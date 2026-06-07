@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIA — Componentes base (HTML/CSS)</title>
+
+  <!-- Fontes do design system -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+  <!-- Tokens + componentes (carregue os tokens ANTES dos componentes) -->
+  <link rel="stylesheet" href="lia-tokens.css">
+  <link rel="stylesheet" href="lia-components.css">
+
+  <style>
+    /* Estilos só desta página de showcase (não fazem parte da export) */
+    body {
+      margin: 0;
+      background: var(--surface-page);
+      color: var(--text-body);
+      font-family: var(--font-ui);
+      -webkit-font-smoothing: antialiased;
+    }
+    .doc { max-width: var(--container-md); margin: 0 auto; padding: var(--space-7) var(--space-5) var(--space-9); }
+    .doc__head { margin-bottom: var(--space-8); }
+    .doc__kicker { font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--oxblood-700); margin: 0 0 var(--space-2); }
+    .doc__title { font: var(--type-display); font-size: var(--text-3xl); color: var(--text-strong); letter-spacing: var(--tracking-tight); margin: 0; }
+    .doc__lede { font: var(--type-prose); color: var(--text-secondary); max-width: 60ch; margin: var(--space-4) 0 0; }
+
+    .sec { margin-top: var(--space-8); border-top: 1px solid var(--border-subtle); padding-top: var(--space-6); }
+    .sec__title { font: var(--type-heading); color: var(--text-strong); margin: 0 0 var(--space-1); }
+    .sec__note { font-size: var(--text-sm); color: var(--text-muted); margin: 0 0 var(--space-5); max-width: 64ch; }
+
+    .demo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-5); padding: var(--space-6); background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); }
+    .demo--col { flex-direction: column; align-items: stretch; gap: var(--space-5); }
+    .demo--grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+    .stack { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+    .stack__cap { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--text-muted); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
+    .field-wrap { max-width: 26rem; }
+
+    /* Snippet de código */
+    details.code { margin-top: var(--space-4); }
+    details.code > summary { cursor: pointer; font-size: var(--text-sm); color: var(--text-link); font-weight: var(--weight-medium); list-style: none; display: inline-flex; align-items: center; gap: var(--space-2); }
+    details.code > summary::-webkit-details-marker { display: none; }
+    details.code > summary::before { content: "▸"; color: var(--text-muted); }
+    details.code[open] > summary::before { content: "▾"; }
+    pre.code { margin: var(--space-3) 0 0; padding: var(--space-4); background: var(--ink-900); color: var(--paper-100); border-radius: var(--radius-md); overflow-x: auto; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--text-sm); line-height: var(--leading-normal); }
+    pre.code .t { color: #c9bea8; }
+
+    .hint { font-size: var(--text-sm); color: var(--text-muted); display: inline-flex; align-items: center; gap: var(--space-2); }
+    .swatch-note { font-size: var(--text-xs); color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <main class="doc">
+    <header class="doc__head">
+      <p class="doc__kicker">LIA · Design System</p>
+      <h1 class="doc__title">Componentes base — HTML/CSS</h1>
+      <p class="doc__lede">Marcação e estilos dos quatro componentes de fundamento (botão, campo, link e cartão), construídos apenas com as variáveis de token. Cada bloco abaixo mostra os estados e traz o HTML pronto para copiar. Use <kbd>Tab</kbd> para ver o anel de foco visível.</p>
+    </header>
+
+    <!-- ============================ BOTÃO ============================ -->
+    <section class="sec" aria-labelledby="s-btn">
+      <h2 class="sec__title" id="s-btn">Botão · <code>.lia-btn</code></h2>
+      <p class="sec__note">Variantes primária (bordô), secundária (contorno) e fantasma. Tamanho médio garante o alvo de toque de 44px. Estados: repouso, hover, foco (Tab) e desabilitado.</p>
+
+      <div class="demo demo--col">
+        <div class="stack" style="align-items:stretch">
+          <span class="stack__cap">Variantes — tamanho md</span>
+          <div class="row">
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--md">Publicar resenha</button>
+            <button type="button" class="lia-btn lia-btn--secondary lia-btn--md">Buscar livros</button>
+            <button type="button" class="lia-btn lia-btn--ghost lia-btn--md">Cancelar</button>
+          </div>
+        </div>
+
+        <div class="stack" style="align-items:stretch">
+          <span class="stack__cap">Tamanhos — sm · md · lg</span>
+          <div class="row">
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--sm">Pequeno</button>
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--md">Médio</button>
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--lg">Grande</button>
+          </div>
+        </div>
+
+        <div class="stack" style="align-items:stretch">
+          <span class="stack__cap">Estados</span>
+          <div class="row">
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--md">Repouso</button>
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--md" id="btn-hover">Hover (passe o mouse)</button>
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--md" autofocus>Foco (Tab)</button>
+            <button type="button" class="lia-btn lia-btn--primary lia-btn--md" disabled aria-disabled="true">Desabilitado</button>
+          </div>
+          <p class="hint">O estado desabilitado usa <code>disabled</code> + <code>aria-disabled="true"</code> (opacidade 0.5, cursor bloqueado).</p>
+        </div>
+      </div>
+
+      <details class="code">
+        <summary>HTML</summary>
+        <pre class="code">&lt;button type="button" class="lia-btn lia-btn--primary lia-btn--md"&gt;Publicar resenha&lt;/button&gt;
+&lt;button type="button" class="lia-btn lia-btn--secondary lia-btn--md"&gt;Buscar livros&lt;/button&gt;
+&lt;button type="button" class="lia-btn lia-btn--ghost lia-btn--md"&gt;Cancelar&lt;/button&gt;
+
+&lt;!-- Desabilitado --&gt;
+&lt;button type="button" class="lia-btn lia-btn--primary lia-btn--md"
+        disabled aria-disabled="true"&gt;Desabilitado&lt;/button&gt;
+
+&lt;!-- Como link (vira &lt;a&gt;) --&gt;
+&lt;a href="/buscar" class="lia-btn lia-btn--secondary lia-btn--md"&gt;Buscar livros&lt;/a&gt;</pre>
+      </details>
+    </section>
+
+    <!-- ============================ CAMPO ============================ -->
+    <section class="sec" aria-labelledby="s-field">
+      <h2 class="sec__title" id="s-field">Campo · <code>.lia-field</code></h2>
+      <p class="sec__note">Rótulo ligado ao controle por <code>for</code>/<code>id</code>; a mensagem de erro é ligada por <code>aria-describedby</code>, anunciada com <code>role="alert"</code> e marcada com <code>aria-invalid</code>. O erro é comunicado por ícone + texto, nunca só por cor.</p>
+
+      <div class="demo demo--col">
+        <!-- Padrão com ajuda -->
+        <div class="lia-field field-wrap">
+          <label class="lia-field__label" for="f-titulo">Título do livro
+            <span class="lia-field__req" aria-hidden="true">*</span>
+          </label>
+          <input class="lia-field__control" id="f-titulo" type="text"
+                 placeholder="Ex.: O primo Basílio" required aria-required="true"
+                 aria-describedby="f-titulo-help">
+          <span class="lia-field__help" id="f-titulo-help">Como aparece na capa da edição.</span>
+        </div>
+
+        <!-- Opcional -->
+        <div class="lia-field field-wrap">
+          <label class="lia-field__label" for="f-isbn">ISBN
+            <span class="lia-field__optional">(opcional)</span>
+          </label>
+          <input class="lia-field__control" id="f-isbn" type="text" placeholder="978-85-000-0000-0">
+        </div>
+
+        <!-- Erro acessível -->
+        <div class="lia-field lia-field--error field-wrap">
+          <label class="lia-field__label" for="f-email">E-mail
+            <span class="lia-field__req" aria-hidden="true">*</span>
+          </label>
+          <input class="lia-field__control" id="f-email" type="email" value="voce@exemplo"
+                 aria-invalid="true" aria-describedby="f-email-error" required aria-required="true">
+          <span class="lia-field__error" id="f-email-error" role="alert">
+            <svg class="lia-field__error-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="7" fill="currentColor"></circle>
+              <rect x="7.1" y="4" width="1.8" height="5" rx="0.9" fill="var(--paper-0)"></rect>
+              <circle cx="8" cy="11.4" r="1" fill="var(--paper-0)"></circle>
+            </svg>
+            <span>Informe um e-mail válido (ex.: voce@exemplo.com).</span>
+          </span>
+        </div>
+
+        <!-- Select + Textarea + Disabled -->
+        <div class="lia-field field-wrap">
+          <label class="lia-field__label" for="f-genero">Gênero</label>
+          <span class="lia-field__select-wrap">
+            <select class="lia-field__control" id="f-genero">
+              <option>Romance</option>
+              <option>Conto</option>
+              <option>Poesia</option>
+              <option>Ensaio</option>
+            </select>
+            <svg class="lia-field__chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </span>
+        </div>
+
+        <div class="lia-field field-wrap">
+          <label class="lia-field__label" for="f-texto">Texto da resenha</label>
+          <textarea class="lia-field__control" id="f-texto" placeholder="Escreva a resenha…"></textarea>
+        </div>
+
+        <div class="lia-field field-wrap">
+          <label class="lia-field__label" for="f-dis">Campo desabilitado</label>
+          <input class="lia-field__control" id="f-dis" type="text" value="Indisponível" disabled>
+        </div>
+      </div>
+
+      <details class="code">
+        <summary>HTML — campo com erro acessível</summary>
+        <pre class="code">&lt;div class="lia-field lia-field--error"&gt;
+  &lt;label class="lia-field__label" for="email"&gt;
+    E-mail &lt;span class="lia-field__req" aria-hidden="true"&gt;*&lt;/span&gt;
+  &lt;/label&gt;
+  &lt;input class="lia-field__control" id="email" type="email"
+         aria-invalid="true" aria-describedby="email-error"
+         required aria-required="true"&gt;
+  &lt;span class="lia-field__error" id="email-error" role="alert"&gt;
+    &lt;svg class="lia-field__error-icon" width="16" height="16"
+         viewBox="0 0 16 16" fill="none" aria-hidden="true"&gt;
+      &lt;circle cx="8" cy="8" r="7" fill="currentColor"/&gt;
+      &lt;rect x="7.1" y="4" width="1.8" height="5" rx="0.9" fill="var(--paper-0)"/&gt;
+      &lt;circle cx="8" cy="11.4" r="1" fill="var(--paper-0)"/&gt;
+    &lt;/svg&gt;
+    &lt;span&gt;Informe um e-mail válido (ex.: voce@exemplo.com).&lt;/span&gt;
+  &lt;/span&gt;
+&lt;/div&gt;</pre>
+      </details>
+    </section>
+
+    <!-- ============================ LINK ============================ -->
+    <section class="sec" aria-labelledby="s-link">
+      <h2 class="sec__title" id="s-link">Link · <code>.lia-link</code></h2>
+      <p class="sec__note">Sempre sublinhado para que o significado não dependa só da cor (WCAG 1.4.1). Hover revela o sublinhado pleno; foco mostra o anel azul. Variante discreta para metadados; link externo recebe o indicador <code>↗</code>.</p>
+
+      <div class="demo demo--col">
+        <p style="font: var(--type-prose); color: var(--text-body); margin: 0; max-width: 60ch;">
+          Leia mais sobre <a href="#" class="lia-link">Eça de Queirós</a> e a fortuna crítica de
+          <a href="#" class="lia-link">O primo Basílio</a>, ou visite o
+          <a href="#" class="lia-link" target="_blank" rel="noopener noreferrer">site da editora<span class="lia-link__external" aria-hidden="true">↗</span></a>.
+        </p>
+        <p class="hint" style="font: var(--type-meta); color: var(--text-muted); margin: 0;">
+          Romance · Portuguesa · 1878 · <a href="#" class="lia-link lia-link--quiet">ver ficha técnica</a>
+        </p>
+      </div>
+
+      <details class="code">
+        <summary>HTML</summary>
+        <pre class="code">&lt;a href="/autor/eca" class="lia-link"&gt;Eça de Queirós&lt;/a&gt;
+
+&lt;!-- Externo --&gt;
+&lt;a href="https://editora.com" class="lia-link"
+   target="_blank" rel="noopener noreferrer"&gt;site da editora&lt;span
+   class="lia-link__external" aria-hidden="true"&gt;↗&lt;/span&gt;&lt;/a&gt;
+
+&lt;!-- Discreto (em metadados) --&gt;
+&lt;a href="#" class="lia-link lia-link--quiet"&gt;ver ficha técnica&lt;/a&gt;</pre>
+      </details>
+    </section>
+
+    <!-- ============================ CARD ============================ -->
+    <section class="sec" aria-labelledby="s-card">
+      <h2 class="sec__title" id="s-card">Cartão · <code>.lia-card</code></h2>
+      <p class="sec__note">Contêiner editorial. Com <code>href</code> o cartão inteiro vira <code>&lt;a&gt;</code> e ganha realce no hover (sombra + leve elevação) e anel de foco. Subpartes: mídia 3:2, olho, título, resumo e rodapé.</p>
+
+      <div class="demo demo--grid">
+        <!-- Cartão clicável -->
+        <a href="#" class="lia-card lia-card--outline" aria-label="O primo Basílio, de Eça de Queirós">
+          <span class="lia-card__media" role="img" aria-label="Capa de O primo Basílio"
+                style="display:flex; align-items:flex-end; padding: var(--space-4); background: var(--oxblood-700); color: var(--paper-0); aspect-ratio: 3/2;">
+            <span style="font: var(--type-subtitle); color: var(--paper-0);">O primo Basílio</span>
+          </span>
+          <span class="lia-card__body">
+            <span class="lia-card__eyebrow">Romance · Portuguesa</span>
+            <h3 class="lia-card__title">O primo Basílio</h3>
+            <p class="lia-card__excerpt">Eça arma um adultério de relojoaria e o usa para dissecar a hipocrisia da classe média lisboeta.</p>
+            <span class="lia-card__footer">Eça de Queirós · 248 recomendam</span>
+          </span>
+        </a>
+
+        <!-- Cartão estático (conteúdo livre) -->
+        <div class="lia-card lia-card--raised">
+          <div class="lia-card__body">
+            <p class="lia-card__eyebrow">Aviso</p>
+            <h3 class="lia-card__title">Cartão elevado</h3>
+            <p class="lia-card__excerpt">Variante <code>--raised</code>: sem borda, com sombra média. Use para destacar conteúdo não clicável.</p>
+            <div class="lia-card__footer">
+              <a href="#" class="lia-link lia-link--quiet">Saiba mais</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <details class="code">
+        <summary>HTML — cartão clicável</summary>
+        <pre class="code">&lt;a href="/resenha/o-primo-basilio" class="lia-card lia-card--outline"&gt;
+  &lt;img class="lia-card__media" src="capa.jpg" alt="Capa de O primo Basílio"&gt;
+  &lt;div class="lia-card__body"&gt;
+    &lt;p class="lia-card__eyebrow"&gt;Romance · Portuguesa&lt;/p&gt;
+    &lt;h3 class="lia-card__title"&gt;O primo Basílio&lt;/h3&gt;
+    &lt;p class="lia-card__excerpt"&gt;Eça arma um adultério de relojoaria…&lt;/p&gt;
+    &lt;div class="lia-card__footer"&gt;Eça de Queirós · 248 recomendam&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/a&gt;</pre>
+      </details>
+    </section>
+  </main>
+</body>
+</html>

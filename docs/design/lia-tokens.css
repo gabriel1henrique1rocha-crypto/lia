@@ -1,0 +1,243 @@
+/* ============================================================
+   LIA — Design System · Export de tokens em CSS
+   ------------------------------------------------------------
+   Variáveis CSS em :root. Cores (papel, tinta/ink, bordô/oxblood
+   e semânticas), tipografia (Spectral display + Newsreader leitura
+   + IBM Plex Sans UI), espaçamento, raio, e foco visível.
+
+   Razões de contraste (WCAG 2.1) anotadas por par texto/fundo.
+   Salvo indicação, a razão é medida sobre --paper-50 (#fbf8f1),
+   o fundo da página. Sobre cartões brancos (--paper-0, #ffffff)
+   o contraste é IGUAL OU MAIOR (fundo mais claro).
+
+   Alvos: texto normal AA >= 4.5:1 · AAA >= 7:1 ·
+   texto grande / UI AA >= 3:1.
+   ============================================================ */
+
+:root {
+  /* ============================================================
+     1 · COR
+     ============================================================ */
+
+  /* ---------- Papel (fundos quentes) ---------- */
+  --paper-0:   #ffffff; /* cartões / superfícies elevadas */
+  --paper-50:  #fbf8f1; /* fundo da página */
+  --paper-100: #f5f0e6; /* superfície sutil / faixa */
+  --paper-200: #ece5d6; /* hover de superfície */
+  --paper-300: #ded5c4; /* linha / borda padrão */
+  --paper-400: #c9bea8; /* borda forte / divisória */
+
+  /* ---------- Tinta / ink (textos quentes) ---------- */
+  --ink-900: #211c17; /* texto principal     — ink-900 sobre paper-50 = 15.9:1 AAA */
+  --ink-800: #2e2823; /* títulos             — ink-800 sobre paper-50 = 13.0:1 AAA */
+  --ink-700: #4b4239; /* texto secundário    — ink-700 sobre paper-50 =  9.3:1 AAA */
+  --ink-500: #756a5e; /* metadados/auxiliar  — ink-500 sobre paper-50 =  5.0:1 AA  */
+  --ink-300: #a89c8c; /* placeholder/disabled— ink-300 sobre paper-50 =  2.9:1 (NÃO usar p/ texto essencial; só decorativo/disabled) */
+
+  /* ---------- Acento: bordô / oxblood ---------- */
+  --oxblood-50:  #f7ebe7; /* fundo tênue de acento */
+  --oxblood-600: #963a2e; /* hover claro */
+  --oxblood-700: #7e2d24; /* acento padrão — oxblood-700 sobre paper-50 = 8.7:1 AAA · paper-0 (branco) sobre oxblood-700 = 9.2:1 AAA */
+  --oxblood-800: #651f18; /* pressionado   — paper-0 (branco) sobre oxblood-800 = 11.6:1 AAA */
+
+  /* ---------- Semânticas (reservadas a feedback) ---------- */
+  --red-700:   #9b2620; /* erro (texto)      — red-700 sobre paper-50   = 7.4:1 AAA · sobre red-50   = 6.9:1 AA */
+  --red-50:    #fbeae8; /* erro (fundo) */
+  --green-700: #1f6b3b; /* sucesso (texto)   — green-700 sobre paper-50 = 6.1:1 AA  · sobre green-50 = 5.7:1 AA */
+  --green-50:  #e8f1ea; /* sucesso (fundo) */
+  --amber-700: #8a5a12; /* alerta (texto)    — amber-700 sobre paper-50 = 5.6:1 AA  · sobre amber-50 = 5.2:1 AA */
+  --amber-50:  #f7eedb; /* alerta (fundo) */
+  --blue-700:  #1b4f8a; /* informação(texto) — blue-700 sobre paper-50  = 7.8:1 AAA · sobre blue-50  = 7.3:1 AAA */
+  --blue-50:   #e8eef6; /* informação (fundo) */
+
+  /* ---------- Foco ---------- */
+  --focus-blue: #1f5fd6; /* anel de foco — focus-blue sobre paper-50 = 5.4:1 (> 3:1 exigido p/ componentes de UI; WCAG 1.4.11) */
+
+  /* ------------------------------------------------------------
+     Aliases semânticos — prefira ESTES nos componentes.
+     ------------------------------------------------------------ */
+
+  /* Superfícies */
+  --surface-page:   var(--paper-50);
+  --surface-card:   var(--paper-0);
+  --surface-subtle: var(--paper-100);
+  --surface-hover:  var(--paper-200);
+  --surface-accent: var(--oxblood-50);
+
+  /* Texto sobre superfícies claras (paper-0/50/100) */
+  --text-strong:     var(--ink-900); /* títulos e texto crítico — >= 15.9:1 */
+  --text-body:       var(--ink-800); /* corpo de leitura        — >= 13.0:1 */
+  --text-secondary:  var(--ink-700); /* legendas, descrições    — >=  9.3:1 */
+  --text-muted:      var(--ink-500); /* metadados, ficha técnica— >=  5.0:1 */
+  --text-disabled:   var(--ink-300); /* placeholder / disabled  —     2.9:1 (decorativo) */
+  --text-on-accent:  var(--paper-0); /* texto sobre bordô       — >=  9.2:1 */
+  --text-link:       var(--oxblood-700); /* link             — 8.7:1 (sempre sublinhado) */
+  --text-link-hover: var(--oxblood-800);
+
+  /* Bordas e divisórias */
+  --border-subtle:  var(--paper-300);
+  --border-default: var(--paper-400);
+  --border-strong:  var(--ink-300);
+
+  /* Ação primária (bordô) */
+  --action-primary-bg:        var(--oxblood-700);
+  --action-primary-bg-hover:  var(--oxblood-800);
+  --action-primary-bg-active: var(--oxblood-800);
+  --action-primary-text:      var(--paper-0); /* branco sobre bordô = 9.2:1 AAA */
+
+  /* Feedback / mensagens (texto sobre seu fundo-par) */
+  --feedback-error-text:   var(--red-700);   /* sobre --feedback-error-bg   = 6.9:1 AA */
+  --feedback-error-bg:     var(--red-50);
+  --feedback-success-text: var(--green-700); /* sobre --feedback-success-bg = 5.7:1 AA */
+  --feedback-success-bg:   var(--green-50);
+  --feedback-warning-text: var(--amber-700); /* sobre --feedback-warning-bg = 5.2:1 AA */
+  --feedback-warning-bg:   var(--amber-50);
+  --feedback-info-text:    var(--blue-700);  /* sobre --feedback-info-bg    = 7.3:1 AAA */
+  --feedback-info-bg:      var(--blue-50);
+
+  /* ============================================================
+     2 · TIPOGRAFIA
+     Escala em rem (1rem = 16px) para respeitar o zoom/tamanho de
+     fonte do usuário (WCAG 1.4.4). Escala modular ~1.2. Mínimo 12px.
+     ============================================================ */
+
+  /* ---------- Famílias ---------- */
+  --font-display: 'Spectral', Georgia, 'Times New Roman', serif;     /* títulos / display */
+  --font-body:    'Newsreader', Georgia, 'Times New Roman', serif;   /* corpo de leitura longa */
+  --font-ui:      'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; /* rótulos, metadados, controles */
+
+  /* ---------- Pesos ---------- */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* ---------- Escala de tamanho (rem) ---------- */
+  --text-xs:   0.75rem;  /* 12px — metadados, microcopy (mínimo) */
+  --text-sm:   0.875rem; /* 14px — rótulos, legendas */
+  --text-base: 1rem;     /* 16px — UI padrão */
+  --text-md:   1.125rem; /* 18px — corpo de leitura (resenhas) */
+  --text-lg:   1.375rem; /* 22px — subtítulos */
+  --text-xl:   1.75rem;  /* 28px — título de seção */
+  --text-2xl:  2.25rem;  /* 36px — título de resenha */
+  --text-3xl:  2.875rem; /* 46px — display */
+  --text-4xl:  3.75rem;  /* 60px — masthead / herói */
+
+  /* ---------- Altura de linha ---------- */
+  --leading-tight:   1.1;  /* display / títulos grandes */
+  --leading-snug:    1.25; /* subtítulos */
+  --leading-normal:  1.5;  /* UI */
+  --leading-relaxed: 1.7;  /* corpo de leitura longa */
+
+  /* ---------- Espaçamento entre letras ---------- */
+  --tracking-tight:  -0.02em; /* títulos display */
+  --tracking-normal: 0;
+  --tracking-wide:   0.02em;
+  --tracking-caps:   0.08em;  /* rótulos em CAIXA ALTA */
+
+  /* ---------- Medida (largura de leitura) ---------- */
+  --measure-prose: 68ch; /* largura máx. confortável p/ resenhas */
+
+  /* ---------- Aliases de texto (família peso tamanho/leading) ---------- */
+  --type-display:  var(--weight-semibold) var(--text-4xl)/var(--leading-tight) var(--font-display);
+  --type-title:    var(--weight-semibold) var(--text-2xl)/var(--leading-snug)  var(--font-display);
+  --type-heading:  var(--weight-semibold) var(--text-xl)/var(--leading-snug)   var(--font-display);
+  --type-subtitle: var(--weight-medium)   var(--text-lg)/var(--leading-snug)   var(--font-display);
+  --type-prose:    var(--weight-regular)  var(--text-md)/var(--leading-relaxed) var(--font-body);
+  --type-body:     var(--weight-regular)  var(--text-base)/var(--leading-normal) var(--font-ui);
+  --type-label:    var(--weight-medium)   var(--text-sm)/var(--leading-normal)  var(--font-ui);
+  --type-meta:     var(--weight-regular)  var(--text-xs)/var(--leading-normal)  var(--font-ui);
+
+  /* ============================================================
+     3 · ESPAÇAMENTO E GRID (base 4px, em rem)
+     ============================================================ */
+  --space-0: 0;
+  --space-1: 0.25rem; /*  4px */
+  --space-2: 0.5rem;  /*  8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem;    /* 16px */
+  --space-5: 1.5rem;  /* 24px */
+  --space-6: 2rem;    /* 32px */
+  --space-7: 3rem;    /* 48px */
+  --space-8: 4rem;    /* 64px */
+  --space-9: 6rem;    /* 96px */
+
+  --target-min: 2.75rem; /* 44px — alvo de toque mínimo (WCAG 2.5.5/2.5.8) */
+
+  --grid-columns:    12;
+  --grid-gutter:     var(--space-5);  /* 24px entre colunas */
+  --container-prose: 42rem; /* ~672px — coluna de leitura */
+  --container-md:    60rem; /* ~960px */
+  --container-lg:    75rem; /* 1200px — largura máx. de página */
+  --container-pad:   var(--space-5);  /* recuo lateral em telas pequenas */
+
+  /* ============================================================
+     4 · RAIO, BORDA, SOMBRA
+     ============================================================ */
+  --radius-none: 0;
+  --radius-sm:   4px;   /* campos, badges */
+  --radius-md:   6px;   /* botões */
+  --radius-lg:   10px;  /* cartões */
+  --radius-full: 999px; /* pílulas, avatares */
+
+  --border-width:        1px;
+  --border-width-strong: 2px;
+
+  --shadow-sm: 0 1px 2px rgba(45, 35, 25, 0.06);
+  --shadow-md: 0 2px 6px rgba(45, 35, 25, 0.08), 0 1px 2px rgba(45, 35, 25, 0.06);
+  --shadow-lg: 0 8px 24px rgba(45, 35, 25, 0.10), 0 2px 6px rgba(45, 35, 25, 0.06);
+
+  /* ============================================================
+     5 · FOCO VISÍVEL (WCAG 2.4.7 / 1.4.11)
+     Anel azul de 3px com 2px de folga. Único elemento "fora da
+     paleta", proposital para máxima visibilidade.
+     ============================================================ */
+  --focus-ring:              var(--focus-blue);
+  --focus-ring-offset:       var(--surface-page);
+  --focus-ring-width:        3px;
+  --focus-ring-offset-width: 2px;
+  /* sombra de foco pronta (alternativa ao outline, p/ cantos arredondados) */
+  --focus-shadow: 0 0 0 var(--focus-ring-offset-width) var(--focus-ring-offset),
+                  0 0 0 calc(var(--focus-ring-offset-width) + var(--focus-ring-width)) var(--focus-ring);
+
+  /* ============================================================
+     6 · MOVIMENTO
+     ============================================================ */
+  --ease-standard:   cubic-bezier(0.2, 0, 0.2, 1);
+  --duration-fast:   120ms;
+  --duration-normal: 200ms;
+}
+
+/* ============================================================
+   FOCO VISÍVEL — global + utilitário
+   ------------------------------------------------------------
+   Global: aplicado a todo elemento interativo via :focus-visible
+   (não polui cliques de mouse). Nunca remova sem substituir.
+   ============================================================ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset-width);
+  border-radius: var(--radius-sm);
+}
+
+/* Utilitário: aplique .focus-ring a qualquer alvo de foco custom
+   (ex.: cartão clicável, controle composto, item de lista). */
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset-width);
+  border-radius: var(--radius-sm);
+}
+
+/* Variante por sombra — quando outline-offset não acompanha o raio
+   do componente (cantos arredondados grandes). */
+.focus-ring-shadow:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast:   0ms;
+    --duration-normal: 0ms;
+  }
+}
