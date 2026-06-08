@@ -1,26 +1,187 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
+/* 1. @theme — primitivas que geram utilities */
+@theme {
+  /* Cores: papel (fundos quentes) */
+  --color-paper-0:   #ffffff;
+  --color-paper-50:  #fbf8f1;
+  --color-paper-100: #f5f0e6;
+  --color-paper-200: #ece5d6;
+  --color-paper-300: #ded5c4;
+  --color-paper-400: #c9bea8;
+
+  /* Cores: tinta */
+  --color-ink-900: #211c17;
+  --color-ink-800: #2e2823;
+  --color-ink-700: #4b4239;
+  --color-ink-500: #756a5e;
+  --color-ink-300: #a89c8c;
+
+  /* Cores: oxblood */
+  --color-oxblood-50:  #f7ebe7;
+  --color-oxblood-600: #963a2e;
+  --color-oxblood-700: #7e2d24;
+  --color-oxblood-800: #651f18;
+
+  /* Cores: feedback */
+  --color-red-700:   #9b2620;
+  --color-red-50:    #fbeae8;
+  --color-green-700: #1f6b3b;
+  --color-green-50:  #e8f1ea;
+  --color-amber-700: #8a5a12;
+  --color-amber-50:  #f7eedb;
+  --color-blue-700:  #1b4f8a;
+  --color-blue-50:   #e8eef6;
+
+  /* Cores: foco */
+  --color-focus-blue: #1f5fd6;
+
+  /* Tipografia: famílias (variáveis CSS de next/font injetadas em <html>) */
+  --font-display: var(--font-spectral), Georgia, serif;
+  --font-body:    var(--font-newsreader), Georgia, serif;
+  --font-ui:      var(--font-ibm-plex-sans), system-ui, sans-serif;
+
+  /* Tipografia: pesos */
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  /* Tipografia: escala de tamanho + line-height par */
+  --text-xs:   0.75rem;
+  --text-xs--line-height:   1.5;
+  --text-sm:   0.875rem;
+  --text-sm--line-height:   1.5;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-md:   1.125rem;
+  --text-md--line-height:   1.7;
+  --text-lg:   1.375rem;
+  --text-lg--line-height:   1.25;
+  --text-xl:   1.75rem;
+  --text-xl--line-height:   1.25;
+  --text-2xl:  2.25rem;
+  --text-2xl--line-height:  1.25;
+  --text-3xl:  2.875rem;
+  --text-3xl--line-height:  1.1;
+  --text-4xl:  3.75rem;
+  --text-4xl--line-height:  1.1;
+
+  /* Tipografia: leading */
+  --leading-tight:   1.1;
+  --leading-snug:    1.25;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.7;
+
+  /* Tipografia: tracking */
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0em;
+  --tracking-wide:   0.02em;
+  --tracking-caps:   0.08em;
+
+  /* Raio */
+  --radius-none: 0px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-full: 999px;
+
+  /* Sombra */
+  --shadow-sm: 0 1px 2px rgba(45, 35, 25, 0.06);
+  --shadow-md: 0 2px 6px rgba(45, 35, 25, 0.08), 0 1px 2px rgba(45, 35, 25, 0.06);
+  --shadow-lg: 0 8px 24px rgba(45, 35, 25, 0.10), 0 2px 6px rgba(45, 35, 25, 0.06);
+
+  /* Container */
+  --container-prose: 42rem;
+  --container-md:    60rem;
+  --container-lg:    75rem;
+
+  /* Spacing (DD-2): reseta escala dinâmica; apenas as 10 chaves do token */
+  --spacing:          initial;
+  --spacing-0:          0px;
+  --spacing-1:          4px;
+  --spacing-2:          8px;
+  --spacing-3:          12px;
+  --spacing-4:          16px;
+  --spacing-5:          24px;
+  --spacing-6:          32px;
+  --spacing-7:          48px;
+  --spacing-8:          64px;
+  --spacing-9:          96px;
+  --spacing-target-min: 2.75rem;
+}
+
+/* 2. :root — aliases semânticos (não geram utilities Tailwind) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Superfícies */
+  --surface-page:   var(--color-paper-50);
+  --surface-card:   var(--color-paper-0);
+  --surface-subtle: var(--color-paper-100);
+  --surface-hover:  var(--color-paper-200);
+  --surface-accent: var(--color-oxblood-50);
+
+  /* Texto */
+  --text-strong:     var(--color-ink-900);
+  --text-body-color: var(--color-ink-800);
+  --text-secondary:  var(--color-ink-700);
+  --text-muted:      var(--color-ink-500);
+  --text-disabled:   var(--color-ink-300);
+  --text-on-accent:  var(--color-paper-0);
+  --text-link:       var(--color-oxblood-700);
+  --text-link-hover: var(--color-oxblood-800);
+
+  /* Bordas */
+  --border-subtle:  var(--color-paper-300);
+  --border-default: var(--color-paper-400);
+  --border-strong:  var(--color-ink-300);
+
+  /* Ação primária */
+  --action-primary-bg:        var(--color-oxblood-700);
+  --action-primary-bg-hover:  var(--color-oxblood-800);
+  --action-primary-bg-active: var(--color-oxblood-800);
+  --action-primary-text:      var(--color-paper-0);
+
+  /* Feedback */
+  --feedback-error-text:   var(--color-red-700);
+  --feedback-error-bg:     var(--color-red-50);
+  --feedback-success-text: var(--color-green-700);
+  --feedback-success-bg:   var(--color-green-50);
+  --feedback-warning-text: var(--color-amber-700);
+  --feedback-warning-bg:   var(--color-amber-50);
+  --feedback-info-text:    var(--color-blue-700);
+  --feedback-info-bg:      var(--color-blue-50);
+
+  /* Foco */
+  --focus-ring:              var(--color-focus-blue);
+  --focus-ring-offset:       var(--surface-page);
+  --focus-ring-width:        3px;
+  --focus-ring-offset-width: 2px;
+  --focus-shadow: 0 0 0 var(--focus-ring-offset-width) var(--focus-ring-offset),
+                  0 0 0 calc(var(--focus-ring-offset-width) + var(--focus-ring-width)) var(--focus-ring);
+
+  /* Movimento */
+  --ease-standard:  cubic-bezier(0.2, 0, 0.2, 1);
+  --duration-fast:  120ms;
+  --duration-base:  200ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* 3. @layer base — foco global corrigido (INFRA-09) */
+@layer base {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset-width);
+    /* sem border-radius: outline segue o raio intrínseco do elemento */
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  .focus-ring-shadow:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-shadow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
