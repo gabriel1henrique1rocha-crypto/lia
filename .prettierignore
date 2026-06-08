@@ -1,0 +1,8 @@
+.next
+node_modules
+public
+*.lock
+next-env.d.ts
+src/lib/database.types.ts
+docs/
+.specs/
