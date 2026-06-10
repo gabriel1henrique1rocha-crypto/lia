@@ -163,6 +163,16 @@
   --ease-standard:  cubic-bezier(0.2, 0, 0.2, 1);
   --duration-fast:  120ms;
   --duration-base:  200ms;
+
+  /* Borda (largura) — consumido por @layer components */
+  --border-width:        1px;
+  --border-width-strong: 2px;
+
+  /* Tipografia composta (shorthand font:) — consumido por @layer components */
+  --type-label:   var(--font-weight-medium)   var(--text-sm)/var(--leading-normal)  var(--font-ui);
+  --type-meta:    var(--font-weight-regular)  var(--text-xs)/var(--leading-normal)  var(--font-ui);
+  --type-heading: var(--font-weight-semibold) var(--text-xl)/var(--leading-snug)    var(--font-display);
+  --type-prose:   var(--font-weight-regular)  var(--text-md)/var(--leading-relaxed) var(--font-body);
 }
 
 /* 3. @layer base — foco global corrigido (INFRA-09) */
@@ -183,5 +193,269 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+/* 4. @layer components — componentes base (portado de docs/design/lia-components.css)
+   Consome APENAS tokens (@theme + aliases :root). Sem cor/fonte nova. */
+@layer components {
+  /* ---------- BOTÃO — .lia-btn ---------- */
+  .lia-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    font-family: var(--font-ui);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    border: var(--border-width) solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard),
+                color var(--duration-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lia-btn:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset-width);
+  }
+
+  /* Tamanhos — alvo de toque mínimo de 44px no tamanho médio */
+  .lia-btn--sm { min-height: 2.25rem;                  padding: 0 var(--spacing-4); font-size: var(--text-sm); }
+  .lia-btn--md { min-height: var(--spacing-target-min); padding: 0 var(--spacing-5); font-size: var(--text-base); }
+  .lia-btn--lg { min-height: 3.25rem;                  padding: 0 var(--spacing-6); font-size: var(--text-md); }
+
+  /* Variante: primária (bordô) — branco sobre bordô = 9.2:1 AAA */
+  .lia-btn--primary {
+    background: var(--action-primary-bg);
+    color: var(--action-primary-text);
+  }
+  .lia-btn--primary:hover  { background: var(--action-primary-bg-hover); }
+  .lia-btn--primary:active { background: var(--action-primary-bg-active); }
+
+  /* Variante: secundária (contorno) */
+  .lia-btn--secondary {
+    background: var(--surface-card);
+    color: var(--text-link);
+    border-color: var(--border-default);
+  }
+  .lia-btn--secondary:hover  { background: var(--surface-subtle); border-color: var(--border-strong); }
+  .lia-btn--secondary:active { background: var(--surface-hover); }
+
+  /* Variante: fantasma (texto) */
+  .lia-btn--ghost {
+    background: transparent;
+    color: var(--text-link);
+  }
+  .lia-btn--ghost:hover  { background: var(--surface-accent); }
+  .lia-btn--ghost:active { background: var(--surface-hover); }
+
+  /* Desabilitado — comunica via opacidade + cursor + aria-disabled (foco preservado) */
+  .lia-btn[disabled],
+  .lia-btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .lia-btn--block { width: 100%; }
+  .lia-btn__icon { display: inline-flex; }
+
+  /* ---------- CAMPO — .lia-field ---------- */
+  .lia-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    font-family: var(--font-ui);
+  }
+  .lia-field__label {
+    font: var(--type-label);
+    color: var(--text-strong);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+  .lia-field__req {
+    color: var(--feedback-error-text);
+    font-weight: var(--font-weight-semibold);
+  }
+  .lia-field__optional {
+    color: var(--text-muted);
+    font-weight: var(--font-weight-regular);
+  }
+  .lia-field__control {
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+    color: var(--text-body-color);
+    background: var(--surface-card);
+    border: var(--border-width) solid var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--spacing-3);
+    min-height: var(--spacing-target-min);
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color var(--duration-fast) var(--ease-standard),
+                box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  textarea.lia-field__control {
+    padding: var(--spacing-3);
+    min-height: 6rem;
+    line-height: var(--leading-normal);
+    resize: vertical;
+  }
+  select.lia-field__control {
+    appearance: none;
+    padding-right: var(--spacing-6);
+    cursor: pointer;
+  }
+  .lia-field__control::placeholder { color: var(--text-disabled); }
+  .lia-field__control:hover { border-color: var(--border-strong); }
+  .lia-field__control:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset-width);
+    border-color: var(--focus-ring);
+  }
+  .lia-field__control[disabled] {
+    background: var(--surface-subtle);
+    color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+  /* Estado de erro: borda reforçada + ícone e texto abaixo (não só cor) */
+  .lia-field--error .lia-field__control {
+    border-color: var(--feedback-error-text);
+    border-width: var(--border-width-strong);
+  }
+  .lia-field__help {
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+  .lia-field__error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    color: var(--feedback-error-text);
+    font-weight: var(--font-weight-medium);
+  }
+  .lia-field__error-icon { flex: none; margin-top: 0.1em; }
+  .lia-field__select-wrap { position: relative; display: block; }
+  .lia-field__chev {
+    position: absolute;
+    right: var(--spacing-3);
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-muted);
+  }
+
+  /* ---------- LINK — .lia-link ---------- */
+  .lia-link {
+    color: var(--text-link);
+    font-family: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in srgb, var(--text-link) 45%, transparent);
+    border-radius: var(--radius-sm);
+    transition: color var(--duration-fast) var(--ease-standard),
+                text-decoration-color var(--duration-fast) var(--ease-standard);
+  }
+  .lia-link:hover {
+    color: var(--text-link-hover);
+    text-decoration-color: currentColor;
+  }
+  .lia-link:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset-width);
+    text-decoration-color: currentColor;
+  }
+  /* Variante discreta: dentro de metadados */
+  .lia-link--quiet {
+    color: inherit;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  }
+  .lia-link--quiet:hover { color: var(--text-link); }
+  /* Link externo: ícone indicativo (decorativo) */
+  .lia-link__external {
+    display: inline-flex;
+    margin-left: 0.15em;
+    vertical-align: baseline;
+  }
+
+  /* ---------- CARD — .lia-card ---------- */
+  .lia-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-card);
+    border: var(--border-width) solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    color: var(--text-body-color);
+    font-family: var(--font-ui);
+  }
+  .lia-card--raised { border-color: transparent; box-shadow: var(--shadow-md); }
+  .lia-card--flat   { box-shadow: none; }
+
+  /* Cartão clicável inteiro */
+  a.lia-card {
+    text-decoration: none;
+    transition: box-shadow var(--duration-base) var(--ease-standard),
+                border-color var(--duration-base) var(--ease-standard),
+                transform var(--duration-base) var(--ease-standard);
+  }
+  a.lia-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-default);
+    transform: translateY(-2px);
+  }
+  a.lia-card:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset-width);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    a.lia-card:hover { transform: none; }
+  }
+
+  .lia-card__media {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    background: var(--surface-subtle);
+  }
+  .lia-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    padding: var(--spacing-5);
+  }
+  .lia-card__eyebrow {
+    font: var(--type-meta);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--text-muted);
+  }
+  .lia-card__title {
+    font: var(--type-heading);
+    color: var(--text-strong);
+    margin: 0;
+    text-wrap: balance;
+  }
+  .lia-card__excerpt {
+    font: var(--type-prose);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  .lia-card__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-1);
+    font: var(--type-meta);
+    color: var(--text-muted);
   }
 }
