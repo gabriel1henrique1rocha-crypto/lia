@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     // Artefatos de referência de design (não são código da aplicação)
     'docs/**',
+    // Arquivos de skill do Claude Code (não são código da aplicação)
+    '.claude/**',
   ]),
 ])
 
