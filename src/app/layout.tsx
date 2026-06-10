@@ -46,9 +46,7 @@ export default function RootLayout({
           Ir para o conteúdo principal
         </a>
         <header className="px-5 py-4 border-b border-[var(--border-subtle)]">
-          <span className="font-display font-semibold text-base text-ink-900">
-            LIA
-          </span>
+          <span className="font-display font-semibold text-base text-ink-900">LIA</span>
         </header>
         <main id="main">{children}</main>
       </body>

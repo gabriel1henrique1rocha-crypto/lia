@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  forwardRef,
-  useId,
-  type ComponentPropsWithoutRef,
-  type ReactNode,
-  type Ref,
-} from 'react'
+import { forwardRef, useId, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react'
 import { AlertCircle, ChevronDown } from 'lucide-react'
 
 interface FieldOwnProps {
@@ -44,8 +38,7 @@ type NormalizedFieldProps = FieldOwnProps & {
   className?: string
 } & Record<string, unknown>
 
-const cx = (...parts: Array<string | false | undefined>) =>
-  parts.filter(Boolean).join(' ')
+const cx = (...parts: Array<string | false | undefined>) => parts.filter(Boolean).join(' ')
 
 export const Field = forwardRef<FieldRef, FieldProps>(function Field(props, ref) {
   const {
@@ -66,9 +59,8 @@ export const Field = forwardRef<FieldRef, FieldProps>(function Field(props, ref)
   const helpId = `${id}-help`
 
   const describedBy =
-    [error ? errorId : null, !error && helpText ? helpId : null]
-      .filter(Boolean)
-      .join(' ') || undefined
+    [error ? errorId : null, !error && helpText ? helpId : null].filter(Boolean).join(' ') ||
+    undefined
 
   const controlProps = {
     id,
@@ -117,9 +109,7 @@ export const Field = forwardRef<FieldRef, FieldProps>(function Field(props, ref)
             *
           </span>
         )}
-        {!required && showOptional && (
-          <span className="lia-field__optional">(opcional)</span>
-        )}
+        {!required && showOptional && <span className="lia-field__optional">(opcional)</span>}
       </label>
 
       {control}

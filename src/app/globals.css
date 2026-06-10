@@ -1,10 +1,10 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* 1. @theme — primitivas que geram utilities */
 @theme {
   /* Cores: papel (fundos quentes) */
-  --color-paper-0:   #ffffff;
-  --color-paper-50:  #fbf8f1;
+  --color-paper-0: #ffffff;
+  --color-paper-50: #fbf8f1;
   --color-paper-100: #f5f0e6;
   --color-paper-200: #ece5d6;
   --color-paper-300: #ded5c4;
@@ -18,161 +18,162 @@
   --color-ink-300: #a89c8c;
 
   /* Cores: oxblood */
-  --color-oxblood-50:  #f7ebe7;
+  --color-oxblood-50: #f7ebe7;
   --color-oxblood-600: #963a2e;
   --color-oxblood-700: #7e2d24;
   --color-oxblood-800: #651f18;
 
   /* Cores: feedback */
-  --color-red-700:   #9b2620;
-  --color-red-50:    #fbeae8;
+  --color-red-700: #9b2620;
+  --color-red-50: #fbeae8;
   --color-green-700: #1f6b3b;
-  --color-green-50:  #e8f1ea;
+  --color-green-50: #e8f1ea;
   --color-amber-700: #8a5a12;
-  --color-amber-50:  #f7eedb;
-  --color-blue-700:  #1b4f8a;
-  --color-blue-50:   #e8eef6;
+  --color-amber-50: #f7eedb;
+  --color-blue-700: #1b4f8a;
+  --color-blue-50: #e8eef6;
 
   /* Cores: foco */
   --color-focus-blue: #1f5fd6;
 
   /* Tipografia: famílias (variáveis CSS de next/font injetadas em <html>) */
   --font-display: var(--font-spectral), Georgia, serif;
-  --font-body:    var(--font-newsreader), Georgia, serif;
-  --font-ui:      var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --font-body: var(--font-newsreader), Georgia, serif;
+  --font-ui: var(--font-ibm-plex-sans), system-ui, sans-serif;
 
   /* Tipografia: pesos */
-  --font-weight-regular:  400;
-  --font-weight-medium:   500;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
   --font-weight-semibold: 600;
-  --font-weight-bold:     700;
+  --font-weight-bold: 700;
 
   /* Tipografia: escala de tamanho + line-height par */
-  --text-xs:   0.75rem;
-  --text-xs--line-height:   1.5;
-  --text-sm:   0.875rem;
-  --text-sm--line-height:   1.5;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5;
   --text-base: 1rem;
   --text-base--line-height: 1.5;
-  --text-md:   1.125rem;
-  --text-md--line-height:   1.7;
-  --text-lg:   1.375rem;
-  --text-lg--line-height:   1.25;
-  --text-xl:   1.75rem;
-  --text-xl--line-height:   1.25;
-  --text-2xl:  2.25rem;
-  --text-2xl--line-height:  1.25;
-  --text-3xl:  2.875rem;
-  --text-3xl--line-height:  1.1;
-  --text-4xl:  3.75rem;
-  --text-4xl--line-height:  1.1;
+  --text-md: 1.125rem;
+  --text-md--line-height: 1.7;
+  --text-lg: 1.375rem;
+  --text-lg--line-height: 1.25;
+  --text-xl: 1.75rem;
+  --text-xl--line-height: 1.25;
+  --text-2xl: 2.25rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 2.875rem;
+  --text-3xl--line-height: 1.1;
+  --text-4xl: 3.75rem;
+  --text-4xl--line-height: 1.1;
 
   /* Tipografia: leading */
-  --leading-tight:   1.1;
-  --leading-snug:    1.25;
-  --leading-normal:  1.5;
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
   --leading-relaxed: 1.7;
 
   /* Tipografia: tracking */
-  --tracking-tight:  -0.02em;
+  --tracking-tight: -0.02em;
   --tracking-normal: 0em;
-  --tracking-wide:   0.02em;
-  --tracking-caps:   0.08em;
+  --tracking-wide: 0.02em;
+  --tracking-caps: 0.08em;
 
   /* Raio */
   --radius-none: 0px;
-  --radius-sm:   4px;
-  --radius-md:   6px;
-  --radius-lg:   10px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
   --radius-full: 999px;
 
   /* Sombra */
   --shadow-sm: 0 1px 2px rgba(45, 35, 25, 0.06);
   --shadow-md: 0 2px 6px rgba(45, 35, 25, 0.08), 0 1px 2px rgba(45, 35, 25, 0.06);
-  --shadow-lg: 0 8px 24px rgba(45, 35, 25, 0.10), 0 2px 6px rgba(45, 35, 25, 0.06);
+  --shadow-lg: 0 8px 24px rgba(45, 35, 25, 0.1), 0 2px 6px rgba(45, 35, 25, 0.06);
 
   /* Container */
   --container-prose: 42rem;
-  --container-md:    60rem;
-  --container-lg:    75rem;
+  --container-md: 60rem;
+  --container-lg: 75rem;
 
   /* Spacing (DD-2): reseta escala dinâmica; apenas as 10 chaves do token */
-  --spacing:          initial;
-  --spacing-0:          0px;
-  --spacing-1:          4px;
-  --spacing-2:          8px;
-  --spacing-3:          12px;
-  --spacing-4:          16px;
-  --spacing-5:          24px;
-  --spacing-6:          32px;
-  --spacing-7:          48px;
-  --spacing-8:          64px;
-  --spacing-9:          96px;
+  --spacing: initial;
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+  --spacing-7: 48px;
+  --spacing-8: 64px;
+  --spacing-9: 96px;
   --spacing-target-min: 2.75rem;
 }
 
 /* 2. :root — aliases semânticos (não geram utilities Tailwind) */
 :root {
   /* Superfícies */
-  --surface-page:   var(--color-paper-50);
-  --surface-card:   var(--color-paper-0);
+  --surface-page: var(--color-paper-50);
+  --surface-card: var(--color-paper-0);
   --surface-subtle: var(--color-paper-100);
-  --surface-hover:  var(--color-paper-200);
+  --surface-hover: var(--color-paper-200);
   --surface-accent: var(--color-oxblood-50);
 
   /* Texto */
-  --text-strong:     var(--color-ink-900);
+  --text-strong: var(--color-ink-900);
   --text-body-color: var(--color-ink-800);
-  --text-secondary:  var(--color-ink-700);
-  --text-muted:      var(--color-ink-500);
-  --text-disabled:   var(--color-ink-300);
-  --text-on-accent:  var(--color-paper-0);
-  --text-link:       var(--color-oxblood-700);
+  --text-secondary: var(--color-ink-700);
+  --text-muted: var(--color-ink-500);
+  --text-disabled: var(--color-ink-300);
+  --text-on-accent: var(--color-paper-0);
+  --text-link: var(--color-oxblood-700);
   --text-link-hover: var(--color-oxblood-800);
 
   /* Bordas */
-  --border-subtle:  var(--color-paper-300);
+  --border-subtle: var(--color-paper-300);
   --border-default: var(--color-paper-400);
-  --border-strong:  var(--color-ink-300);
+  --border-strong: var(--color-ink-300);
 
   /* Ação primária */
-  --action-primary-bg:        var(--color-oxblood-700);
-  --action-primary-bg-hover:  var(--color-oxblood-800);
+  --action-primary-bg: var(--color-oxblood-700);
+  --action-primary-bg-hover: var(--color-oxblood-800);
   --action-primary-bg-active: var(--color-oxblood-800);
-  --action-primary-text:      var(--color-paper-0);
+  --action-primary-text: var(--color-paper-0);
 
   /* Feedback */
-  --feedback-error-text:   var(--color-red-700);
-  --feedback-error-bg:     var(--color-red-50);
+  --feedback-error-text: var(--color-red-700);
+  --feedback-error-bg: var(--color-red-50);
   --feedback-success-text: var(--color-green-700);
-  --feedback-success-bg:   var(--color-green-50);
+  --feedback-success-bg: var(--color-green-50);
   --feedback-warning-text: var(--color-amber-700);
-  --feedback-warning-bg:   var(--color-amber-50);
-  --feedback-info-text:    var(--color-blue-700);
-  --feedback-info-bg:      var(--color-blue-50);
+  --feedback-warning-bg: var(--color-amber-50);
+  --feedback-info-text: var(--color-blue-700);
+  --feedback-info-bg: var(--color-blue-50);
 
   /* Foco */
-  --focus-ring:              var(--color-focus-blue);
-  --focus-ring-offset:       var(--surface-page);
-  --focus-ring-width:        3px;
+  --focus-ring: var(--color-focus-blue);
+  --focus-ring-offset: var(--surface-page);
+  --focus-ring-width: 3px;
   --focus-ring-offset-width: 2px;
-  --focus-shadow: 0 0 0 var(--focus-ring-offset-width) var(--focus-ring-offset),
-                  0 0 0 calc(var(--focus-ring-offset-width) + var(--focus-ring-width)) var(--focus-ring);
+  --focus-shadow:
+    0 0 0 var(--focus-ring-offset-width) var(--focus-ring-offset),
+    0 0 0 calc(var(--focus-ring-offset-width) + var(--focus-ring-width)) var(--focus-ring);
 
   /* Movimento */
-  --ease-standard:  cubic-bezier(0.2, 0, 0.2, 1);
-  --duration-fast:  120ms;
-  --duration-base:  200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
 
   /* Borda (largura) — consumido por @layer components */
-  --border-width:        1px;
+  --border-width: 1px;
   --border-width-strong: 2px;
 
   /* Tipografia composta (shorthand font:) — consumido por @layer components */
-  --type-label:   var(--font-weight-medium)   var(--text-sm)/var(--leading-normal)  var(--font-ui);
-  --type-meta:    var(--font-weight-regular)  var(--text-xs)/var(--leading-normal)  var(--font-ui);
-  --type-heading: var(--font-weight-semibold) var(--text-xl)/var(--leading-snug)    var(--font-display);
-  --type-prose:   var(--font-weight-regular)  var(--text-md)/var(--leading-relaxed) var(--font-body);
+  --type-label: var(--font-weight-medium) var(--text-sm)/var(--leading-normal) var(--font-ui);
+  --type-meta: var(--font-weight-regular) var(--text-xs)/var(--leading-normal) var(--font-ui);
+  --type-heading: var(--font-weight-semibold) var(--text-xl)/var(--leading-snug) var(--font-display);
+  --type-prose: var(--font-weight-regular) var(--text-md)/var(--leading-relaxed) var(--font-body);
 }
 
 /* 3. @layer base — foco global corrigido (INFRA-09) */
@@ -195,7 +196,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
@@ -219,9 +222,10 @@
     border: var(--border-width) solid transparent;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: background-color var(--duration-fast) var(--ease-standard),
-                border-color var(--duration-fast) var(--ease-standard),
-                color var(--duration-fast) var(--ease-standard);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
     -webkit-tap-highlight-color: transparent;
   }
   .lia-btn:focus-visible {
@@ -230,17 +234,33 @@
   }
 
   /* Tamanhos — alvo de toque mínimo de 44px no tamanho médio */
-  .lia-btn--sm { min-height: 2.25rem;                  padding: 0 var(--spacing-4); font-size: var(--text-sm); }
-  .lia-btn--md { min-height: var(--spacing-target-min); padding: 0 var(--spacing-5); font-size: var(--text-base); }
-  .lia-btn--lg { min-height: 3.25rem;                  padding: 0 var(--spacing-6); font-size: var(--text-md); }
+  .lia-btn--sm {
+    min-height: 2.25rem;
+    padding: 0 var(--spacing-4);
+    font-size: var(--text-sm);
+  }
+  .lia-btn--md {
+    min-height: var(--spacing-target-min);
+    padding: 0 var(--spacing-5);
+    font-size: var(--text-base);
+  }
+  .lia-btn--lg {
+    min-height: 3.25rem;
+    padding: 0 var(--spacing-6);
+    font-size: var(--text-md);
+  }
 
   /* Variante: primária (bordô) — branco sobre bordô = 9.2:1 AAA */
   .lia-btn--primary {
     background: var(--action-primary-bg);
     color: var(--action-primary-text);
   }
-  .lia-btn--primary:hover  { background: var(--action-primary-bg-hover); }
-  .lia-btn--primary:active { background: var(--action-primary-bg-active); }
+  .lia-btn--primary:hover {
+    background: var(--action-primary-bg-hover);
+  }
+  .lia-btn--primary:active {
+    background: var(--action-primary-bg-active);
+  }
 
   /* Variante: secundária (contorno) */
   .lia-btn--secondary {
@@ -248,25 +268,38 @@
     color: var(--text-link);
     border-color: var(--border-default);
   }
-  .lia-btn--secondary:hover  { background: var(--surface-subtle); border-color: var(--border-strong); }
-  .lia-btn--secondary:active { background: var(--surface-hover); }
+  .lia-btn--secondary:hover {
+    background: var(--surface-subtle);
+    border-color: var(--border-strong);
+  }
+  .lia-btn--secondary:active {
+    background: var(--surface-hover);
+  }
 
   /* Variante: fantasma (texto) */
   .lia-btn--ghost {
     background: transparent;
     color: var(--text-link);
   }
-  .lia-btn--ghost:hover  { background: var(--surface-accent); }
-  .lia-btn--ghost:active { background: var(--surface-hover); }
+  .lia-btn--ghost:hover {
+    background: var(--surface-accent);
+  }
+  .lia-btn--ghost:active {
+    background: var(--surface-hover);
+  }
 
   /* Desabilitado — comunica via opacidade + cursor + aria-disabled (foco preservado) */
   .lia-btn[disabled],
-  .lia-btn[aria-disabled="true"] {
+  .lia-btn[aria-disabled='true'] {
     cursor: not-allowed;
     opacity: 0.5;
   }
-  .lia-btn--block { width: 100%; }
-  .lia-btn__icon { display: inline-flex; }
+  .lia-btn--block {
+    width: 100%;
+  }
+  .lia-btn__icon {
+    display: inline-flex;
+  }
 
   /* ---------- CAMPO — .lia-field ---------- */
   .lia-field {
@@ -301,8 +334,9 @@
     min-height: var(--spacing-target-min);
     width: 100%;
     box-sizing: border-box;
-    transition: border-color var(--duration-fast) var(--ease-standard),
-                box-shadow var(--duration-fast) var(--ease-standard);
+    transition:
+      border-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
   }
   textarea.lia-field__control {
     padding: var(--spacing-3);
@@ -315,8 +349,12 @@
     padding-right: var(--spacing-6);
     cursor: pointer;
   }
-  .lia-field__control::placeholder { color: var(--text-disabled); }
-  .lia-field__control:hover { border-color: var(--border-strong); }
+  .lia-field__control::placeholder {
+    color: var(--text-disabled);
+  }
+  .lia-field__control:hover {
+    border-color: var(--border-strong);
+  }
   .lia-field__control:focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring);
     outline-offset: var(--focus-ring-offset-width);
@@ -346,8 +384,14 @@
     color: var(--feedback-error-text);
     font-weight: var(--font-weight-medium);
   }
-  .lia-field__error-icon { flex: none; margin-top: 0.1em; }
-  .lia-field__select-wrap { position: relative; display: block; }
+  .lia-field__error-icon {
+    flex: none;
+    margin-top: 0.1em;
+  }
+  .lia-field__select-wrap {
+    position: relative;
+    display: block;
+  }
   .lia-field__chev {
     position: absolute;
     right: var(--spacing-3);
@@ -366,8 +410,9 @@
     text-decoration-thickness: 1px;
     text-decoration-color: color-mix(in srgb, var(--text-link) 45%, transparent);
     border-radius: var(--radius-sm);
-    transition: color var(--duration-fast) var(--ease-standard),
-                text-decoration-color var(--duration-fast) var(--ease-standard);
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      text-decoration-color var(--duration-fast) var(--ease-standard);
   }
   .lia-link:hover {
     color: var(--text-link-hover);
@@ -383,7 +428,9 @@
     color: inherit;
     text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
   }
-  .lia-link--quiet:hover { color: var(--text-link); }
+  .lia-link--quiet:hover {
+    color: var(--text-link);
+  }
   /* Link externo: ícone indicativo (decorativo) */
   .lia-link__external {
     display: inline-flex;
@@ -402,15 +449,21 @@
     color: var(--text-body-color);
     font-family: var(--font-ui);
   }
-  .lia-card--raised { border-color: transparent; box-shadow: var(--shadow-md); }
-  .lia-card--flat   { box-shadow: none; }
+  .lia-card--raised {
+    border-color: transparent;
+    box-shadow: var(--shadow-md);
+  }
+  .lia-card--flat {
+    box-shadow: none;
+  }
 
   /* Cartão clicável inteiro */
   a.lia-card {
     text-decoration: none;
-    transition: box-shadow var(--duration-base) var(--ease-standard),
-                border-color var(--duration-base) var(--ease-standard),
-                transform var(--duration-base) var(--ease-standard);
+    transition:
+      box-shadow var(--duration-base) var(--ease-standard),
+      border-color var(--duration-base) var(--ease-standard),
+      transform var(--duration-base) var(--ease-standard);
   }
   a.lia-card:hover {
     box-shadow: var(--shadow-lg);
@@ -422,7 +475,9 @@
     outline-offset: var(--focus-ring-offset-width);
   }
   @media (prefers-reduced-motion: reduce) {
-    a.lia-card:hover { transform: none; }
+    a.lia-card:hover {
+      transform: none;
+    }
   }
 
   .lia-card__media {

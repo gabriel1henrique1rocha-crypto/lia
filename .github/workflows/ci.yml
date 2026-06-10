@@ -1,0 +1,68 @@
+name: CI
+
+# Roda em cada push (qualquer branch) e em cada PR — o gate vale para todo mundo.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint + format + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+
+  test:
+    name: vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  a11y:
+    name: axe + lighthouse
+    runs-on: ubuntu-latest
+    needs: [test]
+    env:
+      # /styleguide é a rota-alvo das auditorias; sem esta flag retorna 404.
+      ENABLE_STYLEGUIDE: 'true'
+      # A app de fundação não consulta o Supabase; placeholders só satisfazem o
+      # validador de env (zod) caso algum import futuro o acione no boot.
+      NEXT_PUBLIC_SUPABASE_URL: 'https://placeholder.supabase.co'
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_placeholder'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+
+      # HARD GATE axe — reprova com qualquer violação crítica em / e /styleguide.
+      - name: axe (0 violações críticas)
+        run: npm run test:a11y
+
+      # HARD GATE Lighthouse Accessibility = 100 (assertion error).
+      # Performance (LCP/CLS) é coletada e reportada como warn — NÃO bloqueia
+      # (instável em CI, decisão registrada na spec). O relatório completo é
+      # publicado em temporary-public-storage com URL no log.
+      - name: lighthouse (a11y=100 hard gate · performance reportada)
+        run: npm run lhci

@@ -1,5 +1,7 @@
-'use client'
-
+// Sem 'use client': Card é puramente apresentacional (sem hooks/eventos). Mantê-lo
+// como server component preserva os subcomponentes estáticos (Card.Eyebrow, Card.Title…)
+// ao ser usado dentro de outro server component — uma referência de cliente perderia
+// essas propriedades (Object.assign não cruza a fronteira RSC).
 import {
   createElement,
   forwardRef,
@@ -20,8 +22,7 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
   rel?: AnchorHTMLAttributes<HTMLAnchorElement>['rel']
 }
 
-const cx = (...parts: Array<string | false | undefined>) =>
-  parts.filter(Boolean).join(' ')
+const cx = (...parts: Array<string | false | undefined>) => parts.filter(Boolean).join(' ')
 
 const variantClass: Record<CardVariant, string | false> = {
   outline: false,
@@ -31,7 +32,7 @@ const variantClass: Record<CardVariant, string | false> = {
 
 const CardRoot = forwardRef<HTMLElement, CardProps>(function Card(
   { variant = 'outline', href, target, rel, className, children, ...rest },
-  ref,
+  ref
 ) {
   const classes = cx('lia-card', variantClass[variant], className)
 
@@ -88,11 +89,7 @@ interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
   children?: ReactNode
 }
 function CardTitle({ as = 'h3', className, children, ...rest }: CardTitleProps) {
-  return createElement(
-    as,
-    { className: cx('lia-card__title', className), ...rest },
-    children,
-  )
+  return createElement(as, { className: cx('lia-card__title', className), ...rest }, children)
 }
 
 function CardExcerpt({ className, children, ...rest }: HTMLAttributes<HTMLParagraphElement>) {

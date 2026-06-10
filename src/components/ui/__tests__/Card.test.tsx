@@ -9,7 +9,7 @@ describe('Card', () => {
         <Card.Body>
           <Card.Title>Título</Card.Title>
         </Card.Body>
-      </Card>,
+      </Card>
     )
     const card = screen.getByTestId('card')
     expect(card.tagName).toBe('DIV')
@@ -22,7 +22,7 @@ describe('Card', () => {
         <Card.Body>
           <Card.Title>Resenha</Card.Title>
         </Card.Body>
-      </Card>,
+      </Card>
     )
     const link = screen.getByRole('link', { name: /Resenha/ })
     expect(link.tagName).toBe('A')
@@ -43,7 +43,7 @@ describe('Card', () => {
         <Card.Body>
           <Card.Title as="h2">Cabeçalho</Card.Title>
         </Card.Body>
-      </Card>,
+      </Card>
     )
     expect(screen.getByRole('heading', { level: 2, name: 'Cabeçalho' })).toBeInTheDocument()
   })

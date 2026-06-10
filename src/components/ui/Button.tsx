@@ -5,8 +5,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 type ButtonVariant = 'primary' | 'secondary' | 'ghost'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
-export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> {
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> {
   /** Estilo visual. Padrão: `primary`. */
   variant?: ButtonVariant
   /** Tamanho. `md` (padrão) garante alvo de toque ≥ 44px. */
@@ -24,8 +23,7 @@ export interface ButtonProps
   disabled?: boolean
 }
 
-const cx = (...parts: Array<string | false | undefined>) =>
-  parts.filter(Boolean).join(' ')
+const cx = (...parts: Array<string | false | undefined>) => parts.filter(Boolean).join(' ')
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
@@ -41,7 +39,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     onClick,
     ...rest
   },
-  ref,
+  ref
 ) {
   const iconNode = icon ? (
     <span className="lia-btn__icon" aria-hidden="true">
@@ -59,7 +57,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         `lia-btn--${variant}`,
         `lia-btn--${size}`,
         block && 'lia-btn--block',
-        className,
+        className
       )}
       onClick={(event) => {
         if (disabled) {

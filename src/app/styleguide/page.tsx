@@ -67,10 +67,7 @@ export default function StyleguidePage() {
   }
 
   return (
-    <div
-      className="mx-auto px-5 py-6"
-      style={{ maxWidth: 'var(--container-md)' }}
-    >
+    <div className="mx-auto px-5 py-6" style={{ maxWidth: 'var(--container-md)' }}>
       <h1
         className="mb-8 font-bold text-[var(--text-strong)]"
         style={{ fontSize: 'var(--text-3xl)' }}
@@ -146,12 +143,7 @@ export default function StyleguidePage() {
 
         <Row label="Textarea">
           <div style={{ width: '24rem' }}>
-            <Field
-              as="textarea"
-              label="Resenha"
-              placeholder="Escreva sua resenha aqui…"
-              rows={5}
-            />
+            <Field as="textarea" label="Resenha" placeholder="Escreva sua resenha aqui…" rows={5} />
           </div>
         </Row>
 

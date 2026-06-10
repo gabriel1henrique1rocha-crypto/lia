@@ -36,7 +36,7 @@ describe('Field', () => {
     render(
       <Field label="Gênero" id="genero" as="select">
         <option value="a">A</option>
-      </Field>,
+      </Field>
     )
     const select = screen.getByLabelText('Gênero')
     expect(select.tagName).toBe('SELECT')

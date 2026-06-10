@@ -13,12 +13,11 @@ export interface LinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   external?: boolean
 }
 
-const cx = (...parts: Array<string | false | undefined>) =>
-  parts.filter(Boolean).join(' ')
+const cx = (...parts: Array<string | false | undefined>) => parts.filter(Boolean).join(' ')
 
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
   { variant = 'default', external = false, className, children, target, rel, ...rest },
-  ref,
+  ref
 ) {
   return (
     <a
@@ -29,9 +28,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
       {...rest}
     >
       {children}
-      {external && (
-        <ExternalLink className="lia-link__external" size={14} aria-hidden="true" />
-      )}
+      {external && <ExternalLink className="lia-link__external" size={14} aria-hidden="true" />}
     </a>
   )
 })

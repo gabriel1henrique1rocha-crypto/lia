@@ -14,7 +14,7 @@ describe('Link', () => {
     render(
       <Link href="/x" variant="quiet">
         Quieto
-      </Link>,
+      </Link>
     )
     expect(screen.getByRole('link', { name: 'Quieto' })).toHaveClass('lia-link--quiet')
   })
@@ -23,7 +23,7 @@ describe('Link', () => {
     render(
       <Link href="https://exemplo.com" external>
         Externo
-      </Link>,
+      </Link>
     )
     const link = screen.getByRole('link', { name: 'Externo' })
     expect(link).toHaveAttribute('target', '_blank')

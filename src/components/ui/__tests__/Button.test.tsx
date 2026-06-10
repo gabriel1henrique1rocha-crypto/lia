@@ -14,7 +14,7 @@ describe('Button', () => {
     render(
       <Button variant="ghost" size="lg">
         Cancelar
-      </Button>,
+      </Button>
     )
     const btn = screen.getByRole('button', { name: 'Cancelar' })
     expect(btn).toHaveClass('lia-btn--ghost', 'lia-btn--lg')
@@ -25,7 +25,7 @@ describe('Button', () => {
     render(
       <Button disabled onClick={onClick}>
         Enviar
-      </Button>,
+      </Button>
     )
     const btn = screen.getByRole('button', { name: 'Enviar' })
     expect(btn).toHaveAttribute('aria-disabled', 'true')
@@ -36,9 +36,7 @@ describe('Button', () => {
   })
 
   it('renderiza o ícone decorativo com aria-hidden', () => {
-    render(
-      <Button icon={<svg data-testid="ico" />}>Com ícone</Button>,
-    )
+    render(<Button icon={<svg data-testid="ico" />}>Com ícone</Button>)
     const wrapper = screen.getByTestId('ico').parentElement
     expect(wrapper).toHaveClass('lia-btn__icon')
     expect(wrapper).toHaveAttribute('aria-hidden', 'true')
