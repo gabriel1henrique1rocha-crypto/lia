@@ -1,0 +1,25 @@
+# Normaliza line endings para LF no repositório; checkout converte para CRLF no Windows
+* text=auto
+
+# Código-fonte: sempre LF, nunca detectado como binário
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.css  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.sql  text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.env.example text eol=lf
+
+# Binários: nunca manipular
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff2 binary
+*.woff  binary
