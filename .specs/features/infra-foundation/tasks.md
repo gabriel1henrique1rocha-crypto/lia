@@ -582,9 +582,9 @@ Passos:
 | --- | --- | --- | --- | --- |
 | T-01 Scaffold | INFRA-01,02 | — | — | `pending` |
 | T-02 Supabase env | INFRA-04 | T-01 | [P] T-04 | `done` |
-| T-03 Migrations | INFRA-05,06 | T-02 | [P] T-05 | `pending` |
+| T-03 Migrations | INFRA-05,06 | T-02 | [P] T-05 | `done` |
 | T-04 Token layer | INFRA-07,08,09 | T-01 | [P] T-02 | `done` |
-| T-05 Font layer | INFRA-03p,10 | T-04 | [P] T-03 | `pending` |
+| T-05 Font layer | INFRA-03p,10 | T-04 | [P] T-03 | `done` |
 | T-06 Base components | INFRA-11,12,13 | T-05 | — | `pending` |
 | T-07 Styleguide | INFRA-15,16 (alvo) | T-06 | [P] T-08 | `pending` |
 | T-08 Placeholder | INFRA-03 | T-05,T-06 | [P] T-07 | `pending` |
