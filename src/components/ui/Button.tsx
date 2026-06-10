@@ -1,3 +1,5 @@
+'use client'
+
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost'

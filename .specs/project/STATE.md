@@ -1,6 +1,6 @@
 # State — LIA
 
-**Last Updated:** 2026-06-07
+**Last Updated:** 2026-06-10
 **Current Work:** `infra-foundation` (M0) — fase **Tasks** concluída ([tasks.md](../features/infra-foundation/tasks.md), 10 tasks · 17/17 requisitos mapeados), pronta para **Execute**
 
 ---
@@ -29,6 +29,14 @@
 **Reason:** CSS-first satisfaz INFRA-07 nativamente; reset + chaves explícitas resolvem a colisão da INFRA-08.
 **Trade-off:** v4 mais novo; `p-8`=64px diverge da convenção numérica do Tailwind (documentado).
 **Impact:** sem `tailwind.config.js`; componentes consomem só tokens. ADR completa em [DECISIONS.md](DECISIONS.md) D-07.
+
+---
+
+## Technical Debt
+
+| ID | Descrição | Severidade | Milestone sugerido |
+| --- | --- | --- | --- |
+| TD-01 | T-06/T-07 marcou os 4 componentes base como `'use client'` por causa do `useId` no `Field`. `Button`, `Link` e `Card` são candidatos a Server Component (sem hooks); separar reduz JS enviado ao cliente e melhora Core Web Vitals (TBT/INP). | Leve | M4 |
 
 ---
 

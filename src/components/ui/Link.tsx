@@ -1,3 +1,5 @@
+'use client'
+
 import { forwardRef, type AnchorHTMLAttributes } from 'react'
 import { ExternalLink } from 'lucide-react'
 
