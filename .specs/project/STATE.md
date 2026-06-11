@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **Execute Fase 4 concluída** (T-18 BookDetails + T-21 seed). Componente de exibição (Server Component, axe 0 críticos) e seed idempotente (4 clássicos PT, ISBN nulo) prontos; 75 testes verdes; seed verificado no banco local (4+4 linhas). Aguardando verificação dos gates do usuário antes da Fase 5 (T-19 CSS). Branch `feat/book-data`.
+**Current Work:** M1 `book-data` — **Execute Fase 5 concluída** (T-19 `.lia-book-details` em globals.css, só tokens; build verde). DD-9 registrado no design (bloco Tradução irmão da dl, a11y > spec, aprovado). Aguardando verificação antes da Fase 6 (T-20 styleguide seção Ficha). Branch `feat/book-data`.
 
 ---
 

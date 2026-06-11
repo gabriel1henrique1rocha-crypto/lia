@@ -411,7 +411,7 @@ Campos exibidos: Autor, Gênero (`book.genre?.name`), Editora, Ano, Páginas, Id
 | **Reuses** | padrão `.lia-card`, `.lia-field` em [globals.css:210](../../../src/app/globals.css#L210) |
 | **Tests** | none |
 | **Gate** | build: `npm run build` |
-| **Status** | `pending` |
+| **Status** | `done` (build ✅; só tokens, sem hex; contraste AA visual no T-20) |
 
 **What**: Adicionar `.lia-book-details`, `.lia-book-details dt`, `.lia-book-details dd`, `.lia-book-details__group` em `@layer components`, consumindo **apenas tokens** do `@theme` (sem hex, sem valores hardcoded).
 
@@ -530,7 +530,7 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 | T-16 | schema.ts + testes | `done` |
 | T-17 | queries.ts | `done` |
 | T-18 | BookDetails.tsx + testes | `done` |
-| T-19 | .lia-book-details globals.css | `pending` |
+| T-19 | .lia-book-details globals.css | `done` |
 | T-20 | Styleguide seção Ficha | `pending` |
 | T-21 | seed.sql + db:seed | `done` |
 | T-22 | RLS integration test (local) | `pending` |
