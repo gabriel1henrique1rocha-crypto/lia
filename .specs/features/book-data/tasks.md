@@ -495,8 +495,8 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 | **Where** | `src/lib/book/__tests__/rls.integration.test.ts` |
 | **Reuses** | client anon de [src/lib/supabase/client.ts](../../../src/lib/supabase/client.ts) |
 | **Tests** | integration (local Supabase — **não roda no CI atual**, ver TD-02) |
-| **Gate** | manual: `supabase start && npm test -- rls.integration` |
-| **Status** | `pending` |
+| **Gate** | manual (local): `RUN_RLS_INTEGRATION=1 npx vitest run …/rls.integration.test.ts` |
+| **Status** | `done` (4/4 verde no local; PULADO no CI via `describe.skipIf`) |
 
 > **Dívida TD-02**: este teste roda somente com `supabase start`. O CI não tem Supabase; adicionar o serviço ao pipeline é avaliado no M4. O arquivo DEVE conter um comentário `// LOCAL-ONLY — ver TD-02 em STATE.md` e ser excluído do coverage do CI via `vitest.config.ts` se necessário.
 
@@ -533,6 +533,6 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 | T-19 | .lia-book-details globals.css | `done` |
 | T-20 | Styleguide seção Ficha | `done` |
 | T-21 | seed.sql + db:seed | `done` |
-| T-22 | RLS integration test (local) | `pending` |
+| T-22 | RLS integration test (local) | `done` |
 
-**12 tasks · 17/17 reqs mapeados · pronto para execução**
+**12 tasks · 17/17 reqs mapeados · ✅ 12/12 executadas — feature completa, pronta para PR**

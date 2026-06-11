@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **Execute Fase 6 concluída** (T-20 seção Ficha no /styleguide, 3 casos). Gates a11y verdes sobre a ficha renderizada: axe 0 críticos + Lighthouse a11y 100. Falta só a Fase 7: T-22 (teste de integração RLS local-only, TD-02). Branch `feat/book-data`.
+**Current Work:** M1 `book-data` — **✅ FEATURE COMPLETA** (T-11..T-22, 12/12 tasks, 17/17 reqs). Última: T-22 (integração RLS local-only, 4/4 verde). Pronta para **PR** a partir de `feat/book-data`. Próximo: abrir o PR e seguir para a próxima feature do M1.
 
 ---
 
@@ -37,7 +37,7 @@
 | ID | Descrição | Severidade | Milestone sugerido |
 | --- | --- | --- | --- |
 | TD-01 | T-06/T-07 marcou os 4 componentes base como `'use client'` por causa do `useId` no `Field`. `Button`, `Link` e `Card` são candidatos a Server Component (sem hooks); separar reduz JS enviado ao cliente e melhora Core Web Vitals (TBT/INP). | Leve | M4 |
-| TD-02 | Testes de integração de RLS (`BOOK-11`, `BOOK-17`) rodam **apenas localmente** (Supabase local). O CI não tem Supabase/Postgres; adicionar o serviço ao pipeline e mover esses testes para o CI. | Média | M4 |
+| TD-02 | Testes de integração de RLS (`BOOK-11`, `BOOK-17`) rodam **apenas localmente** (Supabase local). Implementado em `src/lib/book/__tests__/rls.integration.test.ts`, guardado por `RUN_RLS_INTEGRATION=1` + `describe.skipIf` (PULA no CI). Credenciais lidas só de env (`SUPABASE_LOCAL_*` no `.env.local`, gitignored — **nunca hardcoded**; `vitest.config` carrega via `loadEnv`). Rodar: `npx supabase start && npx supabase db reset`, depois `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/book/__tests__/rls.integration.test.ts`. Mover para o CI (subir Supabase no pipeline) avaliado no M4. | Média | M4 |
 
 ---
 
@@ -93,6 +93,7 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Desenhar a feature `book-data` (design.md) — 12 componentes, 8 decisões (DD-1..8); 17/17 reqs endereçados
 - [x] Revisar design de `book-data` — aprovado (DD-1..8 ok, TD-02 registrado)
 - [x] Fase Tasks de `book-data` concluída — 12 tasks (T-11..T-22), 17/17 reqs mapeados
+- [x] **Execute `book-data` concluído** — 12/12 tasks, 7 fases; build/typecheck/test/axe/Lighthouse verdes; RLS local 4/4. Pronto para PR (branch `feat/book-data`)
 - [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — segue para as features de resenha (book-data cobre só `book`)
 
 ---
