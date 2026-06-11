@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **Execute Fase 5 concluída** (T-19 `.lia-book-details` em globals.css, só tokens; build verde). DD-9 registrado no design (bloco Tradução irmão da dl, a11y > spec, aprovado). Aguardando verificação antes da Fase 6 (T-20 styleguide seção Ficha). Branch `feat/book-data`.
+**Current Work:** M1 `book-data` — **Execute Fase 6 concluída** (T-20 seção Ficha no /styleguide, 3 casos). Gates a11y verdes sobre a ficha renderizada: axe 0 críticos + Lighthouse a11y 100. Falta só a Fase 7: T-22 (teste de integração RLS local-only, TD-02). Branch `feat/book-data`.
 
 ---
 

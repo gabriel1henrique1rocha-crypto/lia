@@ -435,7 +435,7 @@ Campos exibidos: Autor, Gênero (`book.genre?.name`), Editora, Ano, Páginas, Id
 | **Reuses** | helpers `Section`/`Row` existentes; gate axe+Lighthouse do M0 já cobre `/styleguide` |
 | **Tests** | a11y (Playwright + axe + Lighthouse CI) |
 | **Gate** | `npm run build && npm run test:a11y && npm run lhci` |
-| **Status** | `pending` |
+| **Status** | `done` (build ✅; axe 0 críticos ✅; Lighthouse a11y 100 ✅) |
 
 **What**: Adicionar `<Section id="ficha" title="Ficha do Livro">` com 3 casos de `<BookDetails>` usando dados mock locais (sem banco): **completa** (todos os campos + ISBN), **mínima** (title/author/genre), **com tradução** (translator + translatedFrom).
 
@@ -531,7 +531,7 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 | T-17 | queries.ts | `done` |
 | T-18 | BookDetails.tsx + testes | `done` |
 | T-19 | .lia-book-details globals.css | `done` |
-| T-20 | Styleguide seção Ficha | `pending` |
+| T-20 | Styleguide seção Ficha | `done` |
 | T-21 | seed.sql + db:seed | `done` |
 | T-22 | RLS integration test (local) | `pending` |
 
