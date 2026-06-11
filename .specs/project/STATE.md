@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **Execute Fase 3 concluída** (T-16 schema.ts + T-17 queries.ts). Camada de validação (zod) e leitura (queries) prontas; 64 testes verdes. Aguardando verificação dos gates do usuário antes da Fase 4 (T-18 BookDetails + T-21 seed). Branch `feat/book-data`.
+**Current Work:** M1 `book-data` — **Execute Fase 4 concluída** (T-18 BookDetails + T-21 seed). Componente de exibição (Server Component, axe 0 críticos) e seed idempotente (4 clássicos PT, ISBN nulo) prontos; 75 testes verdes; seed verificado no banco local (4+4 linhas). Aguardando verificação dos gates do usuário antes da Fase 5 (T-19 CSS). Branch `feat/book-data`.
 
 ---
 

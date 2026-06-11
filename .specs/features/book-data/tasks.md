@@ -372,7 +372,7 @@ export async function listBooks(): Promise<BookView[]>
 | **Reuses** | padrão Server Component do [Card.tsx](../../../src/components/ui/Card.tsx); helper `cx`; `languageLabel` (T-12); `formatIsbn` (T-11) |
 | **Tests** | componente (Vitest + RTL) |
 | **Gate** | quick: `npm run typecheck && npm test` |
-| **Status** | `pending` |
+| **Status** | `done` (11 testes ✅, incl. axe 0 críticos) |
 
 **What**: Criar `BookDetails` como Server Component (`<dl className="lia-book-details">`, pares `<dt>/<dd>` apenas para campos presentes) com suporte ao bloco de tradução (sub-`<dl>` com heading configurável).
 
@@ -460,7 +460,7 @@ Campos exibidos: Autor, Gênero (`book.genre?.name`), Editora, Ano, Páginas, Id
 | **Reuses** | mecanismo `[db.seed]` do `supabase/config.toml`; padrão `on conflict (id) do nothing` |
 | **Tests** | none (verificação manual local) |
 | **Gate** | manual: `supabase db reset` local → contar linhas |
-| **Status** | `pending` |
+| **Status** | `done` (local: 4 gêneros + 4 livros, genre_id ok, idempotente ✅; ISBN nulo) |
 
 **What**: Criar `supabase/seed.sql` idempotente com:
 - 4 gêneros (UUIDs fixos): Romance, Realismo, Romantismo, Naturalismo
@@ -468,19 +468,19 @@ Campos exibidos: Autor, Gênero (`book.genre?.name`), Editora, Ano, Páginas, Id
 
 Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em `package.json`.
 
-**Dados**:
-| Título | Autor | Gênero | Ano | ISBN |
-| --- | --- | --- | --- | --- |
-| Dom Casmurro | Machado de Assis | Romance | 1899 | — |
-| O Crime do Padre Amaro | Eça de Queirós | Realismo | 1875 | — |
-| Iracema | José de Alencar | Romantismo | 1865 | — |
-| O Cortiço | Aluísio Azevedo | Naturalismo | 1890 | (ISBN de edição moderna válida, ex.: 9788520932051) |
+**Dados** (decisão do usuário na Fase 4: **todos com ISBN NULO** — obras pré-1970 não têm ISBN original; não inventar nem copiar exemplos errados do spec):
+| Título | Autor | Gênero | Ano | ISBN | Idioma |
+| --- | --- | --- | --- | --- | --- |
+| Dom Casmurro | Machado de Assis | Romance | 1899 | NULL | pt |
+| O Crime do Padre Amaro | Eça de Queirós | Realismo | 1875 | NULL | pt (Portugal) |
+| Iracema | José de Alencar | Romantismo | 1865 | NULL | pt |
+| O Cortiço | Aluísio Azevedo | Naturalismo | 1890 | NULL | pt |
 
 **Done when**:
-- [ ] `supabase db reset` local → 4 livros + 4 gêneros, todos com `genre_id` preenchido
-- [ ] Reexecutar `supabase db reset` → sem duplicatas
-- [ ] Livro(s) com ISBN passam `isValidIsbn()` manualmente
-- [ ] Script `db:seed` listado em `package.json`
+- [x] `supabase db reset` local → 4 livros + 4 gêneros, todos com `genre_id` preenchido
+- [x] Reexecutar `supabase db reset` → sem duplicatas
+- [x] ~~Livro(s) com ISBN passam `isValidIsbn()`~~ N/A — todos os ISBNs são NULL (decisão Fase 4)
+- [x] Script `db:seed` listado em `package.json`
 
 **Commit**: `feat(db): T-21 seed — 4 clássicos PT + gêneros (idempotente, UUIDs fixos)`
 
@@ -529,10 +529,10 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 | T-15 | Regen database.types.ts | `done` |
 | T-16 | schema.ts + testes | `done` |
 | T-17 | queries.ts | `done` |
-| T-18 | BookDetails.tsx + testes | `pending` |
+| T-18 | BookDetails.tsx + testes | `done` |
 | T-19 | .lia-book-details globals.css | `pending` |
 | T-20 | Styleguide seção Ficha | `pending` |
-| T-21 | seed.sql + db:seed | `pending` |
+| T-21 | seed.sql + db:seed | `done` |
 | T-22 | RLS integration test (local) | `pending` |
 
 **12 tasks · 17/17 reqs mapeados · pronto para execução**
