@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:a11y": "playwright test",
     "lhci": "lhci autorun",
+    "db:seed": "npx supabase db query --linked --file supabase/seed.sql",
     "format:check": "prettier --check ."
   },
   "dependencies": {
