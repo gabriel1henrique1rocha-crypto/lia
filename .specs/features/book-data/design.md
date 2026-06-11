@@ -1,6 +1,6 @@
 # book-data — Design
 
-**Spec**: [spec.md](spec.md) · **Status**: Draft
+**Spec**: [spec.md](spec.md) · **Status**: Approved
 **Milestone**: M1 — Núcleo de leitura pública · **Stack**: Next.js (App Router) + React + TypeScript + Tailwind v4 + Supabase
 > Documentação em português; nomes de feature, schema, identificadores e código em inglês.
 

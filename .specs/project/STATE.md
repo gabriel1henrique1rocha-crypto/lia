@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **Design** concluído (design.md, DD-1..8). Aguardando revisão do usuário antes da fase Tasks. Branch `feat/book-data`.
+**Current Work:** M1 `book-data` — **Tasks** criadas (T-11..T-22, 12 tasks, 17/17 reqs mapeados). Pronto para execução. Branch `feat/book-data`.
 
 ---
 
@@ -37,6 +37,7 @@
 | ID | Descrição | Severidade | Milestone sugerido |
 | --- | --- | --- | --- |
 | TD-01 | T-06/T-07 marcou os 4 componentes base como `'use client'` por causa do `useId` no `Field`. `Button`, `Link` e `Card` são candidatos a Server Component (sem hooks); separar reduz JS enviado ao cliente e melhora Core Web Vitals (TBT/INP). | Leve | M4 |
+| TD-02 | Testes de integração de RLS (`BOOK-11`, `BOOK-17`) rodam **apenas localmente** (Supabase local). O CI não tem Supabase/Postgres; adicionar o serviço ao pipeline e mover esses testes para o CI. | Média | M4 |
 
 ---
 
@@ -90,7 +91,8 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [ ] book-data: decisões do Specify registradas — ISBN **opcional, validado se presente** (checksum ISBN-10/13, armazenado normalizado, exibido formatado); seed popula **só livros + gêneros** (resenhas nas features de resenha); `genre_id` endurecido para NOT NULL
 - [x] Revisar spec de `book-data` — aprovado; ajuste: RLS de **leitura pública (SELECT) de `book`** entra nesta feature (BOOK-17), escrita fica no M2; `cover_url` confirmado como referência textual (imagem em `storage-covers`)
 - [x] Desenhar a feature `book-data` (design.md) — 12 componentes, 8 decisões (DD-1..8); 17/17 reqs endereçados
-- [ ] Revisar design de `book-data` antes da fase Tasks
+- [x] Revisar design de `book-data` — aprovado (DD-1..8 ok, TD-02 registrado)
+- [x] Fase Tasks de `book-data` concluída — 12 tasks (T-11..T-22), 17/17 reqs mapeados
 - [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — segue para as features de resenha (book-data cobre só `book`)
 
 ---
