@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M0 `infra-foundation` **concluído** (T-01 → T-10 done). Próximo: M1 `review-listing-search`.
+**Current Work:** M1 `book-data` — Specify **aprovado** (spec.md, 17 reqs BOOK-01..17). Em fase **Design**. Branch `feat/book-data`.
 
 ---
 
@@ -86,7 +86,11 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] T-10: migration aplicada no Supabase remoto (deploy M0 done)
 - [x] M0 `infra-foundation` **concluído** — CI verde, RLS deny-by-default ativo na nuvem
 - [ ] Handoff M1: adicionar RLS policies de leitura (`status='published'`) — M0 entrega RLS deny-by-default
-- [ ] Iniciar M1: `review-listing-search`
+- [x] Iniciar M1 pela feature `book-data` (ficha técnica) — spec.md criado
+- [ ] book-data: decisões do Specify registradas — ISBN **opcional, validado se presente** (checksum ISBN-10/13, armazenado normalizado, exibido formatado); seed popula **só livros + gêneros** (resenhas nas features de resenha); `genre_id` endurecido para NOT NULL
+- [x] Revisar spec de `book-data` — aprovado; ajuste: RLS de **leitura pública (SELECT) de `book`** entra nesta feature (BOOK-17), escrita fica no M2; `cover_url` confirmado como referência textual (imagem em `storage-covers`)
+- [ ] Desenhar a feature `book-data` (Design phase)
+- [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — segue para as features de resenha (book-data cobre só `book`)
 
 ---
 
