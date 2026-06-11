@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { Link } from '@/components/ui/Link'
 import { Card } from '@/components/ui/Card'
+import { BookDetails } from '@/components/book/BookDetails'
+import type { BookView } from '@/lib/book/queries'
 
 /**
  * Rota de auditoria a11y. Só acessível quando ENABLE_STYLEGUIDE=true (server-side).
@@ -58,6 +60,63 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </div>
   )
 }
+
+/* ── mocks da Ficha (dados ilustrativos; não dependem do banco) ──────── */
+
+// O ISBN abaixo tem checksum válido (9783161484100) e serve só para demonstrar
+// a formatação — não é o ISBN real da obra.
+const fichaCompleta: BookView = {
+  id: '10000000-0000-4000-8000-000000000001',
+  title: 'O Nome da Rosa',
+  author: 'Umberto Eco',
+  genre_id: '20000000-0000-4000-8000-000000000001',
+  publisher: 'Editora Record',
+  isbn: '9783161484100',
+  cover_url: null,
+  year: 1980,
+  pages: 512,
+  original_language: 'it',
+  translator: null,
+  translated_from: null,
+  created_at: '2024-01-01T00:00:00Z',
+  genre: { name: 'Romance', slug: 'romance' },
+}
+
+const fichaMinima: BookView = {
+  id: '10000000-0000-4000-8000-000000000002',
+  title: 'Iracema',
+  author: 'José de Alencar',
+  genre_id: '20000000-0000-4000-8000-000000000002',
+  publisher: null,
+  isbn: null,
+  cover_url: null,
+  year: null,
+  pages: null,
+  original_language: null,
+  translator: null,
+  translated_from: null,
+  created_at: '2024-01-01T00:00:00Z',
+  genre: { name: 'Romantismo', slug: 'romantismo' },
+}
+
+const fichaTraducao: BookView = {
+  id: '10000000-0000-4000-8000-000000000003',
+  title: 'Crime e Castigo',
+  author: 'Fiódor Dostoiévski',
+  genre_id: '20000000-0000-4000-8000-000000000001',
+  publisher: 'Editora 34',
+  isbn: null,
+  cover_url: null,
+  year: 1866,
+  pages: 608,
+  original_language: 'ru',
+  translator: 'Paulo Bezerra',
+  translated_from: 'ru',
+  created_at: '2024-01-01T00:00:00Z',
+  genre: { name: 'Romance', slug: 'romance' },
+}
+
+const fichaCardStyle = { width: '26rem', maxWidth: '100%', gap: 'var(--spacing-4)' }
 
 /* ── página ────────────────────────────────────────────────────────── */
 
@@ -215,6 +274,30 @@ export default function StyleguidePage() {
                 Ver resenha →
               </span>
             </Card.Footer>
+          </Card>
+        </Row>
+      </Section>
+
+      {/* ── Ficha do Livro (BookDetails) ─────────────────────────── */}
+      <Section id="ficha" title="Ficha do Livro">
+        <Row label="Completa — todos os campos + ISBN formatado">
+          <Card className="p-5" style={fichaCardStyle}>
+            <Card.Title as="h3">{fichaCompleta.title}</Card.Title>
+            <BookDetails book={fichaCompleta} headingLevel={4} />
+          </Card>
+        </Row>
+
+        <Row label="Mínima — só obrigatórios (opcionais omitidos do dl)">
+          <Card className="p-5" style={fichaCardStyle}>
+            <Card.Title as="h3">{fichaMinima.title}</Card.Title>
+            <BookDetails book={fichaMinima} headingLevel={4} />
+          </Card>
+        </Row>
+
+        <Row label="Com tradução — bloco irmão da dl (heading + sub-dl)">
+          <Card className="p-5" style={fichaCardStyle}>
+            <Card.Title as="h3">{fichaTraducao.title}</Card.Title>
+            <BookDetails book={fichaTraducao} headingLevel={4} />
           </Card>
         </Row>
       </Section>
