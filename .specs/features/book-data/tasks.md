@@ -143,7 +143,7 @@ Todos os checks passaram. ✅
 | **Reuses** | padrão de função pura TS (sem deps externas) |
 | **Tests** | unit (Vitest) |
 | **Gate** | quick: `npm run typecheck && npm test` |
-| **Status** | `pending` |
+| **Status** | `done` (24 testes ✅) |
 
 **What**: Criar `isbn.ts` com 5 funções exportadas: `normalizeIsbn`, `isValidIsbn10`, `isValidIsbn13`, `isValidIsbn`, `formatIsbn`; e cobrir com testes unitários co-localizados.
 
@@ -180,7 +180,7 @@ export function formatIsbn(value: string): string          // hifenização prag
 | **Reuses** | padrão de mapa + função pura TS |
 | **Tests** | unit (Vitest) |
 | **Gate** | quick: `npm run typecheck && npm test` |
-| **Status** | `pending` |
+| **Status** | `done` (5 testes ✅) |
 
 **What**: Criar `language.ts` com mapa ISO 639-1 → rótulo PT e a função `languageLabel`; cobrir com testes unitários.
 
@@ -210,7 +210,7 @@ export function languageLabel(code: string): string // fallback: retorna o próp
 | **Reuses** | padrão `DO $$ … IF NOT EXISTS` de [0001](../../../supabase/migrations/0001_core_schema.sql) |
 | **Tests** | none (verificação manual no banco local) |
 | **Gate** | manual: aplicar localmente + inspecionar schema |
-| **Status** | `pending` |
+| **Status** | `done` (arquivo criado — gate manual pendente de verificação) |
 
 **What**: Criar a migration idempotente que endurece a tabela `book`:
 - `genre_id NOT NULL` (guarda: só aplica se `is_nullable='YES'`)
@@ -522,9 +522,9 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 
 | Task | Descrição | Status |
 | --- | --- | --- |
-| T-11 | isbn.ts + testes | `pending` |
-| T-12 | language.ts + testes | `pending` |
-| T-13 | Migration 0002 hardening | `pending` |
+| T-11 | isbn.ts + testes | `done` |
+| T-12 | language.ts + testes | `done` |
+| T-13 | Migration 0002 hardening | `done` (gate manual pendente) |
 | T-14 | Migration 0003 RLS policy | `pending` |
 | T-15 | Regen database.types.ts | `pending` |
 | T-16 | schema.ts + testes | `pending` |

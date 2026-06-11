@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **Tasks** criadas (T-11..T-22, 12 tasks, 17/17 reqs mapeados). Pronto para execução. Branch `feat/book-data`.
+**Current Work:** M1 `book-data` — **Execute Fase 1 concluída** (T-11, T-12, T-13). Aguardando verificação dos gates do usuário antes da Fase 2. Branch `feat/book-data`.
 
 ---
 
@@ -49,7 +49,7 @@ Nenhum.
 
 ## Lessons Learned
 
-Nenhuma registrada ainda.
+- **ISBNs de exemplo nos specs têm checksum inválido** (2026-06-10, descoberto no T-11). Os ISBNs citados nas tasks/design (`9788535902775`, `8535902770`) e no seed (`9788520932051` para O Cortiço) **não passam** na validação de checksum — foram escritos sem calcular o dígito verificador. A implementação do `isbn.ts` é correta e os rejeita. **Aplicar em T-16 e T-21:** usar ISBNs com checksum verificado (ex.: `9783161484100`, `0306406152`, `080442957X`) ou recalcular o dígito verificador dos ISBNs reais antes de usá-los no seed/schema; não copiar os exemplos do spec verbatim.
 
 ---
 
