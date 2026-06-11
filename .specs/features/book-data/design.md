@@ -17,7 +17,8 @@ A tabela `book` já existe (M0). Esta feature **endurece** o schema, adiciona um
 | DD-3 | CHECK constraints (DB) | `pages > 0`; `year between 1 and 2100` (sanidade); `translator ⇒ translated_from`. A regra "ano não futuro" e o **checksum de ISBN** ficam só na app (não expressáveis como CHECK imutável) | Nota Specify "CHECK vs app"; BOOK-03/10 |
 | DD-4 | Entrega do seed | **`supabase/seed.sql`** idempotente (já apontado por `config.toml` → `[db.seed]`) com **UUIDs fixos** + `on conflict (id) do nothing`; script `db:seed` aplica o mesmo arquivo ao banco **remoto/linkado** | Nota Specify "identidade estável do seed"; BOOK-15/16 |
 | DD-5 | Hifenização do ISBN | Agrupamento **pragmático determinístico** (legível), **não** registration-group-accurate (exigiria as tabelas de faixa ISBN). Limitação documentada — atende "hifenizado de forma legível" | BOOK-08 |
-| DD-6 | Componente de exibição | **Server Component** sem hooks (padrão do [Card](../../../src/components/ui/Card.tsx)), `<dl>/<dt>/<dd>`, classes `.lia-book-details` em `@layer components`, nível de heading do subgrupo de tradução configurável | BOOK-12/13 |
+| DD-6 | Componente de exibição | **Server Component** sem hooks (padrão do [Card](../../../src/components/ui/Card.tsx)), `<dl>/<dt>/<dd>`, classes `.lia-book-details` em `@layer components`, nível de heading do subgrupo de tradução configurável. **O bloco "Tradução" é irmão da `<dl>` principal (não filho)** — ver DD-9 | BOOK-12/13 |
+| DD-9 | Estrutura do bloco de tradução | O heading "Tradução" + sub-`<dl>` ficam num `<div className="lia-book-details__group">` **adjacente** à `<dl>` principal, não aninhados dentro dela. Um heading não é conteúdo válido dentro de `<dl>` (regra axe `definition-list`); aninhá-lo geraria violação de acessibilidade. **A11y tem prioridade sobre a forma literal do spec** (aprovado na Fase 4). O componente retorna um fragmento: `<dl>` principal + `<div>` do grupo de tradução condicional | BOOK-13; axe (BOOK-14) |
 | DD-7 | Migrations | **Duas** migrations de propósito único, idempotentes com `DO`-guards: `0002` (hardening) e `0003` (policy de leitura) | BOOK-04/17 |
 | DD-8 | Conjunto do seed | 4 clássicos PT (1 obra por autor) + gêneros mínimos; todos originais em português (`original_language='pt'`, sem bloco de tradução). 1–2 com ISBN de edição moderna **válido** para exercitar BOOK-05 | BOOK-16 |
 
@@ -161,9 +162,9 @@ graph TD
 ### 8. Exibição — `src/components/book/BookDetails.tsx` · BOOK-12, BOOK-13
 
 - **Purpose**: Renderizar a ficha com marcação semântica (DD-6).
-- **Interfaces**: `BookDetails({ book, headingLevel = 3 }: { book: BookView; headingLevel?: 2|3|4 })`.
+- **Interfaces**: `BookDetails({ book, headingLevel = 3 }: { book: BookView; headingLevel?: 2|3|4 })`. Retorna um **fragmento**: a `<dl>` principal seguida (quando há tradução) do `<div>` do grupo.
   - Estrutura: `<dl className="lia-book-details">` com pares **somente para campos presentes** (omite nulos — BOOK-12 AC#2): Autor, Gênero (de `book.genre?.name`), Editora, Ano, Páginas, Idioma original (`languageLabel`), ISBN (`formatIsbn`).
-  - **Tradução** (BOOK-13): se `translator`/`translated_from`, renderiza um grupo identificável — heading (`h{headingLevel}`) "Tradução" + sub-`<dl>` (Tradutor, Idioma de origem via `languageLabel`).
+  - **Tradução** (BOOK-13, DD-9): se `translator`, renderiza um grupo identificável **irmão** da `<dl>` principal — `<div className="lia-book-details__group">` com heading (`h{headingLevel}`) "Tradução" + um sub-`<dl className="lia-book-details">` (Tradutor, Idioma de origem via `languageLabel`). **Não** aninhado na `<dl>` principal: heading dentro de `<dl>` é inválido (axe `definition-list`).
   - Sem hooks → SSR puro (BOOK-12 AC#4). Sem `<img>` (capa fica em `storage-covers`); a ficha trata só dados textuais.
 - **Dependencies**: `./language` lógica via `@/lib/book/*`, `globals.css`.
 - **Reuses**: padrão server-component do [Card](../../../src/components/ui/Card.tsx); helper `cx`.
