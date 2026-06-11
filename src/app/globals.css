@@ -519,4 +519,40 @@
     font: var(--type-meta);
     color: var(--text-muted);
   }
+
+  /* ---------- FICHA DO LIVRO — .lia-book-details ---------- */
+  /* Lista de descrição rótulo/valor: rótulos (dt) em UI discreta, valores (dd)
+     em corpo editorial. Grid de duas colunas; só tokens (sem cor/fonte nova). */
+  .lia-book-details {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: var(--spacing-5);
+    row-gap: var(--spacing-2);
+    align-items: baseline;
+    margin: 0;
+  }
+  .lia-book-details dt {
+    font: var(--type-label);
+    color: var(--text-muted); /* ink-500 sobre superfície clara ≈ 5.2:1 (AA) */
+  }
+  .lia-book-details dd {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--text-strong);
+  }
+  /* Grupo de tradução: irmão da dl principal (DD-9). Separado por filete sutil. */
+  .lia-book-details__group {
+    margin-top: var(--spacing-5);
+    padding-top: var(--spacing-4);
+    border-top: var(--border-width) solid var(--border-subtle);
+  }
+  .lia-book-details__group-title {
+    margin: 0 0 var(--spacing-3);
+    font: var(--type-label);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--text-secondary); /* ink-700 → contraste forte (AA+) */
+  }
 }
