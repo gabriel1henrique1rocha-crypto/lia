@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **Execute Fase 2 concluída** (T-14, T-15). Migrations 0001-0003 aplicadas no banco local; `database.types.ts` regenerado (genre_id não-nulo). Aguardando verificação dos gates do usuário antes da Fase 3. Branch `feat/book-data`.
+**Current Work:** M1 `book-data` — **Execute Fase 3 concluída** (T-16 schema.ts + T-17 queries.ts). Camada de validação (zod) e leitura (queries) prontas; 64 testes verdes. Aguardando verificação dos gates do usuário antes da Fase 4 (T-18 BookDetails + T-21 seed). Branch `feat/book-data`.
 
 ---
 

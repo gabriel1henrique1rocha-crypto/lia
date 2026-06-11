@@ -303,7 +303,7 @@ Sem policy de `INSERT/UPDATE/DELETE` — escrita permanece deny-by-default.
 | **Reuses** | padrão zod de [src/lib/env.ts](../../../src/lib/env.ts); `isValidIsbn` de T-11 |
 | **Tests** | unit (Vitest) |
 | **Gate** | quick: `npm run typecheck && npm test` |
-| **Status** | `pending` |
+| **Status** | `done` (19 testes ✅, ISBNs de checksum real) |
 
 **What**: Criar `schema.ts` com `bookInputSchema` (zod) e `type BookInput`; cobrir com testes unitários.
 
@@ -339,7 +339,7 @@ export type BookInput = z.infer<typeof bookInputSchema>
 | **Reuses** | [src/lib/supabase/server.ts](../../../src/lib/supabase/server.ts); `Tables<'book'>` de `database.types` |
 | **Tests** | none¹ (integração coberta por T-22) |
 | **Gate** | `npm run typecheck` |
-| **Status** | `pending` |
+| **Status** | `done` (typecheck ✅, eslint/prettier ✅) |
 
 > ¹ Requer banco real; teste unitário com mock não acrescenta cobertura de contrato. Integração em T-22.
 
@@ -527,8 +527,8 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 | T-13 | Migration 0002 hardening | `done` (gate manual pendente) |
 | T-14 | Migration 0003 RLS policy | `done` (gate manual pendente) |
 | T-15 | Regen database.types.ts | `done` |
-| T-16 | schema.ts + testes | `pending` |
-| T-17 | queries.ts | `pending` |
+| T-16 | schema.ts + testes | `done` |
+| T-17 | queries.ts | `done` |
 | T-18 | BookDetails.tsx + testes | `pending` |
 | T-19 | .lia-book-details globals.css | `pending` |
 | T-20 | Styleguide seção Ficha | `pending` |
