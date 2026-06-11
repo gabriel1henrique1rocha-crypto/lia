@@ -244,7 +244,7 @@ Conteúdo exato no design (seção Data Models).
 | **Reuses** | padrão `DO $$ … IF NOT EXISTS` de [0001](../../../supabase/migrations/0001_core_schema.sql) |
 | **Tests** | none (verificação manual; integração em T-22) |
 | **Gate** | manual: aplicar localmente + inspecionar `pg_policies` |
-| **Status** | `pending` |
+| **Status** | `done` (migration up local aplicou 0003 ✅; inspeção `pg_policies` = gate manual) |
 
 **What**: Criar a migration idempotente que adiciona policy de leitura pública em `book`:
 ```sql
@@ -280,7 +280,7 @@ Sem policy de `INSERT/UPDATE/DELETE` — escrita permanece deny-by-default.
 | **Reuses** | processo já executado no M0 |
 | **Tests** | none (arquivo gerado — verificado por typecheck) |
 | **Gate** | `npm run typecheck` |
-| **Status** | `pending` |
+| **Status** | `done` (genre_id agora `string` não-nulo; typecheck ✅) |
 
 **What**: Aplicar `0002` no banco local (via `supabase db reset` ou `supabase db push`) e rodar `supabase gen types typescript --local > src/lib/database.types.ts` para refletir `genre_id NOT NULL`.
 
@@ -525,8 +525,8 @@ Adicionar script `"db:seed": "supabase db execute --file supabase/seed.sql"` em 
 | T-11 | isbn.ts + testes | `done` |
 | T-12 | language.ts + testes | `done` |
 | T-13 | Migration 0002 hardening | `done` (gate manual pendente) |
-| T-14 | Migration 0003 RLS policy | `pending` |
-| T-15 | Regen database.types.ts | `pending` |
+| T-14 | Migration 0003 RLS policy | `done` (gate manual pendente) |
+| T-15 | Regen database.types.ts | `done` |
 | T-16 | schema.ts + testes | `pending` |
 | T-17 | queries.ts | `pending` |
 | T-18 | BookDetails.tsx + testes | `pending` |
