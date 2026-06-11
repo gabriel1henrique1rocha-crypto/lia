@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** `infra-foundation` (M0) — fase **Tasks** concluída ([tasks.md](../features/infra-foundation/tasks.md), 10 tasks · 17/17 requisitos mapeados), pronta para **Execute**
+**Current Work:** M0 `infra-foundation` **concluído** (T-01 → T-10 done). Próximo: M1 `review-listing-search`.
 
 ---
 
@@ -82,8 +82,11 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Versão do Tailwind confirmada: **v4 (`@theme`)** — ADR D-07 (alimenta INFRA-07)
 - [x] Desenhar a feature `infra-foundation` (M0) — design.md criado
 - [x] Fase Tasks de `infra-foundation` concluída — 10 tasks, 17/17 reqs mapeados
-- [ ] Próximo passo: executar T-01 → iniciar implementação de `infra-foundation`
+- [x] T-01 → T-09: implementação de `infra-foundation` concluída
+- [x] T-10: migration aplicada no Supabase remoto (deploy M0 done)
+- [x] M0 `infra-foundation` **concluído** — CI verde, RLS deny-by-default ativo na nuvem
 - [ ] Handoff M1: adicionar RLS policies de leitura (`status='published'`) — M0 entrega RLS deny-by-default
+- [ ] Iniciar M1: `review-listing-search`
 
 ---
 
