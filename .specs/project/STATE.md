@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-06-10
-**Current Work:** `infra-foundation` (M0) — fase **Tasks** concluída ([tasks.md](../features/infra-foundation/tasks.md), 10 tasks · 17/17 requisitos mapeados), pronta para **Execute**
+**Current Work:** M1 `book-data` — **✅ FEATURE COMPLETA** (T-11..T-22, 12/12 tasks, 17/17 reqs). Última: T-22 (integração RLS local-only, 4/4 verde). Pronta para **PR** a partir de `feat/book-data`. Próximo: abrir o PR e seguir para a próxima feature do M1.
 
 ---
 
@@ -37,6 +37,8 @@
 | ID | Descrição | Severidade | Milestone sugerido |
 | --- | --- | --- | --- |
 | TD-01 | T-06/T-07 marcou os 4 componentes base como `'use client'` por causa do `useId` no `Field`. `Button`, `Link` e `Card` são candidatos a Server Component (sem hooks); separar reduz JS enviado ao cliente e melhora Core Web Vitals (TBT/INP). | Leve | M4 |
+| TD-02 | Testes de integração de RLS (`BOOK-11`, `BOOK-17`) rodam **apenas localmente** (Supabase local). Implementado em `src/lib/book/__tests__/rls.integration.test.ts`, guardado por `RUN_RLS_INTEGRATION=1` + `describe.skipIf` (PULA no CI). Credenciais lidas só de env (`SUPABASE_LOCAL_*` no `.env.local`, gitignored — **nunca hardcoded**; `vitest.config` carrega via `loadEnv`). Rodar: `npx supabase start && npx supabase db reset`, depois `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/book/__tests__/rls.integration.test.ts`. Mover para o CI (subir Supabase no pipeline) avaliado no M4. | Média | M4 |
+| TD-03 | **Pós-2026-05-30, o Supabase não auto-concede GRANTs a tabelas novas** do schema public (`auto_expose_new_tables` → `false` por padrão; campo removido em out/2026). Policies RLS **não bastam** sem GRANT de tabela — o Data API retorna 42501. A migration 0004 cobriu **só** a leitura pública da ficha (`select on book` + `genre`, o join exibido — BOOK-17). **Revisar os GRANTs das demais tabelas** (`review`, `comment`, `recommendation`, `editor`) **e do `service_role`/Data API** numa frente de infra dedicada. Bloqueia o caso (3) do teste RLS (insert de `review` via service_role), hoje `it.skip`. | **Alta** | pré-M2 |
 
 ---
 
@@ -48,7 +50,7 @@ Nenhum.
 
 ## Lessons Learned
 
-Nenhuma registrada ainda.
+- **ISBNs de exemplo nos specs têm checksum inválido** (2026-06-10, descoberto no T-11). Os ISBNs citados nas tasks/design (`9788535902775`, `8535902770`) e no seed (`9788520932051` para O Cortiço) **não passam** na validação de checksum — foram escritos sem calcular o dígito verificador. A implementação do `isbn.ts` é correta e os rejeita. **Aplicar em T-16 e T-21:** usar ISBNs com checksum verificado (ex.: `9783161484100`, `0306406152`, `080442957X`) ou recalcular o dígito verificador dos ISBNs reais antes de usá-los no seed/schema; não copiar os exemplos do spec verbatim.
 
 ---
 
@@ -82,8 +84,18 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Versão do Tailwind confirmada: **v4 (`@theme`)** — ADR D-07 (alimenta INFRA-07)
 - [x] Desenhar a feature `infra-foundation` (M0) — design.md criado
 - [x] Fase Tasks de `infra-foundation` concluída — 10 tasks, 17/17 reqs mapeados
-- [ ] Próximo passo: executar T-01 → iniciar implementação de `infra-foundation`
+- [x] T-01 → T-09: implementação de `infra-foundation` concluída
+- [x] T-10: migration aplicada no Supabase remoto (deploy M0 done)
+- [x] M0 `infra-foundation` **concluído** — CI verde, RLS deny-by-default ativo na nuvem
 - [ ] Handoff M1: adicionar RLS policies de leitura (`status='published'`) — M0 entrega RLS deny-by-default
+- [x] Iniciar M1 pela feature `book-data` (ficha técnica) — spec.md criado
+- [ ] book-data: decisões do Specify registradas — ISBN **opcional, validado se presente** (checksum ISBN-10/13, armazenado normalizado, exibido formatado); seed popula **só livros + gêneros** (resenhas nas features de resenha); `genre_id` endurecido para NOT NULL
+- [x] Revisar spec de `book-data` — aprovado; ajuste: RLS de **leitura pública (SELECT) de `book`** entra nesta feature (BOOK-17), escrita fica no M2; `cover_url` confirmado como referência textual (imagem em `storage-covers`)
+- [x] Desenhar a feature `book-data` (design.md) — 12 componentes, 8 decisões (DD-1..8); 17/17 reqs endereçados
+- [x] Revisar design de `book-data` — aprovado (DD-1..8 ok, TD-02 registrado)
+- [x] Fase Tasks de `book-data` concluída — 12 tasks (T-11..T-22), 17/17 reqs mapeados
+- [x] **Execute `book-data` concluído** — 12/12 tasks, 7 fases; build/typecheck/test/axe/Lighthouse verdes; RLS local 4/4. Pronto para PR (branch `feat/book-data`)
+- [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — segue para as features de resenha (book-data cobre só `book`)
 
 ---
 

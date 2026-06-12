@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -39,7 +39,7 @@ export type Database = {
           author: string
           cover_url: string | null
           created_at: string
-          genre_id: string | null
+          genre_id: string
           id: string
           isbn: string | null
           original_language: string | null
@@ -54,7 +54,7 @@ export type Database = {
           author: string
           cover_url?: string | null
           created_at?: string
-          genre_id?: string | null
+          genre_id: string
           id?: string
           isbn?: string | null
           original_language?: string | null
@@ -69,7 +69,7 @@ export type Database = {
           author?: string
           cover_url?: string | null
           created_at?: string
-          genre_id?: string | null
+          genre_id?: string
           id?: string
           isbn?: string | null
           original_language?: string | null
