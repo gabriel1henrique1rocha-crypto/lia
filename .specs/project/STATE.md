@@ -38,6 +38,7 @@
 | --- | --- | --- | --- |
 | TD-01 | T-06/T-07 marcou os 4 componentes base como `'use client'` por causa do `useId` no `Field`. `Button`, `Link` e `Card` são candidatos a Server Component (sem hooks); separar reduz JS enviado ao cliente e melhora Core Web Vitals (TBT/INP). | Leve | M4 |
 | TD-02 | Testes de integração de RLS (`BOOK-11`, `BOOK-17`) rodam **apenas localmente** (Supabase local). Implementado em `src/lib/book/__tests__/rls.integration.test.ts`, guardado por `RUN_RLS_INTEGRATION=1` + `describe.skipIf` (PULA no CI). Credenciais lidas só de env (`SUPABASE_LOCAL_*` no `.env.local`, gitignored — **nunca hardcoded**; `vitest.config` carrega via `loadEnv`). Rodar: `npx supabase start && npx supabase db reset`, depois `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/book/__tests__/rls.integration.test.ts`. Mover para o CI (subir Supabase no pipeline) avaliado no M4. | Média | M4 |
+| TD-03 | **Pós-2026-05-30, o Supabase não auto-concede GRANTs a tabelas novas** do schema public (`auto_expose_new_tables` → `false` por padrão; campo removido em out/2026). Policies RLS **não bastam** sem GRANT de tabela — o Data API retorna 42501. A migration 0004 cobriu **só** a leitura pública da ficha (`select on book` + `genre`, o join exibido — BOOK-17). **Revisar os GRANTs das demais tabelas** (`review`, `comment`, `recommendation`, `editor`) **e do `service_role`/Data API** numa frente de infra dedicada. Bloqueia o caso (3) do teste RLS (insert de `review` via service_role), hoje `it.skip`. | **Alta** | pré-M2 |
 
 ---
 
