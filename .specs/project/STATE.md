@@ -1,7 +1,7 @@
 # State — LIA
 
-**Last Updated:** 2026-06-11
-**Current Work:** M1 `review-page` — **fase Specify CONCLUÍDA** (spec.md + context.md em `.specs/features/review-page/`, branch `feat/review-page`). 27 reqs (RVW-01..27), 9 stories P1. Decisões de gray areas: C-1 (nota só número, sem estrelas) e C-2 (placeholders M3 com aviso "em breve"). **Aguardando revisão do usuário antes do Design.** | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
+**Last Updated:** 2026-06-12
+**Current Work:** M1 `review-page` — **fase Design APROVADA** (design.md em `.specs/features/review-page/`, branch `feat/review-page`). 27/27 reqs mapeados a componentes. Arquitetura: rota SSR `/resenha/[slug]`, query `getPublishedReviewBySlug` (filtro `status='published'` explícito + RLS/GRANT como 2º gate), componentes novos `BookCover`/`Rating` + util `formatRating`, reuso de `BookDetails`, migration `0005_review_public_read.sql` (policy+grant num só arquivo), seed estendido (4 publicadas + 1 draft no 5º book de teste), teste RLS local-only só-anon, `metadataBase` no layout p/ OG absoluto. Decisões da revisão (2026-06-12): draft via 5º book; `<h2> Resenha` explícito; `metadataBase` no layout — todas ✅. **Próximo: fase Tasks.** Specify concluído (C-1 nota só número; C-2 placeholders "em breve"). | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
 
 ---
 
