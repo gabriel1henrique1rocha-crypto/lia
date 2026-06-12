@@ -1,7 +1,7 @@
 # State — LIA
 
-**Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **✅ FEATURE COMPLETA** (T-11..T-22, 12/12 tasks, 17/17 reqs). Última: T-22 (integração RLS local-only, 4/4 verde). Pronta para **PR** a partir de `feat/book-data`. Próximo: abrir o PR e seguir para a próxima feature do M1.
+**Last Updated:** 2026-06-11
+**Current Work:** M1 `review-page` — **fase Specify CONCLUÍDA** (spec.md + context.md em `.specs/features/review-page/`, branch `feat/review-page`). 27 reqs (RVW-01..27), 9 stories P1. Decisões de gray areas: C-1 (nota só número, sem estrelas) e C-2 (placeholders M3 com aviso "em breve"). **Aguardando revisão do usuário antes do Design.** | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
 
 ---
 
@@ -95,7 +95,8 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Revisar design de `book-data` — aprovado (DD-1..8 ok, TD-02 registrado)
 - [x] Fase Tasks de `book-data` concluída — 12 tasks (T-11..T-22), 17/17 reqs mapeados
 - [x] **Execute `book-data` concluído** — 12/12 tasks, 7 fases; build/typecheck/test/axe/Lighthouse verdes; RLS local 4/4. Pronto para PR (branch `feat/book-data`)
-- [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — segue para as features de resenha (book-data cobre só `book`)
+- [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — **endereçado na spec de `review-page`** (RVW-13/14/15: policy filtrada + GRANT TD-03); a implementar no Execute
+- [x] Especificar a feature `review-page` (M1) — spec.md + context.md criados; gray areas C-1 (nota só número) e C-2 (placeholders "em breve") resolvidas; **aguardando revisão antes do Design**
 
 ---
 
