@@ -44,7 +44,7 @@ describe.skipIf(!RUN)('RLS integration — review (local-only, TD-02)', () => {
     if (!LOCAL_ANON_KEY) {
       throw new Error(
         'Defina SUPABASE_LOCAL_ANON_KEY no .env.local (valor de `npx supabase status`). ' +
-          'A chave não é hardcoded.',
+          'A chave não é hardcoded.'
       )
     }
     anon = createClient<Database>(LOCAL_URL, LOCAL_ANON_KEY, { auth: { persistSession: false } })

@@ -29,11 +29,7 @@ function splitParagraphs(body: string | null): string[] {
 // SEO por requisição (RVW-19/20/21). Em 404 retorna metadata genérico — NÃO
 // vaza dados de resenha inexistente. og:url é resolvida absoluta via metadataBase
 // do layout (T-29). Dedupe da query com generateMetadata via cache() (T-25).
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<Params>
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { slug } = await params
   const review = await getPublishedReviewBySlug(slug)
   if (!review) {

@@ -23,16 +23,14 @@ const REVIEW_SELECT = '*, book(*, genre(name, slug))'
  * Envolvida em `cache()` do React: `generateMetadata` e a `page` chamam esta
  * função na mesma requisição; o cache deduplica para uma única viagem ao banco.
  */
-export const getPublishedReviewBySlug = cache(
-  async (slug: string): Promise<ReviewView | null> => {
-    const supabase = createServerClient()
-    const { data, error } = await supabase
-      .from('review')
-      .select(REVIEW_SELECT)
-      .eq('slug', slug)
-      .eq('status', 'published')
-      .maybeSingle()
-    if (error) throw error
-    return (data as ReviewView | null) ?? null
-  },
-)
+export const getPublishedReviewBySlug = cache(async (slug: string): Promise<ReviewView | null> => {
+  const supabase = createServerClient()
+  const { data, error } = await supabase
+    .from('review')
+    .select(REVIEW_SELECT)
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle()
+  if (error) throw error
+  return (data as ReviewView | null) ?? null
+})
