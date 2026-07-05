@@ -487,6 +487,17 @@
     object-fit: cover;
     background: var(--surface-subtle);
   }
+  /* Capa tipográfica de fallback (BookCover): título sobre fundo de marca
+     quando não há imagem. Só tokens (sem hex). Contraste paper-0/oxblood-700 AA. */
+  .lia-card__media--type {
+    display: flex;
+    align-items: flex-end;
+    padding: var(--spacing-5);
+    background: var(--color-oxblood-700);
+    color: var(--color-paper-0);
+    font: var(--type-heading);
+    text-wrap: balance;
+  }
   .lia-card__body {
     display: flex;
     flex-direction: column;
