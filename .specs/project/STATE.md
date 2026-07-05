@@ -50,6 +50,7 @@ Nenhum.
 
 ## Lessons Learned
 
+- **Gate de código DEVE incluir `npm run format:check` (Prettier), não só typecheck+lint** (2026-07-05, descoberto no PR #2 da `review-page`). No Execute rodei `typecheck` e `eslint` por task, mas **não** o `format:check`; o CI (job `lint + format + types`) reprovou `prettier --check` em 3 arquivos (`page.tsx`, `queries.ts`, `rls.integration.test.ts`) — só formatação, corrigido com `prettier --write` (commit `a150297`). **Aplicar sempre:** o gate quick/full local deve ser `npm run typecheck && npm run lint && npm run format:check && npm test`, espelhando o job do CI. eslint e prettier são gates independentes.
 - **ISBNs de exemplo nos specs têm checksum inválido** (2026-06-10, descoberto no T-11). Os ISBNs citados nas tasks/design (`9788535902775`, `8535902770`) e no seed (`9788520932051` para O Cortiço) **não passam** na validação de checksum — foram escritos sem calcular o dígito verificador. A implementação do `isbn.ts` é correta e os rejeita. **Aplicar em T-16 e T-21:** usar ISBNs com checksum verificado (ex.: `9783161484100`, `0306406152`, `080442957X`) ou recalcular o dígito verificador dos ISBNs reais antes de usá-los no seed/schema; não copiar os exemplos do spec verbatim.
 
 ---
@@ -102,7 +103,7 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Execute `review-page` — **10/10 tasks (T-23..T-32) implementadas e commitadas**; gates de código verdes (typecheck/build/lint + 93 passed/8 skipped). Verificação local Supabase (T-23/24/31/32) pendente (TD-02)
 - [x] Ajuste pré-Execute `review-page` — T-26 dividida (formatRating util + Rating componente), renumeração T-27..T-32, dependency graph corrigido (T-23→T-24 sequencial); código realinhado (`rating.ts`→`formatRating.ts`, commit `7f0d925`)
 - [x] `review-page`: branch pushada para o origin (CI rodando no push)
-- [ ] `review-page`: **abrir o PR** para `main` (corpo pronto em scratchpad `PR-review-page.md`) — bloqueado por `gh`/token ausentes; abrir via web ou instalar `gh`. **Sem merge.**
+- [x] `review-page`: **PR #2 aberto** para `main` (https://github.com/gabriel1henrique1rocha-crypto/lia/pull/2) via `gh` (instalado 2.96.0 + autenticado). CI **verde** após fix de Prettier (`a150297`): lint+format+types, vitest (93/8), axe+lighthouse (`/`+`/styleguide`), Vercel. **Sem merge — aberto para revisão.**
 - [ ] `review-page`: rodar verificação local dos gates de banco (`supabase start && db reset`; axe da rota `/resenha/[slug]`; `RUN_RLS_INTEGRATION=1`)
 - [ ] **TD-03 (Alta, pré-M2):** a migration 0005 (T-23) concede GRANT só a `review`; abrir frente de infra para GRANTs de `comment`/`recommendation`/`editor` + `service_role`/Data API **antes do M2 (`reviews-crud`)**
 
