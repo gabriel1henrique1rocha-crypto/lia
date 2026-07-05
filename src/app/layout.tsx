@@ -23,7 +23,13 @@ const ibmPlexSans = IBM_Plex_Sans({
   variable: '--font-ibm-plex-sans',
 })
 
+// Base para URLs absolutas de metadata (og:url, canonical). Sem ela, URLs
+// relativas de generateMetadata (ex.: /resenha/<slug>) não resolvem absolutas.
+// Env com fallback local determinístico (sem hardcode de domínio de produção).
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'LIA — Leituras e impressões anotadas',
   description: 'Resenhas e anotações de leitura.',
 }

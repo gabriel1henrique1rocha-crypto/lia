@@ -1,7 +1,7 @@
 # State — LIA
 
-**Last Updated:** 2026-06-10
-**Current Work:** M1 `book-data` — **✅ FEATURE COMPLETA** (T-11..T-22, 12/12 tasks, 17/17 reqs). Última: T-22 (integração RLS local-only, 4/4 verde). Pronta para **PR** a partir de `feat/book-data`. Próximo: abrir o PR e seguir para a próxima feature do M1.
+**Last Updated:** 2026-07-05
+**Current Work:** M1 `review-page` — **fase Execute CONCLUÍDA** (branch `feat/review-page`). 10/10 tasks `T-23..T-32` implementadas e commitadas (commits `4a68d7f`→`166890e`; ajuste pré-Execute `7f0d925` dividiu T-26 formatRating/T-27 Rating e renumerou). **Gates de código verdes:** typecheck/build/lint + suíte Vitest **93 passed / 8 skipped** (as 2 suítes RLS local-only puladas no CI); rota `ƒ /resenha/[slug]` compila como dinâmica (SSR). **Verificação local Supabase pendente** (Docker indisponível nesta sessão, padrão TD-02): T-23 (`pg_policies`/grant), T-24 (`db reset` conta linhas), T-30 (axe da rota seeded), T-31 (`RUN_RLS_INTEGRATION=1`) — todos reproduzíveis com `supabase start && db reset`. **⚠️ TD-03 permanece ABERTA:** a 0005 (T-23) concede GRANT só a `review` — não fecha a TD-03 (demais tabelas + service_role pré-M2). **Branch `feat/review-page` PUSHADA** para o origin (CI dispara no push). **PR ainda NÃO aberto** — `gh` CLI ausente + sem `GITHUB_TOKEN` nesta máquina. Corpo do PR pronto no scratchpad (`PR-review-page.md`); abrir via web (https://github.com/gabriel1henrique1rocha-crypto/lia/pull/new/feat/review-page, base `main`) ou instalar `gh` e rodar `gh pr create`. **Sem merge.** Verificações pré-PR: (1) axe/Lighthouse de ROTA da review-page NÃO está no CI (só `/` e `/styleguide`; TD-02) — axe de componente verde no CI; (2) teste RLS anon cobre os 2 lados ✅; (3) TD-03 registrada ABERTA ✅. **Próximo: abrir o PR (ação do usuário) + verificação local dos gates de banco.** | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
 
 ---
 
@@ -50,6 +50,7 @@ Nenhum.
 
 ## Lessons Learned
 
+- **Gate de código DEVE incluir `npm run format:check` (Prettier), não só typecheck+lint** (2026-07-05, descoberto no PR #2 da `review-page`). No Execute rodei `typecheck` e `eslint` por task, mas **não** o `format:check`; o CI (job `lint + format + types`) reprovou `prettier --check` em 3 arquivos (`page.tsx`, `queries.ts`, `rls.integration.test.ts`) — só formatação, corrigido com `prettier --write` (commit `a150297`). **Aplicar sempre:** o gate quick/full local deve ser `npm run typecheck && npm run lint && npm run format:check && npm test`, espelhando o job do CI. eslint e prettier são gates independentes.
 - **ISBNs de exemplo nos specs têm checksum inválido** (2026-06-10, descoberto no T-11). Os ISBNs citados nas tasks/design (`9788535902775`, `8535902770`) e no seed (`9788520932051` para O Cortiço) **não passam** na validação de checksum — foram escritos sem calcular o dígito verificador. A implementação do `isbn.ts` é correta e os rejeita. **Aplicar em T-16 e T-21:** usar ISBNs com checksum verificado (ex.: `9783161484100`, `0306406152`, `080442957X`) ou recalcular o dígito verificador dos ISBNs reais antes de usá-los no seed/schema; não copiar os exemplos do spec verbatim.
 
 ---
@@ -95,7 +96,16 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Revisar design de `book-data` — aprovado (DD-1..8 ok, TD-02 registrado)
 - [x] Fase Tasks de `book-data` concluída — 12 tasks (T-11..T-22), 17/17 reqs mapeados
 - [x] **Execute `book-data` concluído** — 12/12 tasks, 7 fases; build/typecheck/test/axe/Lighthouse verdes; RLS local 4/4. Pronto para PR (branch `feat/book-data`)
-- [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — segue para as features de resenha (book-data cobre só `book`)
+- [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — **endereçado na spec de `review-page`** (RVW-13/14/15: policy filtrada + GRANT TD-03); a implementar no Execute
+- [x] Especificar a feature `review-page` (M1) — spec.md + context.md criados; gray areas C-1 (nota só número) e C-2 (placeholders "em breve") resolvidas; **aguardando revisão antes do Design**
+- [x] Desenhar a feature `review-page` (design.md) — **aprovado** 2026-06-12; 27/27 reqs mapeados a componentes; 3 pontos da revisão resolvidos (draft via 5º book; `<h2>Resenha`; `metadataBase`)
+- [x] Fase Tasks de `review-page` concluída — **9 tasks (T-23..T-31), 27/27 reqs mapeados**, alocação de modelo definida; `tasks.md` criado
+- [x] Execute `review-page` — **10/10 tasks (T-23..T-32) implementadas e commitadas**; gates de código verdes (typecheck/build/lint + 93 passed/8 skipped). Verificação local Supabase (T-23/24/31/32) pendente (TD-02)
+- [x] Ajuste pré-Execute `review-page` — T-26 dividida (formatRating util + Rating componente), renumeração T-27..T-32, dependency graph corrigido (T-23→T-24 sequencial); código realinhado (`rating.ts`→`formatRating.ts`, commit `7f0d925`)
+- [x] `review-page`: branch pushada para o origin (CI rodando no push)
+- [x] `review-page`: **PR #2 aberto** para `main` (https://github.com/gabriel1henrique1rocha-crypto/lia/pull/2) via `gh` (instalado 2.96.0 + autenticado). CI **verde** após fix de Prettier (`a150297`): lint+format+types, vitest (93/8), axe+lighthouse (`/`+`/styleguide`), Vercel. **Sem merge — aberto para revisão.**
+- [ ] `review-page`: rodar verificação local dos gates de banco (`supabase start && db reset`; axe da rota `/resenha/[slug]`; `RUN_RLS_INTEGRATION=1`)
+- [ ] **TD-03 (Alta, pré-M2):** a migration 0005 (T-23) concede GRANT só a `review`; abrir frente de infra para GRANTs de `comment`/`recommendation`/`editor` + `service_role`/Data API **antes do M2 (`reviews-crud`)**
 
 ---
 
