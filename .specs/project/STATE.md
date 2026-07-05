@@ -1,7 +1,7 @@
 # State — LIA
 
-**Last Updated:** 2026-06-12
-**Current Work:** M1 `review-page` — **fase Design APROVADA** (design.md em `.specs/features/review-page/`, branch `feat/review-page`). 27/27 reqs mapeados a componentes. Arquitetura: rota SSR `/resenha/[slug]`, query `getPublishedReviewBySlug` (filtro `status='published'` explícito + RLS/GRANT como 2º gate), componentes novos `BookCover`/`Rating` + util `formatRating`, reuso de `BookDetails`, migration `0005_review_public_read.sql` (policy+grant num só arquivo), seed estendido (4 publicadas + 1 draft no 5º book de teste), teste RLS local-only só-anon, `metadataBase` no layout p/ OG absoluto. Decisões da revisão (2026-06-12): draft via 5º book; `<h2> Resenha` explícito; `metadataBase` no layout — todas ✅. **Próximo: fase Tasks.** Specify concluído (C-1 nota só número; C-2 placeholders "em breve"). | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
+**Last Updated:** 2026-07-05
+**Current Work:** M1 `review-page` — **fase Tasks CONCLUÍDA** (tasks.md em `.specs/features/review-page/`, branch `feat/review-page`). 9 tasks atômicas `T-23..T-31`, **27/27 reqs mapeados** (0 órfão); 3 tabelas de validação pré-aprovação passam. Fase 1 paralela (T-23..T-29, 7 arquivos independentes) → Fase 2 (T-30 page.tsx ← 25/26/27/28/29; T-31 teste RLS ← 23/24). Alocação de modelo: **Opus** na migration 0005 (T-23), teste RLS anon (T-31) e componentes com carga de a11y (T-26 Rating/formatRating, T-27 BookCover); Sonnet/Haiku no scaffolding (T-24 seed, T-25 queries+cache, T-28 not-found, T-29 metadataBase, T-30 page). WCAG 2.1 AA embutido no `Done when` das tasks de UI (não é task separada, C-2). **⚠️ TD-03 permanece ABERTA:** a T-23 concede GRANT só a `review` — não fecha a TD-03 (demais tabelas + service_role pré-M2). **Próximo: aprovar tasks.md e iniciar a fase Execute.** Design aprovado (2026-06-12); Specify concluído (C-1 nota só número; C-2 placeholders "em breve"). | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
 
 ---
 
@@ -97,6 +97,10 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] **Execute `book-data` concluído** — 12/12 tasks, 7 fases; build/typecheck/test/axe/Lighthouse verdes; RLS local 4/4. Pronto para PR (branch `feat/book-data`)
 - [ ] Handoff M1: RLS de leitura de `review` (`status='published'`) — **endereçado na spec de `review-page`** (RVW-13/14/15: policy filtrada + GRANT TD-03); a implementar no Execute
 - [x] Especificar a feature `review-page` (M1) — spec.md + context.md criados; gray areas C-1 (nota só número) e C-2 (placeholders "em breve") resolvidas; **aguardando revisão antes do Design**
+- [x] Desenhar a feature `review-page` (design.md) — **aprovado** 2026-06-12; 27/27 reqs mapeados a componentes; 3 pontos da revisão resolvidos (draft via 5º book; `<h2>Resenha`; `metadataBase`)
+- [x] Fase Tasks de `review-page` concluída — **9 tasks (T-23..T-31), 27/27 reqs mapeados**, alocação de modelo definida; `tasks.md` criado
+- [ ] Execute `review-page` — implementar T-23..T-31 (aguardando aprovação do tasks.md)
+- [ ] **TD-03 (Alta, pré-M2):** a migration 0005 (T-23) concede GRANT só a `review`; abrir frente de infra para GRANTs de `comment`/`recommendation`/`editor` + `service_role`/Data API **antes do M2 (`reviews-crud`)**
 
 ---
 

@@ -201,35 +201,35 @@ A entidade `review` e sua ficha de livro (`book`) já existem no banco e há um 
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| RVW-01 | Rota dinâmica `/resenha/[slug]` SSR | Design | Pending |
-| RVW-02 | 404 para slug inexistente | Design | Pending |
-| RVW-03 | 404 para resenha `draft` (não publicada) | Design | Pending |
-| RVW-04 | Busca por `review.slug` com join `book`+`genre` (tipada) | Design | Pending |
-| RVW-05 | Página sob `<main>` do layout; fornece o `<article>` | Design | Pending |
-| RVW-06 | Título da resenha como `<h1>` | Design | Pending |
-| RVW-07 | Ficha técnica reusando `BookDetails` (headingLevel coerente) | Design | Pending |
-| RVW-08 | Nota como valor numérico pt-BR, só exibição, acessível (C-1) | Design | Pending |
-| RVW-09 | Nota nula → bloco omitido | Design | Pending |
-| RVW-10 | Texto da resenha em parágrafos semânticos | Design | Pending |
-| RVW-11 | Capa tipográfica de fallback (sem `cover_url`) com alt acessível | Design | Pending |
-| RVW-12 | Não processar imagem real de capa (escopo `storage-covers`) | Design | Pending |
-| RVW-13 | RLS: policy `SELECT` em `review` filtrada por `status='published'` | Design | Pending |
-| RVW-14 | GRANT SELECT em `review` a `anon`/`authenticated` (TD-03) | Design | Pending |
-| RVW-15 | Escrita em `review` fechada; RLS permanece habilitado; migration idempotente | Design | Pending |
-| RVW-16 | Seed de 1 resenha publicada por livro (4), 1—1 com `book` | Design | Pending |
-| RVW-17 | Seed: slug único, rating plausível, body em parágrafos, idempotente, editor_id nulo | Design | Pending |
-| RVW-18 | (Opcional) Seed de 1 resenha `draft` para teste de visibilidade | Design | Pending |
-| RVW-19 | SEO: `generateMetadata` por requisição (title + meta description) | Design | Pending |
-| RVW-20 | SEO: Open Graph básico (title/description/type/url) | Design | Pending |
-| RVW-21 | SEO: 404 não vaza metadados de resenha inexistente | Design | Pending |
-| RVW-22 | Placeholder estrutural de comentários + aviso "em breve" (C-2) | Design | Pending |
-| RVW-23 | Botão "Recomendar" desabilitado e acessível, sem lógica (C-2) | Design | Pending |
-| RVW-24 | `<article>` semântico, único `<h1>`, headings hierárquicos | Design | Pending |
-| RVW-25 | Teclado: foco visível, tab order lógico, skip link | Design | Pending |
-| RVW-26 | SSR sem JS: conteúdo e estrutura presentes | Design | Pending |
-| RVW-27 | axe 0 críticos + contraste AA (gate de CI do M0) | Design | Pending |
+| RVW-01 | Rota dinâmica `/resenha/[slug]` SSR | Tasks | Mapped |
+| RVW-02 | 404 para slug inexistente | Tasks | Mapped |
+| RVW-03 | 404 para resenha `draft` (não publicada) | Tasks | Mapped |
+| RVW-04 | Busca por `review.slug` com join `book`+`genre` (tipada) | Tasks | Mapped |
+| RVW-05 | Página sob `<main>` do layout; fornece o `<article>` | Tasks | Mapped |
+| RVW-06 | Título da resenha como `<h1>` | Tasks | Mapped |
+| RVW-07 | Ficha técnica reusando `BookDetails` (headingLevel coerente) | Tasks | Mapped |
+| RVW-08 | Nota como valor numérico pt-BR, só exibição, acessível (C-1) | Tasks | Mapped |
+| RVW-09 | Nota nula → bloco omitido | Tasks | Mapped |
+| RVW-10 | Texto da resenha em parágrafos semânticos | Tasks | Mapped |
+| RVW-11 | Capa tipográfica de fallback (sem `cover_url`) com alt acessível | Tasks | Mapped |
+| RVW-12 | Não processar imagem real de capa (escopo `storage-covers`) | Tasks | Mapped |
+| RVW-13 | RLS: policy `SELECT` em `review` filtrada por `status='published'` | Tasks | Mapped |
+| RVW-14 | GRANT SELECT em `review` a `anon`/`authenticated` (TD-03) | Tasks | Mapped |
+| RVW-15 | Escrita em `review` fechada; RLS permanece habilitado; migration idempotente | Tasks | Mapped |
+| RVW-16 | Seed de 1 resenha publicada por livro (4), 1—1 com `book` | Tasks | Mapped |
+| RVW-17 | Seed: slug único, rating plausível, body em parágrafos, idempotente, editor_id nulo | Tasks | Mapped |
+| RVW-18 | (Opcional) Seed de 1 resenha `draft` para teste de visibilidade | Tasks | Mapped |
+| RVW-19 | SEO: `generateMetadata` por requisição (title + meta description) | Tasks | Mapped |
+| RVW-20 | SEO: Open Graph básico (title/description/type/url) | Tasks | Mapped |
+| RVW-21 | SEO: 404 não vaza metadados de resenha inexistente | Tasks | Mapped |
+| RVW-22 | Placeholder estrutural de comentários + aviso "em breve" (C-2) | Tasks | Mapped |
+| RVW-23 | Botão "Recomendar" desabilitado e acessível, sem lógica (C-2) | Tasks | Mapped |
+| RVW-24 | `<article>` semântico, único `<h1>`, headings hierárquicos | Tasks | Mapped |
+| RVW-25 | Teclado: foco visível, tab order lógico, skip link | Tasks | Mapped |
+| RVW-26 | SSR sem JS: conteúdo e estrutura presentes | Tasks | Mapped |
+| RVW-27 | axe 0 críticos + contraste AA (gate de CI do M0) | Tasks | Mapped |
 
-**Coverage:** 27 requisitos · 0 mapeados para tasks (Tasks pendente) ⚠️
+**Coverage:** 27 requisitos · **27/27 mapeados para tasks** (T-23..T-31, ver [tasks.md](tasks.md)) ✅
 
 ---
 
