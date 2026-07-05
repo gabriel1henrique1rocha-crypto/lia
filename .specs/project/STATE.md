@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-07-05
-**Current Work:** **M1 `review-page` COMPLETO e PÚBLICO NO AR** 🎉 — `book-data` e `review-page` ambas **mergeadas em `main`** (`738bd49`). Site servido pelo alias de produção canônico **https://lia-kappa.vercel.app** (Valid Configuration); a rota pública é **https://lia-kappa.vercel.app/resenha/[slug]**. **Banco de produção populado** (LIA / `gcfsiaxyvfmoyasxjflx`): migration `0005` aplicada (`supabase db push`) + seed rodado (`npm run db:seed`) → **4 resenhas `published` + 1 `draft`** + 5 livros. **RLS validada end-to-end em produção via anon** (2026-07-05): o público vê as **4 publicadas** (`dom-casmurro`, `iracema`, `o-cortico`, `o-crime-do-padre-amaro`); o **draft `memorias-postumas-rascunho` é invisível** (retorna vazio) — deny-by-default confirmada na nuvem. Como o Production **não tem `SUPABASE_SERVICE_ROLE_KEY`** (ver TD-04), a leitura usa anon e a **RLS é o gate real**. **Próximo:** domínio final `www.literaturainclusiva.com.br` (DNS pendente — ver D-08) e polish de UI (bloco vinho da capa — ver backlog). | Gates de código verdes: typecheck/build/lint + Vitest 93 passed / 8 skipped.
+**Current Work:** **M1 `review-page` COMPLETO e PÚBLICO NO AR** 🎉 — `book-data` e `review-page` ambas **mergeadas em `main`** (`738bd49`). Site servido pelo alias de produção canônico **https://lia-kappa.vercel.app** (Valid Configuration); a rota pública é **https://lia-kappa.vercel.app/resenha/[slug]**. **Banco de produção populado** (LIA / `gcfsiaxyvfmoyasxjflx`): migration `0005` aplicada (`supabase db push`) + seed rodado (`npm run db:seed`) → **4 resenhas `published` + 1 `draft`** + 5 livros. **RLS validada end-to-end em produção via anon** (2026-07-05): o público vê as **4 publicadas** (`dom-casmurro`, `iracema`, `o-cortico`, `o-crime-do-padre-amaro`); o **draft `memorias-postumas-rascunho` é invisível** (retorna vazio) — deny-by-default confirmada na nuvem. Como o Production **não tem `SUPABASE_SERVICE_ROLE_KEY`** (ver TD-04), a leitura usa anon e a **RLS é o gate real**. **LACUNA DE DESIGN RESOLVIDA** (2026-07-05, commit `45b90c4`): os artefatos gerados no Claude Design foram versionados em `docs/design/` — a `/resenha/[slug]` fora construída SEM alvo visual (o design vivia só no Claude Design, fora do repo), e agora o alvo está no repositório. **Próxima feature:** M1 `review-listing-search` (listagem/busca da home `/`) pelo fluxo TLC completo (ver Todos). Pendências pré-aplicação de design em backlog (cores sálvia, rota admin `novo`/`nova`). Ainda em aberto: domínio final `www.literaturainclusiva.com.br` (DNS — D-08) e polish de UI (bloco vinho da capa — backlog). | Gates de código verdes: typecheck/build/lint + Vitest 93 passed / 8 skipped.
 
 ---
 
@@ -59,6 +59,11 @@
 - [ ] **UI — bloco vinho na página de resenha (prod):** um bloco de cor vinho ocupa grande parte da página em produção — provável **placeholder do `BookCover` (D-05)** com altura/cor exageradas, ou o container de capa sem imagem esticando. Afeta as **4 resenhas** (seeds sem `cover_url`). Investigar no polish de UI (ajustar `.lia-card__media--type`/layout da capa tipográfica).
 - [ ] **DNS — validar `www.literaturainclusiva.com.br`:** configurar no **Registro.br** os registros que a Vercel indica em **Domains > Edit** (hoje *Invalid Configuration*). Ao validar, atualizar `NEXT_PUBLIC_SITE_URL` (ver D-08 — impacta OG/canonical/sitemap).
 
+### Pendências de design a decidir (backlog — não bloqueiam telas públicas, resolver ANTES de aplicar o design)
+
+- [ ] **Cores sálvia (`#4f5c47` e `#dce5d3`) — decisão pendente.** Aparecem no `docs/design/LIA Marca.html` mas **NÃO existem** em `lia-tokens.css` (o par verde dos tokens é semântico: `#1f6b3b`/`#e8f1ea`). Decidir: **adotar como acento novo da marca** (viram tokens nomeados no design system) **ou descartar**. **Resolver antes de a listagem (`review-listing-search`) consumir tokens**, para não espalhar cor hard-coded fora do sistema.
+- [ ] **Divergência de rota admin entre os artefatos.** O **wireframe** diz `/admin/resenhas/novo`; o **sitemap** diz `/admin/resenhas/nova`. Alinhar nomenclatura **antes do M2 (admin)**. Provável correto: **`nova`** (concordância com "resenha"). **Não bloqueia** as telas públicas do M1.
+
 ---
 
 ## Lessons Learned
@@ -90,7 +95,7 @@ Itens fora de escopo do MVP, preservados para fases futuras (não bloquear o mod
 
 Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DECISIONS.md)):
 
-- [ ] D-04 (busca) — resolver em `review-listing-search` (M1)
+- [ ] D-04 (busca) — resolver em `review-listing-search` (M1) — **endereçada por esta feature** (Tela 1 do wireframe já prevê busca por título + filtros gênero/autor/nota + ordenação)
 - [ ] D-01 (escala da nota) — resolver em `reviews-crud` (M2)
 - [ ] D-02 (anti-spam) — resolver em `public-comments` (M3)
 - [ ] D-03 (modelo de indicação) — resolver em `recommendations` (M3)
@@ -119,6 +124,8 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] `review-page`: **PR #2 aberto** para `main` (https://github.com/gabriel1henrique1rocha-crypto/lia/pull/2) via `gh` (instalado 2.96.0 + autenticado). CI **verde** após fix de Prettier (`a150297`): lint+format+types, vitest (93/8), axe+lighthouse (`/`+`/styleguide`), Vercel. **Sem merge — aberto para revisão.**
 - [ ] `review-page`: rodar verificação local dos gates de banco (`supabase start && db reset`; axe da rota `/resenha/[slug]`; `RUN_RLS_INTEGRATION=1`)
 - [ ] **TD-03 (Alta, pré-M2):** a migration 0005 (T-23) concede GRANT só a `review`; abrir frente de infra para GRANTs de `comment`/`recommendation`/`editor` + `service_role`/Data API **antes do M2 (`reviews-crud`)**
+- [x] **Lacuna de design RESOLVIDA** (2026-07-05, commit `45b90c4`) — artefatos versionados em `docs/design/`: `LIA Marca.html` (design system/marca), `Wireframes LIA (standalone).html` (wireframe lo-fi de 4 telas + estados), `LIA — Sitemap da aplicação.pdf` (rotas públicas e admin). Cobertura confirmada: wireframe cobre a **página de resenha individual (Tela 2)** E a **listagem/home (Tela 1)**. Design system é **evolução coerente** com `lia-tokens.css`/`lia-components.css` (mesma paleta e tipografia, sem conflito estrutural; só as 2 cores sálvia divergem — ver backlog)
+- [ ] **PRÓXIMA FEATURE (M1) — `review-listing-search` (listagem/busca da home `/`)** pelo fluxo TLC completo (Specify → Design → Tasks → Execute). **Design pronto:** Tela 1 do wireframe (destaque/carrossel acessível, busca por título, filtros gênero/autor/nota, grid+lista, paginação, estado vazio); **rotas no sitemap:** `/`, `/genero/[slug]`, `/recomendacoes`. **Racional de sequência:** a listagem firma os componentes compartilhados (Review card, Rating, Ficha técnica, capa) que a página de resenha reusa — polir a resenha depois vira quase de graça. Endereça a decisão D-04 (busca)
 
 ---
 
