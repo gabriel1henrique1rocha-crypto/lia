@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-07-05
-**Current Work:** M1 `review-page` — **fase Tasks CONCLUÍDA** (tasks.md em `.specs/features/review-page/`, branch `feat/review-page`). 9 tasks atômicas `T-23..T-31`, **27/27 reqs mapeados** (0 órfão); 3 tabelas de validação pré-aprovação passam. Fase 1 paralela (T-23..T-29, 7 arquivos independentes) → Fase 2 (T-30 page.tsx ← 25/26/27/28/29; T-31 teste RLS ← 23/24). Alocação de modelo: **Opus** na migration 0005 (T-23), teste RLS anon (T-31) e componentes com carga de a11y (T-26 Rating/formatRating, T-27 BookCover); Sonnet/Haiku no scaffolding (T-24 seed, T-25 queries+cache, T-28 not-found, T-29 metadataBase, T-30 page). WCAG 2.1 AA embutido no `Done when` das tasks de UI (não é task separada, C-2). **⚠️ TD-03 permanece ABERTA:** a T-23 concede GRANT só a `review` — não fecha a TD-03 (demais tabelas + service_role pré-M2). **Próximo: aprovar tasks.md e iniciar a fase Execute.** Design aprovado (2026-06-12); Specify concluído (C-1 nota só número; C-2 placeholders "em breve"). | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
+**Current Work:** M1 `review-page` — **fase Execute CONCLUÍDA** (branch `feat/review-page`). 9/9 tasks `T-23..T-31` implementadas e commitadas (commits `4a68d7f`→`166890e`). **Gates de código verdes:** typecheck/build/lint + suíte Vitest **93 passed / 8 skipped** (as 2 suítes RLS local-only puladas no CI); rota `ƒ /resenha/[slug]` compila como dinâmica (SSR). **Verificação local Supabase pendente** (Docker indisponível nesta sessão, padrão TD-02): T-23 (`pg_policies`/grant), T-24 (`db reset` conta linhas), T-30 (axe da rota seeded), T-31 (`RUN_RLS_INTEGRATION=1`) — todos reproduzíveis com `supabase start && db reset`. **⚠️ TD-03 permanece ABERTA:** a 0005 (T-23) concede GRANT só a `review` — não fecha a TD-03 (demais tabelas + service_role pré-M2). **Próximo: verificação local dos gates de banco → abrir PR da `review-page`.** | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
 
 ---
 
@@ -99,7 +99,8 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Especificar a feature `review-page` (M1) — spec.md + context.md criados; gray areas C-1 (nota só número) e C-2 (placeholders "em breve") resolvidas; **aguardando revisão antes do Design**
 - [x] Desenhar a feature `review-page` (design.md) — **aprovado** 2026-06-12; 27/27 reqs mapeados a componentes; 3 pontos da revisão resolvidos (draft via 5º book; `<h2>Resenha`; `metadataBase`)
 - [x] Fase Tasks de `review-page` concluída — **9 tasks (T-23..T-31), 27/27 reqs mapeados**, alocação de modelo definida; `tasks.md` criado
-- [ ] Execute `review-page` — implementar T-23..T-31 (aguardando aprovação do tasks.md)
+- [x] Execute `review-page` — **9/9 tasks (T-23..T-31) implementadas e commitadas**; gates de código verdes (typecheck/build/lint + 93 passed/8 skipped). Verificação local Supabase (T-23/24/30/31) pendente (TD-02)
+- [ ] `review-page`: rodar verificação local dos gates de banco (`supabase start && db reset`; axe da rota; `RUN_RLS_INTEGRATION=1`) e abrir PR
 - [ ] **TD-03 (Alta, pré-M2):** a migration 0005 (T-23) concede GRANT só a `review`; abrir frente de infra para GRANTs de `comment`/`recommendation`/`editor` + `service_role`/Data API **antes do M2 (`reviews-crud`)**
 
 ---

@@ -2,6 +2,7 @@
 
 **Spec**: [spec.md](spec.md) · **Design**: [design.md](design.md) · **Context**: [context.md](context.md) · **Status**: Draft
 **Milestone**: M1 — Núcleo de leitura pública · **Stack**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4 + Supabase
+> **Status: Execute concluído** — 9/9 tasks implementadas e commitadas (branch `feat/review-page`). Gates de código verdes (typecheck/build/lint + suíte 93 passed / 8 skipped). Gates de banco (T-23/T-24/T-31) = **verificação local pendente** (Supabase/Docker indisponível nesta sessão; padrão TD-02, marcados `done-code`).
 > Documentação em português; nomes de feature, schema, identificadores e código em inglês.
 > Numeração global contínua: infra-foundation `T-01..T-10`, book-data `T-11..T-22`, review-page **`T-23..T-31`**.
 > Acessibilidade **não é task separada** (C-2 / decisão do usuário): o critério WCAG 2.1 AA está embutido no `Done when` de cada task de UI.
@@ -163,7 +164,7 @@ Todos os checks passaram. ✅
 | **Model** | **Opus** |
 | **Tests** | none (verificação manual no banco local; integração em T-31) |
 | **Gate** | manual: `supabase db reset` local + inspecionar `pg_policies` |
-| **Status** | `pending` |
+| **Status** | `done-code` (arquivo criado, commit `4a68d7f`; **gate local Supabase pendente**) |
 
 **What**: Migration idempotente (**arquivo único** — escopo só `review`) que abre leitura pública filtrada de `review`, mantendo escrita deny-by-default:
 - Policy guardada via `pg_policies` (padrão 0003):
@@ -196,7 +197,7 @@ Todos os checks passaram. ✅
 | **Model** | Sonnet/Haiku |
 | **Tests** | none (verificação manual local) |
 | **Gate** | manual: `supabase db reset` local → contar linhas |
-| **Status** | `pending` |
+| **Status** | `done-code` (seed estendido, commit `0ffb94c`; **gate local Supabase pendente**) |
 
 **What**: Semear resenhas nos 4 livros de domínio público existentes + 1 caso `draft`:
 - **1 resenha `published` por livro** (Dom Casmurro, O Crime do Padre Amaro, Iracema, O Cortiço), respeitando `book` **1—1** `review` (`book_id` UNIQUE). UUIDs fixos `bbbbbbbb-…`.
@@ -226,7 +227,7 @@ Todos os checks passaram. ✅
 | **Model** | Sonnet/Haiku |
 | **Tests** | none¹ (integração coberta por T-31) |
 | **Gate** | `npm run typecheck && npm run lint` |
-| **Status** | `pending` |
+| **Status** | `done` (typecheck ✅ + lint ✅; commit `59747c8`) |
 
 **What**: Criar `queries.ts` com o tipo `ReviewView` e a função `getPublishedReviewBySlug`, **envolvida em `cache()` do React** para deduplicar a chamada dupla `generateMetadata` + `page` na mesma requisição.
 
@@ -272,7 +273,7 @@ export const getPublishedReviewBySlug = cache(
 | **Model** | **Opus** |
 | **Tests** | unit (Vitest) + componente (Vitest + RTL + axe) |
 | **Gate** | quick: `npm run typecheck && npm test` |
-| **Status** | `pending` |
+| **Status** | `done` (9 testes ✅: 4 unit + 5 componente c/ axe; commit `fd3710e`) |
 
 **What**: Util puro `formatRating` + componente apresentacional `Rating` (C-1: **só número**, sem estrelas/medidor).
 
@@ -309,7 +310,7 @@ export function Rating({ rating }: { rating: number }): JSX.Element
 | **Model** | **Opus** |
 | **Tests** | componente (Vitest + RTL + axe) |
 | **Gate** | quick: `npm run typecheck && npm test` (+ `npm run build` para o CSS) |
-| **Status** | `pending` |
+| **Status** | `done` (5 testes ✅ c/ axe; build ✅; commit `6ed6ab9`) |
 
 **What**: Componente `BookCover` (Server Component) que renderiza a capa **tipográfica** de fallback, + novo modifier `.lia-card__media--type` consumindo **apenas tokens** (sem hex).
 
@@ -345,7 +346,7 @@ export function BookCover({ title }: { title: string }): JSX.Element
 | **Model** | Sonnet/Haiku |
 | **Tests** | componente (Vitest + RTL + axe) |
 | **Gate** | quick: `npm run typecheck && npm test` |
-| **Status** | `pending` |
+| **Status** | `done` (4 testes ✅ c/ axe; commit `f00309d`) |
 
 **What**: Página de 404 **acessível** da rota, renderizada automaticamente pelo Next quando `page.tsx` chama `notFound()` (slug inexistente ou `draft`).
 
@@ -372,7 +373,7 @@ export function BookCover({ title }: { title: string }): JSX.Element
 | **Model** | Sonnet/Haiku |
 | **Tests** | none (config de metadata; validado por build + em T-30) |
 | **Gate** | `npm run typecheck && npm run build` |
-| **Status** | `pending` |
+| **Status** | `done` (typecheck + build ✅; commit `9301774`) |
 
 **What**: Adicionar `metadataBase: new URL(<site url>)` ao `metadata` raiz do layout, para que `og:url` e canonical relativos de `generateMetadata` (T-30) resolvam **absolutos** já nesta feature (decisão da revisão 2026-06-12).
 
@@ -396,7 +397,7 @@ export function BookCover({ title }: { title: string }): JSX.Element
 | **Model** | Sonnet/Haiku |
 | **Tests** | a11y (Playwright + axe, **local-seeded** — ver TD-02) |
 | **Gate** | `npm run typecheck && npm run build` (CI) · axe de rota = verificação local (seed) |
-| **Status** | `pending` |
+| **Status** | `done-code` (typecheck + build ✅, rota compila como dinâmica ƒ; commit `83c4565`; **axe de rota = verificação local pendente**) |
 
 **What**: Compor a resenha completa num `<article>` SSR + emitir SEO/404.
 - `generateMetadata({ params })`: busca via `getPublishedReviewBySlug`; se `null` → `Metadata` genérico **sem dados de resenha** (RVW-21). Senão: `title: "${review.title} · LIA"`, `description` = resumo do `body` (~160 chars, corte em palavra), `openGraph: { title, description, type: 'article', url: '/resenha/${slug}' }` (absoluta via metadataBase de T-29).
@@ -432,7 +433,7 @@ export function BookCover({ title }: { title: string }): JSX.Element
 | **Model** | **Opus** |
 | **Tests** | integration (Supabase local — **não roda no CI atual**, ver TD-02) |
 | **Gate** | manual (local): `RUN_RLS_INTEGRATION=1 npx vitest run src/lib/review/__tests__/rls.integration.test.ts` |
-| **Status** | `pending` |
+| **Status** | `done-code` (teste criado, PULA no CI via `skipIf` — suíte verde 93/8; commit `166890e`; **execução local Supabase pendente**) |
 
 **What**: Teste com o client **anon** sobre o seed (T-24), **sem** precisar de `service_role` em `review` (não esbarra na TD-03).
 
@@ -456,18 +457,18 @@ export function BookCover({ title }: { title: string }): JSX.Element
 
 ## Status Summary
 
-| Task | Descrição | Modelo | Depends on | Status |
-| --- | --- | --- | --- | --- |
-| T-23 | Migration 0005 (policy + GRANT review) | Opus | — | `pending` |
-| T-24 | seed.sql — 4 published + 5º book/review draft | Sonnet/Haiku | — | `pending` |
-| T-25 | review/queries.ts — getPublishedReviewBySlug + cache() | Sonnet/Haiku | — | `pending` |
-| T-26 | rating.ts + Rating.tsx + testes | Opus | — | `pending` |
-| T-27 | BookCover.tsx + .lia-card__media--type + teste | Opus | — | `pending` |
-| T-28 | not-found.tsx (404 acessível) + teste | Sonnet/Haiku | — | `pending` |
-| T-29 | layout.tsx metadataBase | Sonnet/Haiku | — | `pending` |
-| T-30 | page.tsx — rota SSR + generateMetadata + article | Sonnet/Haiku | T-25,26,27,28,29 | `pending` |
-| T-31 | RLS integration test (local-only) | Opus | T-23,24 | `pending` |
+| Task | Descrição | Modelo | Depends on | Commit | Status |
+| --- | --- | --- | --- | --- | --- |
+| T-23 | Migration 0005 (policy + GRANT review) | Opus | — | `4a68d7f` | `done-code` (gate local pendente) |
+| T-24 | seed.sql — 4 published + 5º book/review draft | Sonnet/Haiku | — | `0ffb94c` | `done-code` (gate local pendente) |
+| T-25 | review/queries.ts — getPublishedReviewBySlug + cache() | Sonnet/Haiku | — | `59747c8` | `done` |
+| T-26 | rating.ts + Rating.tsx + testes | Opus | — | `fd3710e` | `done` (9 testes) |
+| T-27 | BookCover.tsx + .lia-card__media--type + teste | Opus | — | `6ed6ab9` | `done` (5 testes) |
+| T-28 | not-found.tsx (404 acessível) + teste | Sonnet/Haiku | — | `f00309d` | `done` (4 testes) |
+| T-29 | layout.tsx metadataBase | Sonnet/Haiku | — | `9301774` | `done` |
+| T-30 | page.tsx — rota SSR + generateMetadata + article | Sonnet/Haiku | T-25,26,27,28,29 | `83c4565` | `done-code` (axe rota local pendente) |
+| T-31 | RLS integration test (local-only) | Opus | T-23,24 | `166890e` | `done-code` (exec. local pendente) |
 
-**9 tasks · 27/27 reqs mapeados · 0 executadas — aguardando aprovação para a fase Execute.**
+**9 tasks · 27/27 reqs mapeados · 9/9 implementadas e commitadas.** Gates de código verdes (typecheck/build/lint + suíte 93 passed / 8 skipped). **Verificação local pendente** (Supabase/Docker indisponível nesta sessão): T-23/T-24 (`db reset` + inspeção), T-30 (axe da rota seeded), T-31 (`RUN_RLS_INTEGRATION=1`). Padrão TD-02 — reproduzível localmente.
 
 > **Lembrete TD-03 (Alta):** a T-23 concede GRANT **apenas** a `review`. TD-03 permanece **ABERTA** para as demais tabelas e deve ser resolvida **antes do M2 (`reviews-crud`)`**. Concluir a review-page **não** a fecha.
