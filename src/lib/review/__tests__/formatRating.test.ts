@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatRating } from '../rating'
+import { formatRating } from '../formatRating'
 
 describe('formatRating', () => {
   it('formata com vírgula decimal pt-BR e 1 casa', () => {

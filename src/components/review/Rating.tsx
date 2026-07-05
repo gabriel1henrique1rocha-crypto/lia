@@ -1,4 +1,4 @@
-import { formatRating } from '@/lib/review/rating'
+import { formatRating } from '@/lib/review/formatRating'
 
 /**
  * Exibe a nota da resenha como valor numérico localizado (C-1: só número, sem
