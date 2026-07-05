@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-07-05
-**Current Work:** M1 `review-page` — **fase Execute CONCLUÍDA** (branch `feat/review-page`). 10/10 tasks `T-23..T-32` implementadas e commitadas (commits `4a68d7f`→`166890e`; ajuste pré-Execute `7f0d925` dividiu T-26 formatRating/T-27 Rating e renumerou). **Gates de código verdes:** typecheck/build/lint + suíte Vitest **93 passed / 8 skipped** (as 2 suítes RLS local-only puladas no CI); rota `ƒ /resenha/[slug]` compila como dinâmica (SSR). **Verificação local Supabase pendente** (Docker indisponível nesta sessão, padrão TD-02): T-23 (`pg_policies`/grant), T-24 (`db reset` conta linhas), T-30 (axe da rota seeded), T-31 (`RUN_RLS_INTEGRATION=1`) — todos reproduzíveis com `supabase start && db reset`. **⚠️ TD-03 permanece ABERTA:** a 0005 (T-23) concede GRANT só a `review` — não fecha a TD-03 (demais tabelas + service_role pré-M2). **Branch `feat/review-page` PUSHADA** para o origin (CI dispara no push). **PR ainda NÃO aberto** — `gh` CLI ausente + sem `GITHUB_TOKEN` nesta máquina. Corpo do PR pronto no scratchpad (`PR-review-page.md`); abrir via web (https://github.com/gabriel1henrique1rocha-crypto/lia/pull/new/feat/review-page, base `main`) ou instalar `gh` e rodar `gh pr create`. **Sem merge.** Verificações pré-PR: (1) axe/Lighthouse de ROTA da review-page NÃO está no CI (só `/` e `/styleguide`; TD-02) — axe de componente verde no CI; (2) teste RLS anon cobre os 2 lados ✅; (3) TD-03 registrada ABERTA ✅. **Próximo: abrir o PR (ação do usuário) + verificação local dos gates de banco.** | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
+**Current Work:** **M1 `review-page` COMPLETO e PÚBLICO NO AR** 🎉 — `book-data` e `review-page` ambas **mergeadas em `main`** (`738bd49`). Site servido pelo alias de produção canônico **https://lia-kappa.vercel.app** (Valid Configuration); a rota pública é **https://lia-kappa.vercel.app/resenha/[slug]**. **Banco de produção populado** (LIA / `gcfsiaxyvfmoyasxjflx`): migration `0005` aplicada (`supabase db push`) + seed rodado (`npm run db:seed`) → **4 resenhas `published` + 1 `draft`** + 5 livros. **RLS validada end-to-end em produção via anon** (2026-07-05): o público vê as **4 publicadas** (`dom-casmurro`, `iracema`, `o-cortico`, `o-crime-do-padre-amaro`); o **draft `memorias-postumas-rascunho` é invisível** (retorna vazio) — deny-by-default confirmada na nuvem. Como o Production **não tem `SUPABASE_SERVICE_ROLE_KEY`** (ver TD-04), a leitura usa anon e a **RLS é o gate real**. **Próximo:** domínio final `www.literaturainclusiva.com.br` (DNS pendente — ver D-08) e polish de UI (bloco vinho da capa — ver backlog). | Gates de código verdes: typecheck/build/lint + Vitest 93 passed / 8 skipped.
 
 ---
 
@@ -30,6 +30,13 @@
 **Trade-off:** v4 mais novo; `p-8`=64px diverge da convenção numérica do Tailwind (documentado).
 **Impact:** sem `tailwind.config.js`; componentes consomem só tokens. ADR completa em [DECISIONS.md](DECISIONS.md) D-07.
 
+### D-08: Domínio de produção — www.literaturainclusiva.com.br (2026-07-05) · *decisão de domínio (#6)*
+
+**Decision:** domínio de produção **`www.literaturainclusiva.com.br`**, registrado na Vercel (escopo Production).
+**Status:** ⚠️ **Invalid Configuration** — o **DNS ainda não aponta para a Vercel** (provável zona no **Registro.br**). Enquanto não valida, o site é servido por **`lia-kappa.vercel.app`**.
+**Pendência:** configurar os registros DNS que a Vercel indica em **Domains > Edit** (ver backlog).
+**Impact:** quando o DNS validar, **revisar `NEXT_PUBLIC_SITE_URL`** para o domínio final — impacta `og:url`/canonical (via `metadataBase`) e o futuro sitemap (`seo-core`).
+
 ---
 
 ## Technical Debt
@@ -38,13 +45,19 @@
 | --- | --- | --- | --- |
 | TD-01 | T-06/T-07 marcou os 4 componentes base como `'use client'` por causa do `useId` no `Field`. `Button`, `Link` e `Card` são candidatos a Server Component (sem hooks); separar reduz JS enviado ao cliente e melhora Core Web Vitals (TBT/INP). | Leve | M4 |
 | TD-02 | Testes de integração de RLS (`BOOK-11`, `BOOK-17`) rodam **apenas localmente** (Supabase local). Implementado em `src/lib/book/__tests__/rls.integration.test.ts`, guardado por `RUN_RLS_INTEGRATION=1` + `describe.skipIf` (PULA no CI). Credenciais lidas só de env (`SUPABASE_LOCAL_*` no `.env.local`, gitignored — **nunca hardcoded**; `vitest.config` carrega via `loadEnv`). Rodar: `npx supabase start && npx supabase db reset`, depois `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/book/__tests__/rls.integration.test.ts`. Mover para o CI (subir Supabase no pipeline) avaliado no M4. | Média | M4 |
-| TD-03 | **Pós-2026-05-30, o Supabase não auto-concede GRANTs a tabelas novas** do schema public (`auto_expose_new_tables` → `false` por padrão; campo removido em out/2026). Policies RLS **não bastam** sem GRANT de tabela — o Data API retorna 42501. A migration 0004 cobriu **só** a leitura pública da ficha (`select on book` + `genre`, o join exibido — BOOK-17). **Revisar os GRANTs das demais tabelas** (`review`, `comment`, `recommendation`, `editor`) **e do `service_role`/Data API** numa frente de infra dedicada. Bloqueia o caso (3) do teste RLS (insert de `review` via service_role), hoje `it.skip`. | **Alta** | pré-M2 |
+| TD-03 | **Pós-2026-05-30, o Supabase não auto-concede GRANTs a tabelas novas** do schema public (`auto_expose_new_tables` → `false` por padrão; campo removido em out/2026). Policies RLS **não bastam** sem GRANT de tabela — o Data API retorna 42501. A migration 0004 cobriu **só** a leitura pública da ficha (`select on book` + `genre`, o join exibido — BOOK-17). A 0005 abriu **só `review`** (leitura pública). **Revisar os GRANTs das demais tabelas** (`comment`, `recommendation`, `editor`) **e do `service_role`/Data API** numa frente de infra dedicada. Bloqueia o caso (3) do teste RLS (insert de `review` via service_role), hoje `it.skip`. **AINDA ABERTO** — separada da TD-04. | **Alta** | pré-M2 |
+| TD-04 | **Achado de segurança (latente, não ativo — verificado 2026-07-05).** [server.ts:8](../../src/lib/supabase/server.ts#L8) usa fallback `SUPABASE_SERVICE_ROLE_KEY ?? NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Conferido no dashboard Vercel: **`SUPABASE_SERVICE_ROLE_KEY` NÃO existe em Production** (só `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). **Hoje inócuo:** a rota pública `/resenha/[slug]` lê com anon/publishable e a RLS está no controle (validado end-to-end em prod). **RISCO:** vira **bypass de RLS** no instante em que a service_role for adicionada ao Production (M2, painel admin) — a rota pública passaria a ler por cima da RLS **sem nenhum teste vermelho** (o CI testa com anon). **CORREÇÃO:** separar **client público** (anon, sem service_role nem fallback) de **client admin** (service_role isolado), **ANTES** de configurar `SUPABASE_SERVICE_ROLE_KEY` no M2. **Gatilho:** introdução da service_role no M2. Independente da TD-03. Portado de `feat/review-page` (commit `2baef7a`). | **Média** | pré-M2 (antes de introduzir service_role) |
 
 ---
 
 ## Active Blockers
 
-Nenhum.
+**Nenhum bloqueador.** ✅ *(Deploy da `review-page` RESOLVIDO em 2026-07-05 — `0005` aplicada ao banco de produção LIA + seed rodado; `/resenha/[slug]` responde em produção com as 4 publicadas, draft invisível.)*
+
+### Backlog / polish (não-bloqueante)
+
+- [ ] **UI — bloco vinho na página de resenha (prod):** um bloco de cor vinho ocupa grande parte da página em produção — provável **placeholder do `BookCover` (D-05)** com altura/cor exageradas, ou o container de capa sem imagem esticando. Afeta as **4 resenhas** (seeds sem `cover_url`). Investigar no polish de UI (ajustar `.lia-card__media--type`/layout da capa tipográfica).
+- [ ] **DNS — validar `www.literaturainclusiva.com.br`:** configurar no **Registro.br** os registros que a Vercel indica em **Domains > Edit** (hoje *Invalid Configuration*). Ao validar, atualizar `NEXT_PUBLIC_SITE_URL` (ver D-08 — impacta OG/canonical/sitemap).
 
 ---
 
