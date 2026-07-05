@@ -1,11 +1,12 @@
 # review-page — Tasks
 
-**Spec**: [spec.md](spec.md) · **Design**: [design.md](design.md) · **Context**: [context.md](context.md) · **Status**: Draft
+**Spec**: [spec.md](spec.md) · **Design**: [design.md](design.md) · **Context**: [context.md](context.md) · **Status**: Execute concluído
 **Milestone**: M1 — Núcleo de leitura pública · **Stack**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4 + Supabase
-> **Status: Execute concluído** — 9/9 tasks implementadas e commitadas (branch `feat/review-page`). Gates de código verdes (typecheck/build/lint + suíte 93 passed / 8 skipped). Gates de banco (T-23/T-24/T-31) = **verificação local pendente** (Supabase/Docker indisponível nesta sessão; padrão TD-02, marcados `done-code`).
+> **Status: Execute concluído** — 10/10 tasks implementadas e commitadas (branch `feat/review-page`). Gates de código verdes (typecheck/build/lint + suíte 93 passed / 8 skipped). Gates de banco (T-23/T-24/T-32) e axe de rota (T-31) = **verificação local pendente** (Supabase/Docker indisponível na sessão de Execute; padrão TD-02, marcados `done-code`).
 > Documentação em português; nomes de feature, schema, identificadores e código em inglês.
-> Numeração global contínua: infra-foundation `T-01..T-10`, book-data `T-11..T-22`, review-page **`T-23..T-31`**.
+> Numeração global contínua: infra-foundation `T-01..T-10`, book-data `T-11..T-22`, review-page **`T-23..T-32`**.
 > Acessibilidade **não é task separada** (C-2 / decisão do usuário): o critério WCAG 2.1 AA está embutido no `Done when` de cada task de UI.
+> **Ajuste pré-Execute (2026-07-05):** T-26 dividida em **T-26 formatRating** (util, Sonnet) + **T-27 Rating** (componente, Opus); tasks seguintes renumeradas; dependency graph corrigido (migration→seed sequencial). Código realinhado (commit `7f0d925`: `rating.ts`→`formatRating.ts`).
 
 ---
 
@@ -22,23 +23,30 @@
 ## Dependency Graph
 
 ```
-Phase 1 (paralelo — nenhuma dependência entre si):
-  T-23 [P] (migration 0005 — policy + grant review)
-  T-24 [P] (seed.sql — 4 published + 5º book/review draft)
-  T-25 [P] (review/queries.ts — getPublishedReviewBySlug + cache())
-  T-26 [P] (rating.ts + Rating.tsx)
-  T-27 [P] (BookCover.tsx + .lia-card__media--type)
-  T-28 [P] (not-found.tsx — 404 acessível)
-  T-29 [P] (layout.tsx — metadataBase)
+Phase 1 (SEQUENCIAL — não negociável):
+  T-23 (migration 0005) ──→ T-24 (seed)
+  # o seed é aplicado depois da migration no fluxo db reset; ordem fixa.
 
-Phase 2 (após Phase 1):
-  T-30 (page.tsx — rota + generateMetadata + <article>)  ← T-25, T-26, T-27, T-28, T-29
-  T-31 (rls.integration.test.ts)                          ← T-23, T-24
+Phase 2 (PARALELO — arquivos independentes, não se tocam):
+  T-25 [P] (review/queries.ts)
+  T-26 [P] (review/formatRating.ts)
+  T-28 [P] (BookCover.tsx + .lia-card__media--type)
+  T-29 [P] (not-found.tsx)
+  T-30 [P] (layout.tsx metadataBase)
+
+Phase 2b (após T-26 — Rating importa formatRating):
+  T-27 (Rating.tsx)  ← T-26
+
+Phase 3:
+  T-31 (page.tsx)    ← T-25, T-27, T-28, T-29, T-30
+  T-32 (rls.integration.test.ts)  ← T-23, T-24
 ```
 
 **Grupos de execução paralela:**
-- Grupo 1: `T-23 [P] T-24 [P] T-25 [P] T-26 [P] T-27 [P] T-28 [P] T-29 [P]` — sete arquivos independentes, nenhum compartilha estado mutável nem arquivo.
-- Grupo 2: `T-30` e `T-31` — não compartilham arquivo; T-31 é o único teste de integração de DB (não paralelo-inseguro com outros testes de DB porque é o único). Podem rodar em paralelo.
+- **Fase 1 é sequencial e não negociável:** `T-23 → T-24`. A migration abre a leitura pública; o seed roda **depois** (o `supabase db reset` aplica migrations e só então o `seed.sql`).
+- **Fase 2 (paralela):** `T-25 [P] T-26 [P] T-28 [P] T-29 [P] T-30 [P]` — cinco arquivos independentes, nenhum compartilha arquivo/estado. Podem rodar concorrentes entre si (e com a Fase 1, que é DB-only).
+- **T-27 (Rating) NÃO é paralela com T-26:** `Rating.tsx` importa `formatRating` → depende de T-26. (Correção do ajuste: embora ambos sejam da mesma feature de nota, o componente toca o util.)
+- **Fase 3:** `T-31` (page ← componentes + queries + metadataBase) e `T-32` (teste RLS ← migration + seed) não se tocam → podem rodar em paralelo.
 
 ---
 
@@ -46,35 +54,35 @@ Phase 2 (após Phase 1):
 
 | Req | Descrição curta | Task(s) |
 | --- | --- | --- |
-| RVW-01 | Rota `/resenha/[slug]` SSR | T-30 |
-| RVW-02 | 404 slug inexistente (UI acessível) | T-28, T-30 |
-| RVW-03 | 404 resenha `draft` | T-25 (filtro), T-30 (notFound), T-31 (verif.) |
+| RVW-01 | Rota `/resenha/[slug]` SSR | T-31 |
+| RVW-02 | 404 slug inexistente (UI acessível) | T-29, T-31 |
+| RVW-03 | 404 resenha `draft` | T-25 (filtro), T-31 (notFound), T-32 (verif.) |
 | RVW-04 | Busca por `slug` com join `book`+`genre` tipada | T-25 |
-| RVW-05 | Página sob `<main>`; fornece o `<article>` | T-30 |
-| RVW-06 | Título da resenha como `<h1>` | T-30 |
-| RVW-07 | Ficha reusando `BookDetails` (`headingLevel=3`) | T-30 |
-| RVW-08 | Nota numérica pt-BR, só exibição, acessível (C-1) | T-26 |
-| RVW-09 | Nota nula → bloco omitido | T-26 (contrato), T-30 (omissão) |
-| RVW-10 | Texto em parágrafos semânticos + `body` vazio gracioso | T-30 |
-| RVW-11 | Capa tipográfica de fallback com alt acessível | T-27 |
-| RVW-12 | Não processar imagem real (escopo `storage-covers`) | T-27 |
-| RVW-13 | RLS policy `SELECT` filtrada por `status='published'` | T-23, T-25 (filtro app-side), T-31 (verif.) |
-| RVW-14 | GRANT SELECT em `review` (TD-03) | T-23, T-31 (verif.) |
-| RVW-15 | Escrita fechada + RLS habilitado + idempotência | T-23, T-31 (verif.) |
+| RVW-05 | Página sob `<main>`; fornece o `<article>` | T-31 |
+| RVW-06 | Título da resenha como `<h1>` | T-31 |
+| RVW-07 | Ficha reusando `BookDetails` (`headingLevel=3`) | T-31 |
+| RVW-08 | Nota numérica pt-BR, só exibição, acessível (C-1) | T-26 (formatação), T-27 (exibição acessível) |
+| RVW-09 | Nota nula → bloco omitido | T-27 (contrato), T-31 (omissão) |
+| RVW-10 | Texto em parágrafos semânticos + `body` vazio gracioso | T-31 |
+| RVW-11 | Capa tipográfica de fallback com alt acessível | T-28 |
+| RVW-12 | Não processar imagem real (escopo `storage-covers`) | T-28 |
+| RVW-13 | RLS policy `SELECT` filtrada por `status='published'` | T-23, T-25 (filtro app-side), T-32 (verif.) |
+| RVW-14 | GRANT SELECT em `review` (TD-03) | T-23, T-32 (verif.) |
+| RVW-15 | Escrita fechada + RLS habilitado + idempotência | T-23, T-32 (verif.) |
 | RVW-16 | Seed 1 resenha publicada por livro (4), 1—1 `book` | T-24 |
 | RVW-17 | Seed: slug único, rating plausível, body em §, idempotente, editor_id nulo | T-24 |
 | RVW-18 | Seed 1 resenha `draft` (5º book de teste) | T-24 |
-| RVW-19 | SEO `generateMetadata` (title + meta description) | T-30 |
-| RVW-20 | SEO Open Graph (title/description/type/url absoluta) | T-29 (metadataBase), T-30 |
-| RVW-21 | 404 não vaza metadados de resenha inexistente | T-30 |
-| RVW-22 | Placeholder de comentários + aviso "em breve" (C-2) | T-30 |
-| RVW-23 | Botão "Recomendar" desabilitado e acessível (C-2) | T-30 |
-| RVW-24 | `<article>` semântico, único `<h1>`, headings hierárquicos | T-30 |
-| RVW-25 | Teclado: foco visível, tab order lógico, skip link | T-30 |
-| RVW-26 | SSR sem JS: conteúdo e estrutura presentes | T-30 |
-| RVW-27 | axe 0 críticos + contraste AA | T-26, T-27, T-28, T-30 |
+| RVW-19 | SEO `generateMetadata` (title + meta description) | T-31 |
+| RVW-20 | SEO Open Graph (title/description/type/url absoluta) | T-30 (metadataBase), T-31 |
+| RVW-21 | 404 não vaza metadados de resenha inexistente | T-31 |
+| RVW-22 | Placeholder de comentários + aviso "em breve" (C-2) | T-31 |
+| RVW-23 | Botão "Recomendar" desabilitado e acessível (C-2) | T-31 |
+| RVW-24 | `<article>` semântico, único `<h1>`, headings hierárquicos | T-31 |
+| RVW-25 | Teclado: foco visível, tab order lógico, skip link | T-31 |
+| RVW-26 | SSR sem JS: conteúdo e estrutura presentes | T-31 |
+| RVW-27 | axe 0 críticos + contraste AA | T-27, T-28, T-29, T-31 |
 
-**Coverage:** 27/27 requisitos mapeados a tasks — **nenhum órfão** ✅
+**Coverage:** 27/27 requisitos mapeados a tasks — **nenhum órfão** ✅ (RVW-08 agora coberto por T-26+T-27; nada perdido na divisão).
 
 ---
 
@@ -87,30 +95,33 @@ Phase 2 (após Phase 1):
 | T-23: migration 0005 | 1 arquivo SQL | ✅ Atômico |
 | T-24: seed.sql (extensão) | 1 arquivo (append idempotente) | ✅ Atômico |
 | T-25: review/queries.ts | 1 arquivo (2 exports coesos) | ✅ Atômico |
-| T-26: rating.ts + Rating.tsx + testes | util + seu componente apresentacional (1 conceito) | ✅ Coeso |
-| T-27: BookCover.tsx + modifier CSS + teste | 1 componente + 1 modifier de classe existente | ✅ Coeso |
-| T-28: not-found.tsx + teste | 1 componente | ✅ Atômico |
-| T-29: layout.tsx metadataBase | 1 edição pontual em arquivo existente | ✅ Atômico |
-| T-30: page.tsx (rota + metadata + article) | 1 arquivo de rota | ✅ Atômico (1 rota) |
-| T-31: rls.integration.test.ts | 1 arquivo de teste | ✅ Atômico |
+| T-26: review/formatRating.ts + teste | 1 util puro + 1 test | ✅ Atômico |
+| T-27: Rating.tsx + teste | 1 componente | ✅ Atômico |
+| T-28: BookCover.tsx + modifier CSS + teste | 1 componente + 1 modifier de classe existente | ✅ Coeso |
+| T-29: not-found.tsx + teste | 1 componente | ✅ Atômico |
+| T-30: layout.tsx metadataBase | 1 edição pontual em arquivo existente | ✅ Atômico |
+| T-31: page.tsx (rota + metadata + article) | 1 arquivo de rota | ✅ Atômico (1 rota) |
+| T-32: rls.integration.test.ts | 1 arquivo de teste | ✅ Atômico |
 
-> Nota de granularidade: em `book-data`, `BookDetails` (T-18) e seu CSS (T-19) foram tasks separadas porque `.lia-book-details` era um bloco extenso. Aqui `.lia-card__media--type` é **um único modifier** que estende `.lia-card__media` já existente → mantido dentro de T-27 (coeso, não justifica task própria). `formatRating` + `Rating` ficam juntos (T-26) por serem o mesmo conceito (util puro + seu componente de apresentação).
+> **Nota de granularidade (item 2 do ajuste — decisão intencional):** em T-28, o modifier `.lia-card__media--type` fica **junto** do `BookCover`. Regra adotada: **CSS acoplado a um único componente fica na mesma task**; só CSS de token/base **reaproveitado por vários componentes** vira task separada (como foi `.lia-book-details` em `book-data` T-18/T-19). O modifier aqui serve exclusivamente ao `BookCover` → não justifica task própria.
+> A divisão de T-26/T-27 (formatRating util × Rating componente) segue o oposto: são **conceitos distintos em arquivos distintos** (`formatRating.ts` reusável por `review-listing-search` sem o componente) → duas tasks.
 
 ### Check 2 — Diagrama × Definição
 
 | Task | `Depends on` (corpo) | Diagrama mostra | Status |
 | --- | --- | --- | --- |
-| T-23 | — | Fase 1, sem seta de entrada | ✅ |
-| T-24 | — | Fase 1, sem seta de entrada | ✅ |
-| T-25 | — | Fase 1, sem seta de entrada | ✅ |
-| T-26 | — | Fase 1, sem seta de entrada | ✅ |
-| T-27 | — | Fase 1, sem seta de entrada | ✅ |
-| T-28 | — | Fase 1, sem seta de entrada | ✅ |
-| T-29 | — | Fase 1, sem seta de entrada | ✅ |
-| T-30 | T-25, T-26, T-27, T-28, T-29 | ← T-25, T-26, T-27, T-28, T-29 | ✅ |
-| T-31 | T-23, T-24 | ← T-23, T-24 | ✅ |
+| T-23 | — | Fase 1, início | ✅ |
+| T-24 | T-23 | ← T-23 | ✅ |
+| T-25 | — | Fase 2, sem seta de entrada | ✅ |
+| T-26 | — | Fase 2, sem seta de entrada | ✅ |
+| T-27 | T-26 | ← T-26 | ✅ |
+| T-28 | — | Fase 2, sem seta de entrada | ✅ |
+| T-29 | — | Fase 2, sem seta de entrada | ✅ |
+| T-30 | — | Fase 2, sem seta de entrada | ✅ |
+| T-31 | T-25, T-27, T-28, T-29, T-30 | ← T-25, T-27, T-28, T-29, T-30 | ✅ |
+| T-32 | T-23, T-24 | ← T-23, T-24 | ✅ |
 
-Nenhuma task marcada `[P]` na Fase 1 depende de outra da mesma fase. ✅
+Nenhuma task marcada `[P]` na Fase 2 depende de outra da mesma fase (T-27 saiu do grupo `[P]` por depender de T-26). ✅
 
 ### Check 3 — Co-localização de testes
 
@@ -120,16 +131,17 @@ Stack de testes: **Vitest + RTL** (unit/componente em `src/`, `axe` via jsdom), 
 | --- | --- | --- | --- | --- |
 | T-23 | Migration SQL (policy+grant) | none (DB-level, gate manual) | none | ✅ |
 | T-24 | Seed SQL | none (DB-level, gate manual) | none | ✅ |
-| T-25 | Query de servidor (queries.ts) | none¹ (integração em T-31) | none (typecheck) | ✅ |
-| T-26 | Util puro TS + Server Component | unit + componente | unit (rating.test.ts) + componente (Rating.test.tsx, axe) | ✅ |
-| T-27 | Server Component (+CSS) | componente | componente (BookCover.test.tsx, axe) | ✅ |
-| T-28 | Componente de rota (not-found) | componente | componente (not-found.test.tsx, axe) | ✅ |
-| T-29 | Config de metadata (layout) | none | none (build/typecheck) | ✅ |
-| T-30 | Rota RSC async (page) | a11y² (Playwright local-seeded) | a11y + build/typecheck | ✅ |
-| T-31 | Teste de integração RLS | integration (local-only, TD-02) | integration/local | ✅ |
+| T-25 | Query de servidor (queries.ts) | none¹ (integração em T-32) | none (typecheck) | ✅ |
+| T-26 | Util puro TS (formatRating) | unit | unit (formatRating.test.ts) | ✅ |
+| T-27 | Server Component (Rating) | componente | componente (Rating.test.tsx, axe) | ✅ |
+| T-28 | Server Component (+CSS) | componente | componente (BookCover.test.tsx, axe) | ✅ |
+| T-29 | Componente de rota (not-found) | componente | componente (not-found.test.tsx, axe) | ✅ |
+| T-30 | Config de metadata (layout) | none | none (build/typecheck) | ✅ |
+| T-31 | Rota RSC async (page) | a11y² (Playwright local-seeded) | a11y + build/typecheck | ✅ |
+| T-32 | Teste de integração RLS | integration (local-only, TD-02) | integration/local | ✅ |
 
-> ¹ `queries.ts` requer banco real; teste unitário com mock não acrescenta cobertura de contrato — integração coberta em T-31 (padrão aceito em `book-data` T-17/T-22).
-> ² `page.tsx` é RSC `async` que lê dados semeados; a auditoria axe da rota depende do seed local (TD-02: CI não tem Supabase). Gate de CI = `build + typecheck`; auditoria axe da rota é verificação **local** (seed presente), embutida no `Done when`.
+> ¹ `queries.ts` requer banco real; contrato coberto por integração em T-32 (padrão aceito em `book-data` T-17/T-22).
+> ² `page.tsx` é RSC `async` que lê dados semeados; a auditoria axe da rota depende do seed local (TD-02: CI não tem Supabase). Gate de CI = `build + typecheck`; auditoria axe da rota é verificação **local**, embutida no `Done when`.
 
 Todos os checks passaram. ✅
 
@@ -139,15 +151,16 @@ Todos os checks passaram. ✅
 
 | Task | Modelo | Racional |
 | --- | --- | --- |
-| T-23 | **Opus** | SQL de RLS/GRANT com armadilha TD-03; erro é silencioso e de segurança |
+| T-23 | **Opus** | SQL de RLS/GRANT com armadilha TD-03; erro silencioso e de segurança |
 | T-24 | Sonnet/Haiku | Seed idempotente mecânico (UUIDs fixos, `on conflict`) |
 | T-25 | Sonnet/Haiku | Espelha padrão de `book/queries.ts` + `cache()` |
-| T-26 | **Opus** | Nota acessível (C-1): `Intl` pt-BR + texto `sr-only`, carga de a11y |
-| T-27 | **Opus** | Capa com `role="img"` + `aria-label` + fallback tipográfico (D-05), carga de a11y |
-| T-28 | Sonnet/Haiku | Scaffolding de UI simples (WCAG embutido no done) |
-| T-29 | Sonnet/Haiku | Edição pontual de config (metadataBase) |
-| T-30 | Sonnet/Haiku | Composição/scaffolding do `<article>` a partir de peças prontas |
-| T-31 | **Opus** | Teste de integração RLS anon — asserts de segurança (42501, draft invisível, RLS enabled) |
+| T-26 | **Sonnet** | Util puro de formatação (`Intl` pt-BR); testável isolado, baixo risco |
+| T-27 | **Opus** | Nota acessível (C-1): texto `sr-only` + contraste AA; carga de a11y |
+| T-28 | **Opus** | Capa com `role="img"` + `aria-label` + fallback tipográfico; carga de a11y |
+| T-29 | Sonnet/Haiku | Scaffolding de UI simples (WCAG embutido no done) |
+| T-30 | Sonnet/Haiku | Edição pontual de config (metadataBase) |
+| T-31 | Sonnet/Haiku | Composição/scaffolding do `<article>` a partir de peças prontas |
+| T-32 | **Opus** | Teste de integração RLS anon — asserts de segurança (42501, draft invisível, RLS enabled) |
 
 ---
 
@@ -162,25 +175,22 @@ Todos os checks passaram. ✅
 | **Where** | `supabase/migrations/0005_review_public_read.sql` |
 | **Reuses** | padrão policy guardada de [0003](../../../supabase/migrations/0003_book_public_read_policy.sql) + GRANT explícito de [0004](../../../supabase/migrations/0004_public_read_grants.sql) |
 | **Model** | **Opus** |
-| **Tests** | none (verificação manual no banco local; integração em T-31) |
+| **Tests** | none (verificação manual no banco local; integração em T-32) |
 | **Gate** | manual: `supabase db reset` local + inspecionar `pg_policies` |
 | **Status** | `done-code` (arquivo criado, commit `4a68d7f`; **gate local Supabase pendente**) |
 
 **What**: Migration idempotente (**arquivo único** — escopo só `review`) que abre leitura pública filtrada de `review`, mantendo escrita deny-by-default:
-- Policy guardada via `pg_policies` (padrão 0003):
-  `create policy "review_public_read" on review for select to anon, authenticated using (status = 'published');`
-- GRANT explícito (padrão 0004 / TD-03):
-  `grant select on table review to anon, authenticated;`
+- Policy guardada via `pg_policies` (padrão 0003): `create policy "review_public_read" on review for select to anon, authenticated using (status = 'published');`
+- GRANT explícito (padrão 0004 / TD-03): `grant select on table review to anon, authenticated;`
 - **Sem** policy/grant de `INSERT/UPDATE/DELETE`; **sem** `disable row level security`.
 
 **Done when**:
 - [ ] Arquivo criado em `supabase/migrations/0005_review_public_read.sql`
 - [ ] `supabase db reset` local executa sem erro
-- [ ] `SELECT * FROM pg_policies WHERE tablename='review'` lista exatamente 1 policy (`review_public_read`, command `SELECT`, qual `status = 'published'`)
-- [ ] RLS continua `enabled` em `review` (não há `alter table … disable`)
-- [ ] GRANT concede `SELECT` a `anon` e `authenticated` (verificável via `information_schema.role_table_grants`)
-- [ ] Reaplicar a migration é no-op (idempotente): guarda `pg_policies` + `grant` re-concedido sem erro
-- [ ] **TD-03 não fechada**: GRANT restrito a `review`; nenhuma outra tabela tocada
+- [ ] `SELECT * FROM pg_policies WHERE tablename='review'` lista 1 policy (`review_public_read`, `SELECT`, qual `status = 'published'`)
+- [ ] RLS continua `enabled` em `review`; GRANT concede `SELECT` a `anon`/`authenticated`
+- [ ] Reaplicar a migration é no-op (idempotente)
+- [ ] **TD-03 não fechada**: GRANT restrito a `review`
 
 **Commit**: `feat(db): T-23 migration 0005 — review RLS policy + GRANT (status=published)`
 
@@ -191,26 +201,24 @@ Todos os checks passaram. ✅
 | | |
 | --- | --- |
 | **Reqs** | RVW-16, RVW-17, RVW-18 |
-| **Depends on** | — |
-| **Where** | `supabase/seed.sql` (append no `do $$ … $$` existente, após os `insert into book`) |
+| **Depends on** | **T-23** (a migration é aplicada antes do seed no `db reset`; ordem fixa) |
+| **Where** | `supabase/seed.sql` (append no `do $$ … $$` existente) |
 | **Reuses** | idempotência e estilo do seed atual (UUIDs fixos + `on conflict (id) do nothing`) |
 | **Model** | Sonnet/Haiku |
 | **Tests** | none (verificação manual local) |
 | **Gate** | manual: `supabase db reset` local → contar linhas |
 | **Status** | `done-code` (seed estendido, commit `0ffb94c`; **gate local Supabase pendente**) |
 
-**What**: Semear resenhas nos 4 livros de domínio público existentes + 1 caso `draft`:
-- **1 resenha `published` por livro** (Dom Casmurro, O Crime do Padre Amaro, Iracema, O Cortiço), respeitando `book` **1—1** `review` (`book_id` UNIQUE). UUIDs fixos `bbbbbbbb-…`.
-- Cada resenha: `title`, `slug` único derivado do título (`dom-casmurro`, `o-crime-do-padre-amaro`, `iracema`, `o-cortico`), `rating` plausível **cabendo em `numeric(2,1)`** (1 casa decimal, ex.: `4.5`, `4.0`, `4.5`, `5.0`) e dentro do `check` 0–5, `body` **multi-parágrafo** (separado por `\n\n`), `status='published'`, `published_at = now()`, `editor_id` **omitido** (nullable).
-- **5º book de teste** (domínio público, ex.: "Memórias Póstumas de Brás Cubas", UUID `aaaaaaaa-…0005`) + sua `review` **`status='draft'`** (slug ex.: `memorias-postumas-rascunho`, `published_at` nulo) — para o teste de visibilidade (RVW-18).
+**What**: Semear resenhas nos 4 livros existentes + 1 caso `draft`:
+- **1 resenha `published` por livro** (Dom Casmurro, O Crime do Padre Amaro, Iracema, O Cortiço), 1—1 com `book` (`book_id` UNIQUE), UUIDs `bbbbbbbb-…`.
+- Cada uma: `title`, `slug` único (`dom-casmurro`, `o-crime-do-padre-amaro`, `iracema`, `o-cortico`), `rating` **cabendo em `numeric(2,1)`** (1 casa, ex.: 4.5/4.0/4.5/5.0) e no `check` 0–5, `body` **multi-parágrafo** (`\n\n`), `status='published'`, `published_at=now()`, `editor_id` **omitido** (nullable).
+- **5º book de teste** ("Memórias Póstumas de Brás Cubas", UUID `aaaaaaaa-…0005`) + `review` **`draft`** (slug `memorias-postumas-rascunho`, `published_at` nulo) — RVW-18.
 
 **Done when**:
-- [ ] `supabase db reset` local → **4 resenhas `published`** (1 por livro existente) + **1 `draft`** (no 5º book)
-- [ ] Reexecutar `supabase db reset` → **sem duplicatas** (idempotente)
-- [ ] Todos os `rating` têm no máximo 1 casa decimal (não estouram `numeric(2,1)`) e passam o `check` 0–5
-- [ ] Cada `body` tem ≥ 2 parágrafos separados por `\n\n`
-- [ ] `editor_id` das resenhas semeadas é `NULL` (sem editores no M1)
-- [ ] Os 4 slugs `published` resolvem conteúdo; o slug `draft` **não** aparece para o cliente anon (confirmado em T-31)
+- [ ] `supabase db reset` → 4 `published` (1/livro) + 1 `draft`
+- [ ] Reexecutar → sem duplicatas (idempotente)
+- [ ] `rating` ≤ 1 casa decimal e no `check` 0–5; `body` ≥ 2 parágrafos; `editor_id` nulo
+- [ ] Slugs `published` resolvem conteúdo; `draft` invisível ao anon (confirmado em T-32)
 
 **Commit**: `feat(db): T-24 seed — 4 resenhas publicadas + 5º book/review draft (idempotente)`
 
@@ -223,235 +231,201 @@ Todos os checks passaram. ✅
 | **Reqs** | RVW-03 (filtro), RVW-04, RVW-13 (filtro app-side) |
 | **Depends on** | — |
 | **Where** | `src/lib/review/queries.ts` |
-| **Reuses** | padrão de [book/queries.ts](../../../src/lib/book/queries.ts); `createServerClient` de [supabase/server.ts](../../../src/lib/supabase/server.ts); `Tables<'review'>` e `BookView` de `book/queries` |
+| **Reuses** | padrão de [book/queries.ts](../../../src/lib/book/queries.ts); `createServerClient`; `Tables<'review'>` e `BookView` |
 | **Model** | Sonnet/Haiku |
-| **Tests** | none¹ (integração coberta por T-31) |
+| **Tests** | none¹ (integração coberta por T-32) |
 | **Gate** | `npm run typecheck && npm run lint` |
 | **Status** | `done` (typecheck ✅ + lint ✅; commit `59747c8`) |
 
-**What**: Criar `queries.ts` com o tipo `ReviewView` e a função `getPublishedReviewBySlug`, **envolvida em `cache()` do React** para deduplicar a chamada dupla `generateMetadata` + `page` na mesma requisição.
-
-**Interfaces**:
-```typescript
-import { cache } from 'react'
-import type { Tables } from '@/lib/database.types'
-import type { BookView } from '@/lib/book/queries'
-
-export type ReviewView = Tables<'review'> & { book: BookView }
-
-export const getPublishedReviewBySlug = cache(
-  async (slug: string): Promise<ReviewView | null> => { /* … */ }
-)
-```
-
-**Comportamento** (design):
-- `select('*, book(*, genre(name, slug))')`, `.eq('slug', slug)`, **`.eq('status', 'published')`**, `.maybeSingle()`.
-- Filtro `status='published'` **explícito na query** (não delegado ao RLS — vale mesmo com `service_role`).
-- `if (error) throw error`; retorno `null` quando inexistente **ou** `draft`.
+**What**: `ReviewView` + `getPublishedReviewBySlug` **envolvida em `cache()` do React** (dedupe `generateMetadata` + `page`). `select('*, book(*, genre(name, slug))')`, `.eq('slug', slug)`, **`.eq('status','published')`**, `.maybeSingle()`; `if (error) throw error`; `null` em inexistente/draft.
 
 **Done when**:
 - [ ] `ReviewView` usa `Tables<'review'>` + `BookView` (sem `any`)
-- [ ] `getPublishedReviewBySlug` está envolvida em `cache()` (`import { cache } from 'react'`)
-- [ ] Query aplica `.eq('status','published')` explicitamente e `.maybeSingle()`
-- [ ] Retorna `null` (sem `throw`) quando não encontrado ou `draft`; `throw` só em erro de DB
-- [ ] `npm run typecheck && npm run lint` passa (sem erro no arquivo)
+- [ ] `getPublishedReviewBySlug` em `cache()`; filtro `status='published'` explícito; `maybeSingle()`
+- [ ] `null` (sem throw) quando não encontrado/draft; `throw` só em erro de DB
+- [ ] `npm run typecheck && npm run lint` passa
 
 **Commit**: `feat(review): T-25 queries — getPublishedReviewBySlug (cache + join book/genre)`
 
-> ¹ Requer banco real; contrato coberto por integração em T-31.
+> ¹ Requer banco real; contrato coberto por integração em T-32.
 
 ---
 
-### T-26 — `src/lib/review/rating.ts` (`formatRating`) + `src/components/review/Rating.tsx` + testes
+### T-26 — `src/lib/review/formatRating.ts` (util) + teste
 
 | | |
 | --- | --- |
-| **Reqs** | RVW-08, RVW-09 (contrato), RVW-27 |
+| **Reqs** | RVW-08 (formatação) |
 | **Depends on** | — |
-| **Where** | `src/lib/review/rating.ts` · `src/components/review/Rating.tsx` · `src/lib/review/__tests__/rating.test.ts` · `src/components/review/__tests__/Rating.test.tsx` |
-| **Reuses** | classe utilitária `sr-only` (skip link/layout); `Intl.NumberFormat` |
-| **Model** | **Opus** |
-| **Tests** | unit (Vitest) + componente (Vitest + RTL + axe) |
+| **Where** | `src/lib/review/formatRating.ts` · `src/lib/review/__tests__/formatRating.test.ts` |
+| **Reuses** | `Intl.NumberFormat` |
+| **Model** | **Sonnet** |
+| **Tests** | unit (Vitest) |
 | **Gate** | quick: `npm run typecheck && npm test` |
-| **Status** | `done` (9 testes ✅: 4 unit + 5 componente c/ axe; commit `fd3710e`) |
+| **Status** | `done` (4 testes unit ✅; commit `fd3710e` + refactor `7f0d925`) |
 
-**What**: Util puro `formatRating` + componente apresentacional `Rating` (C-1: **só número**, sem estrelas/medidor).
-
-**Interfaces**:
-```typescript
-// rating.ts
-export function formatRating(rating: number): string   // 4.5 → "4,5" (Intl pt-BR, 1 casa min/max)
-// Rating.tsx (Server Component, sem 'use client')
-export function Rating({ rating }: { rating: number }): JSX.Element
-```
-
-**Comportamento**: `Rating` renderiza `4,5 / 5` visível **+** `<span class="sr-only">Nota: 4,5 de 5</span>`. Assume `rating` presente — a **omissão quando nulo (RVW-09) é responsabilidade do chamador** (T-30).
+**What**: Util **puro** `formatRating(rating: number): string` — valor numérico localizado pt-BR, sempre 1 casa, vírgula decimal (C-1: só número). `Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })`. Testável isolado; reusável por `review-listing-search`.
 
 **Done when**:
-- [ ] `formatRating(4.5)` → `'4,5'`; `formatRating(4)` → `'4,0'`; `formatRating(5)` → `'5,0'` (vírgula decimal pt-BR, sempre 1 casa)
-- [ ] `Rating` é Server Component (sem `'use client'`); **sem** estrelas/SVG de medidor
-- [ ] Texto acessível `sr-only` anuncia "Nota: X de 5" (leitor de tela) — não só cor/visual (WCAG 2.1 AA)
-- [ ] Componente expõe a nota visível e a alternativa textual (dois nós distintos)
-- [ ] Axe (jsdom/RTL) → 0 issues críticos ao renderizar `Rating`
-- [ ] Gate: `npm run typecheck && npm test` passa; ≥ 4 testes em `rating.test.ts` + ≥ 2 em `Rating.test.tsx`
+- [ ] `formatRating(4.5)` → `'4,5'`; `formatRating(4)` → `'4,0'`; `formatRating(5)` → `'5,0'`; `formatRating(0)` → `'0,0'`
+- [ ] Nunca usa `.` como separador decimal
+- [ ] Gate: `npm run typecheck && npm test` passa; ≥ 4 testes em `formatRating.test.ts`
 
-**Commit**: `feat(review): T-26 Rating — formatRating pt-BR + exibição numérica acessível`
+**Commit**: `feat(review): T-26 formatRating — util de nota pt-BR (Intl, 1 casa)`
 
 ---
 
-### T-27 — `src/components/book/BookCover.tsx` + `.lia-card__media--type` + testes
+### T-27 — `src/components/review/Rating.tsx` (componente) + teste
+
+| | |
+| --- | --- |
+| **Reqs** | RVW-08 (exibição acessível), RVW-09 (contrato), RVW-27 |
+| **Depends on** | **T-26** (`Rating` importa `formatRating`) |
+| **Where** | `src/components/review/Rating.tsx` · `src/components/review/__tests__/Rating.test.tsx` |
+| **Reuses** | `formatRating` (T-26); utilitário `sr-only` (Tailwind v4, usado no skip link) |
+| **Model** | **Opus** |
+| **Tests** | componente (Vitest + RTL + axe) |
+| **Gate** | quick: `npm run typecheck && npm test` |
+| **Status** | `done` (5 testes ✅ c/ axe; commit `fd3710e` + refactor `7f0d925`) |
+
+**What**: `Rating({ rating }: { rating: number })` — Server Component (**sem** `'use client'`). Renderiza `4,5 / 5` visível (`aria-hidden`) **+** `<span class="sr-only">Nota: 4,5 de 5</span>`. **Sem** estrelas/medidor (C-1). A **omissão quando nulo (RVW-09) é do chamador** (T-31).
+
+**Done when**:
+- [ ] Server Component; sem estrelas/SVG de medidor
+- [ ] Texto `sr-only` anuncia "Nota: X de 5" ao leitor de tela (WCAG 2.1 AA — não só cor/visual)
+- [ ] Nota visível e alternativa textual em nós distintos; contraste AA
+- [ ] Axe (jsdom/RTL) → 0 críticos
+- [ ] Gate: `npm run typecheck && npm test` passa; ≥ 2 testes em `Rating.test.tsx`
+
+**Commit**: `feat(review): T-27 Rating — exibição numérica acessível (sr-only, C-1)`
+
+---
+
+### T-28 — `src/components/book/BookCover.tsx` + `.lia-card__media--type` + teste
 
 | | |
 | --- | --- |
 | **Reqs** | RVW-11, RVW-12, RVW-27 |
 | **Depends on** | — |
 | **Where** | `src/components/book/BookCover.tsx` · `src/app/globals.css` (modifier em `@layer components`) · `src/components/book/__tests__/BookCover.test.tsx` |
-| **Reuses** | classe `lia-card__media` (aspect-ratio 3/2) de [globals.css:483](../../../src/app/globals.css#L483); tokens `--oxblood-700`, `--paper-0`; mock de [telas-finais.html](../../../docs/design/telas-finais.html) l.245 |
+| **Reuses** | classe `lia-card__media` (aspect-ratio 3/2); tokens `--color-oxblood-700`, `--color-paper-0`; mock de [telas-finais.html](../../../docs/design/telas-finais.html) l.245 |
 | **Model** | **Opus** |
 | **Tests** | componente (Vitest + RTL + axe) |
 | **Gate** | quick: `npm run typecheck && npm test` (+ `npm run build` para o CSS) |
 | **Status** | `done` (5 testes ✅ c/ axe; build ✅; commit `6ed6ab9`) |
 
-**What**: Componente `BookCover` (Server Component) que renderiza a capa **tipográfica** de fallback, + novo modifier `.lia-card__media--type` consumindo **apenas tokens** (sem hex).
-
-**Interfaces**:
-```typescript
-// BookCover.tsx (sem 'use client')
-export function BookCover({ title }: { title: string }): JSX.Element
-```
-
-**Markup** (design): `<span class="lia-card__media lia-card__media--type" role="img" aria-label={`Capa de ${title}`}>` com o título **visível** dentro (não só imagem). **Não** processa `cover_url` (RVW-12 — pipeline de imagem é `storage-covers`).
+**What**: `BookCover({ title })` (Server Component) — capa **tipográfica** de fallback. `<span class="lia-card__media lia-card__media--type" role="img" aria-label={`Capa de ${title}`}>` com título **visível**. **Não** processa `cover_url` (RVW-12). Novo modifier `.lia-card__media--type` **só tokens** (sem hex). **CSS mantido junto do componente — decisão intencional** (ver nota de granularidade).
 
 **Done when**:
-- [ ] `BookCover` é Server Component (sem `'use client'`); recebe **só** `title` (contrato mínimo à prova de escopo)
-- [ ] Renderiza `role="img"` + `aria-label="Capa de <título>"` e o título como texto visível (WCAG 2.1 AA — alternativa textual, não texto-como-imagem)
-- [ ] **Não** referencia/processa `cover_url` (RVW-12)
-- [ ] `.lia-card__media--type` adicionada em `@layer components` ao lado de `.lia-card__media`, **só tokens** (zero hex): fundo `--oxblood-700`, texto `--paper-0`, `align-items:flex-end`, padding
-- [ ] Contraste texto/fundo ≥ 4.5:1 (token `--paper-0` sobre `--oxblood-700`)
-- [ ] Axe (jsdom/RTL) → 0 issues críticos; `npm run build` compila o CSS sem erro
+- [ ] Server Component; recebe só `title`
+- [ ] `role="img"` + `aria-label="Capa de <título>"` + título como texto visível (WCAG 2.1 AA)
+- [ ] Não referencia `cover_url`
+- [ ] `.lia-card__media--type` em `@layer components`, só tokens (zero hex); contraste ≥ 4.5:1
+- [ ] Axe → 0 críticos; `npm run build` compila o CSS
 - [ ] Gate: `npm run typecheck && npm test` passa; ≥ 3 testes em `BookCover.test.tsx`
 
-**Commit**: `feat(book): T-27 BookCover — capa tipográfica de fallback (role=img + aria-label)`
+**Commit**: `feat(book): T-28 BookCover — capa tipográfica de fallback (role=img + aria-label)`
 
 ---
 
-### T-28 — `src/app/resenha/[slug]/not-found.tsx` (404 acessível)
+### T-29 — `src/app/resenha/[slug]/not-found.tsx` (404 acessível) + teste
 
 | | |
 | --- | --- |
 | **Reqs** | RVW-02, RVW-03 (parte UI), RVW-27 |
 | **Depends on** | — |
 | **Where** | `src/app/resenha/[slug]/not-found.tsx` · `src/app/resenha/[slug]/__tests__/not-found.test.tsx` |
-| **Reuses** | tokens `lia-*`; `<main>`/skip link do [layout.tsx](../../../src/app/layout.tsx); classes `lia-btn` para o link de volta |
+| **Reuses** | tokens `lia-*`; `<main>`/skip link do layout; `next/link` (SSR) |
 | **Model** | Sonnet/Haiku |
 | **Tests** | componente (Vitest + RTL + axe) |
 | **Gate** | quick: `npm run typecheck && npm test` |
 | **Status** | `done` (4 testes ✅ c/ axe; commit `f00309d`) |
 
-**What**: Página de 404 **acessível** da rota, renderizada automaticamente pelo Next quando `page.tsx` chama `notFound()` (slug inexistente ou `draft`).
+**What**: Página de 404 acessível da rota (renderizada quando `page.tsx` chama `notFound()`).
 
 **Done when**:
-- [ ] Arquivo `not-found.tsx` na pasta da rota
-- [ ] Um único `<h1>` com mensagem clara de "resenha não encontrada" (rascunho indistinguível de inexistente — **sem vazar** que existe um draft)
-- [ ] Link de retorno (ex.: para a home) navegável por teclado com **foco visível** (tokens M0)
-- [ ] Hierarquia de heading coerente; nenhum heading órfão (WCAG 2.1 AA)
-- [ ] Axe (jsdom/RTL) → 0 issues críticos
-- [ ] Gate: `npm run typecheck && npm test` passa; ≥ 2 testes em `not-found.test.tsx`
+- [ ] Um único `<h1>` "resenha não encontrada"; **não vaza** que existe um draft
+- [ ] Link de retorno navegável por teclado, foco visível
+- [ ] Hierarquia de heading coerente; axe → 0 críticos
+- [ ] Gate: `npm run typecheck && npm test` passa; ≥ 2 testes
 
-**Commit**: `feat(review): T-28 not-found — página 404 acessível da rota /resenha`
+**Commit**: `feat(review): T-29 not-found — página 404 acessível da rota /resenha`
 
 ---
 
-### T-29 — `metadataBase` no `src/app/layout.tsx`
+### T-30 — `metadataBase` no `src/app/layout.tsx`
 
 | | |
 | --- | --- |
 | **Reqs** | RVW-20 (og:url/canonical absolutas) |
 | **Depends on** | — |
 | **Where** | `src/app/layout.tsx` (objeto `metadata` raiz) |
-| **Reuses** | export `metadata` já existente no layout; var de ambiente de site (padrão `NEXT_PUBLIC_SITE_URL` / fallback local) |
+| **Reuses** | export `metadata` existente; `NEXT_PUBLIC_SITE_URL` / fallback local |
 | **Model** | Sonnet/Haiku |
-| **Tests** | none (config de metadata; validado por build + em T-30) |
+| **Tests** | none (config; validado por build + T-31) |
 | **Gate** | `npm run typecheck && npm run build` |
 | **Status** | `done` (typecheck + build ✅; commit `9301774`) |
 
-**What**: Adicionar `metadataBase: new URL(<site url>)` ao `metadata` raiz do layout, para que `og:url` e canonical relativos de `generateMetadata` (T-30) resolvam **absolutos** já nesta feature (decisão da revisão 2026-06-12).
+**What**: `metadataBase: new URL(NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000')` no `metadata` raiz, para `og:url`/canonical relativos de `generateMetadata` (T-31) resolverem absolutos.
 
 **Done when**:
-- [ ] `metadata.metadataBase` definido no layout raiz com a URL do site (env com fallback determinístico local, sem hardcode de domínio proibido)
-- [ ] Metadata relativa (`url: '/resenha/<slug>'`) resolve para URL absoluta no `<head>` renderizado
+- [ ] `metadata.metadataBase` definido (env com fallback local, sem hardcode de domínio)
+- [ ] URL relativa resolve absoluta no `<head>`
 - [ ] `npm run typecheck && npm run build` passa
 
-**Commit**: `feat(seo): T-29 metadataBase no layout raiz (og:url/canonical absolutas)`
+**Commit**: `feat(seo): T-30 metadataBase no layout raiz (og:url/canonical absolutas)`
 
 ---
 
-### T-30 — `src/app/resenha/[slug]/page.tsx` (rota + `generateMetadata` + `<article>`)
+### T-31 — `src/app/resenha/[slug]/page.tsx` (rota + `generateMetadata` + `<article>`)
 
 | | |
 | --- | --- |
 | **Reqs** | RVW-01, 02 (notFound), 05, 06, 07, 09 (omissão), 10, 19, 20, 21, 22, 23, 24, 25, 26, 27 |
-| **Depends on** | T-25, T-26, T-27, T-28, T-29 |
+| **Depends on** | T-25, T-27, T-28, T-29, T-30 |
 | **Where** | `src/app/resenha/[slug]/page.tsx` |
-| **Reuses** | `getPublishedReviewBySlug` (T-25); `Rating` (T-26); `BookCover` (T-27); [BookDetails](../../../src/components/book/BookDetails.tsx) (`headingLevel={3}`); `notFound` de `next/navigation`; classes `lia-btn`, `lia-btn--secondary`; `<main>`/skip link do layout |
+| **Reuses** | `getPublishedReviewBySlug` (T-25); `Rating` (T-27); `BookCover` (T-28); `BookDetails` (`headingLevel={3}`); `notFound`; classes `lia-btn*`; `<main>`/skip link |
 | **Model** | Sonnet/Haiku |
 | **Tests** | a11y (Playwright + axe, **local-seeded** — ver TD-02) |
 | **Gate** | `npm run typecheck && npm run build` (CI) · axe de rota = verificação local (seed) |
 | **Status** | `done-code` (typecheck + build ✅, rota compila como dinâmica ƒ; commit `83c4565`; **axe de rota = verificação local pendente**) |
 
-**What**: Compor a resenha completa num `<article>` SSR + emitir SEO/404.
-- `generateMetadata({ params })`: busca via `getPublishedReviewBySlug`; se `null` → `Metadata` genérico **sem dados de resenha** (RVW-21). Senão: `title: "${review.title} · LIA"`, `description` = resumo do `body` (~160 chars, corte em palavra), `openGraph: { title, description, type: 'article', url: '/resenha/${slug}' }` (absoluta via metadataBase de T-29).
-- `ReviewPage({ params })`: resolve; `null` → `notFound()`; senão renderiza o `<article>` na ordem do design (header `h1`+contexto+`Rating` condicional → `BookCover` → `<section>` Ficha `h2`+`BookDetails h3` → `<section>` Resenha `h2`+parágrafos → `<section>` Comentários `h2`+aviso "em breve" → footer botão "Recomendar" `disabled`+`aria-describedby`).
-- Helper `splitParagraphs(body)`: `body.split(/\n{2,}/).map(s=>s.trim()).filter(Boolean)`; `body` vazio/nulo → `[]` (degradação graciosa). **Sem** `dangerouslySetInnerHTML`.
-- `Rating` só renderiza quando `rating != null` (RVW-09).
+**What**: `<article>` SSR + SEO/404. `generateMetadata`: `null` → `Metadata` genérico (RVW-21); senão `title`/`description` (resumo ~160 chars) + `openGraph` (type article, url absoluta via T-30). `ReviewPage`: `notFound()` se `null`; ordem header(`h1`+contexto+`Rating` condicional) → `BookCover` → seção Ficha(`h2`+`BookDetails h3`) → seção Resenha(`h2`+parágrafos) → seção Comentários(`h2`+"em breve") → footer botão Recomendar `disabled`. `splitParagraphs(body)` → `<p>` por parágrafo; vazio → `[]`.
 
 **Done when**:
-- [ ] `/resenha/<slug>` publicado renderiza **via SSR** (conteúdo factual no HTML inicial, sem depender de hidratação — RVW-01/26)
-- [ ] Slug inexistente **e** resenha `draft` → `notFound()` → 404 acessível (via T-28), sem 500 (RVW-02/03)
-- [ ] `<article>` sob o `<main>` do layout (a página **não** cria outro `<main>` — RVW-05); **único `<h1>`** = `review.title` (RVW-06/24)
-- [ ] Ficha via `BookDetails` com `headingLevel={3}` sob `<h2>Ficha técnica</h2>` (RVW-07); bloco Tradução vira `<h3>` coerente
-- [ ] `Rating` presente só quando `rating != null`; nulo → bloco omitido, resto intacto (RVW-09)
-- [ ] `<section><h2>Resenha</h2>` + `body` em `<p>` por parágrafo; `body` vazio → seção sem parágrafos, sem quebra (RVW-10)
-- [ ] Placeholders: `<section>` Comentários com aviso "em breve" (texto) + botão "Recomendar" `disabled` acessível (`aria-describedby`), **zero lógica de negócio** (RVW-22/23)
-- [ ] `<head>`: `title`, meta description e OG (title/description/type/**url absoluta**) coerentes por requisição (RVW-19/20); slug 404 **não vaza** metadados de resenha (RVW-21)
-- [ ] Teclado: tab order lógico, **foco visível**, skip link funcionando (RVW-25); conteúdo presente **sem JS** (RVW-26)
-- [ ] axe na rota `/resenha/dom-casmurro` (seed local) → **0 críticos**, contraste ≥ 4.5:1 (RVW-27); ordem de headings validada (único `h1`, `h2`/`h3` hierárquicos)
+- [ ] `/resenha/<slug>` publicado renderiza via SSR; slug inexistente e `draft` → 404 (T-29), sem 500
+- [ ] `<article>` sob `<main>`; único `<h1>`; `BookDetails headingLevel=3`; `Rating` só se `rating != null`
+- [ ] Seção Resenha em `<p>`; `body` vazio → sem quebra; placeholders (Comentários "em breve" + Recomendar `disabled` acessível), zero lógica
+- [ ] `<head>` com title/description/OG absoluta; 404 não vaza metadados
+- [ ] Teclado (foco visível, tab lógico), SSR sem JS; axe na rota seeded → 0 críticos + contraste AA
 - [ ] Gate CI: `npm run typecheck && npm run build` passa
 
-**Commit**: `feat(review): T-30 page — rota SSR /resenha/[slug] + generateMetadata + <article>`
+**Commit**: `feat(review): T-31 page — rota SSR /resenha/[slug] + generateMetadata + <article>`
 
 ---
 
-### T-31 — Teste de integração RLS de `review` (local-only)
+### T-32 — Teste de integração RLS de `review` (local-only)
 
 | | |
 | --- | --- |
 | **Reqs** | RVW-13, RVW-14, RVW-15 (verificação) |
 | **Depends on** | T-23, T-24 |
 | **Where** | `src/lib/review/__tests__/rls.integration.test.ts` |
-| **Reuses** | client `anon` de [supabase/client.ts](../../../src/lib/supabase/client.ts); estrutura `describe.skipIf(!RUN)` de [book/__tests__/rls.integration.test.ts](../../../src/lib/book/__tests__/rls.integration.test.ts) |
+| **Reuses** | estrutura `describe.skipIf(!RUN)` de [book/__tests__/rls.integration.test.ts](../../../src/lib/book/__tests__/rls.integration.test.ts) |
 | **Model** | **Opus** |
 | **Tests** | integration (Supabase local — **não roda no CI atual**, ver TD-02) |
 | **Gate** | manual (local): `RUN_RLS_INTEGRATION=1 npx vitest run src/lib/review/__tests__/rls.integration.test.ts` |
 | **Status** | `done-code` (teste criado, PULA no CI via `skipIf` — suíte verde 93/8; commit `166890e`; **execução local Supabase pendente**) |
 
-**What**: Teste com o client **anon** sobre o seed (T-24), **sem** precisar de `service_role` em `review` (não esbarra na TD-03).
-
-**Casos** (design):
-1. anon `select` em `review` retorna **só publicadas** (4) e contém os slugs do seed.
-2. a review `draft` semeada **não** aparece para anon (linha filtrada, **sem** erro de permissão — indistinguível de inexistente).
-3. anon `insert` / `update` / `delete` em `review` → erro **`42501`** (sem grant/policy de escrita).
-4. RLS de `review` permanece **`enabled`** (consulta a metadados, como no teste de `book`).
+**What**: Cliente **anon** sobre o seed (não usa `service_role` → não esbarra na TD-03). Casos: (1) anon lê só publicadas (4) + slugs do seed; (2) `draft` não aparece (filtrado, sem `42501`); (3) `insert`/`update`/`delete` anon → `42501`; (4) RLS `enabled` (toda linha lida é `published`; draft oculto apesar de existir).
 
 **Done when**:
-- [ ] Arquivo criado com comentário `// LOCAL-ONLY — ver TD-02 em STATE.md` e `describe.skipIf(!RUN)`
-- [ ] Caso 1: `select` anon → `data.length === 4` e inclui os 4 slugs publicados
-- [ ] Caso 2: nenhum registro `draft` retorna; `error` é `null` (filtrado, não `42501`)
-- [ ] Caso 3: `insert`/`update`/`delete` anon → `error.code === '42501'`
-- [ ] Caso 4: RLS de `review` reportado como `enabled`
-- [ ] Chaves lidas via env (nunca hardcoded); executar local com Supabase → todos os asserts passam; **pulado** no CI
+- [ ] Arquivo com `// LOCAL-ONLY — ver TD-02` e `describe.skipIf(!RUN)`
+- [ ] (1) `select` anon → 4 + os 4 slugs; (2) draft → `null`, `error null`
+- [ ] (3) escrita anon → `42501`; (4) toda linha `published`
+- [ ] Chaves via env; local com Supabase → asserts passam; **pulado** no CI
 
-**Commit**: `test(review): T-31 RLS integration — leitura pública filtrada + escrita fechada (local-only)`
+**Commit**: `test(review): T-32 RLS integration — leitura pública filtrada + escrita fechada (local-only)`
 
 ---
 
@@ -460,15 +434,16 @@ export function BookCover({ title }: { title: string }): JSX.Element
 | Task | Descrição | Modelo | Depends on | Commit | Status |
 | --- | --- | --- | --- | --- | --- |
 | T-23 | Migration 0005 (policy + GRANT review) | Opus | — | `4a68d7f` | `done-code` (gate local pendente) |
-| T-24 | seed.sql — 4 published + 5º book/review draft | Sonnet/Haiku | — | `0ffb94c` | `done-code` (gate local pendente) |
+| T-24 | seed.sql — 4 published + 5º book/review draft | Sonnet/Haiku | T-23 | `0ffb94c` | `done-code` (gate local pendente) |
 | T-25 | review/queries.ts — getPublishedReviewBySlug + cache() | Sonnet/Haiku | — | `59747c8` | `done` |
-| T-26 | rating.ts + Rating.tsx + testes | Opus | — | `fd3710e` | `done` (9 testes) |
-| T-27 | BookCover.tsx + .lia-card__media--type + teste | Opus | — | `6ed6ab9` | `done` (5 testes) |
-| T-28 | not-found.tsx (404 acessível) + teste | Sonnet/Haiku | — | `f00309d` | `done` (4 testes) |
-| T-29 | layout.tsx metadataBase | Sonnet/Haiku | — | `9301774` | `done` |
-| T-30 | page.tsx — rota SSR + generateMetadata + article | Sonnet/Haiku | T-25,26,27,28,29 | `83c4565` | `done-code` (axe rota local pendente) |
-| T-31 | RLS integration test (local-only) | Opus | T-23,24 | `166890e` | `done-code` (exec. local pendente) |
+| T-26 | review/formatRating.ts — util de nota pt-BR | Sonnet | — | `fd3710e`+`7f0d925` | `done` (4 testes) |
+| T-27 | Rating.tsx — exibição numérica acessível | Opus | T-26 | `fd3710e`+`7f0d925` | `done` (5 testes) |
+| T-28 | BookCover.tsx + .lia-card__media--type + teste | Opus | — | `6ed6ab9` | `done` (5 testes) |
+| T-29 | not-found.tsx (404 acessível) + teste | Sonnet/Haiku | — | `f00309d` | `done` (4 testes) |
+| T-30 | layout.tsx metadataBase | Sonnet/Haiku | — | `9301774` | `done` |
+| T-31 | page.tsx — rota SSR + generateMetadata + article | Sonnet/Haiku | T-25,27,28,29,30 | `83c4565` | `done-code` (axe rota local pendente) |
+| T-32 | RLS integration test (local-only) | Opus | T-23,24 | `166890e` | `done-code` (exec. local pendente) |
 
-**9 tasks · 27/27 reqs mapeados · 9/9 implementadas e commitadas.** Gates de código verdes (typecheck/build/lint + suíte 93 passed / 8 skipped). **Verificação local pendente** (Supabase/Docker indisponível nesta sessão): T-23/T-24 (`db reset` + inspeção), T-30 (axe da rota seeded), T-31 (`RUN_RLS_INTEGRATION=1`). Padrão TD-02 — reproduzível localmente.
+**10 tasks · 27/27 reqs mapeados · 10/10 implementadas e commitadas.** Gates de código verdes (typecheck/build/lint + suíte 93 passed / 8 skipped). **Verificação local pendente** (Supabase/Docker indisponível na sessão de Execute): T-23/T-24 (`db reset` + inspeção), T-31 (axe da rota seeded), T-32 (`RUN_RLS_INTEGRATION=1`). Padrão TD-02 — reproduzível localmente.
 
-> **Lembrete TD-03 (Alta):** a T-23 concede GRANT **apenas** a `review`. TD-03 permanece **ABERTA** para as demais tabelas e deve ser resolvida **antes do M2 (`reviews-crud`)`**. Concluir a review-page **não** a fecha.
+> **Lembrete TD-03 (Alta):** a T-23 concede GRANT **apenas** a `review`. TD-03 permanece **ABERTA** para as demais tabelas e deve ser resolvida **antes do M2 (`reviews-crud`)**. Concluir a review-page **não** a fecha.

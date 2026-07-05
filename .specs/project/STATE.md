@@ -1,7 +1,7 @@
 # State — LIA
 
 **Last Updated:** 2026-07-05
-**Current Work:** M1 `review-page` — **fase Execute CONCLUÍDA** (branch `feat/review-page`). 9/9 tasks `T-23..T-31` implementadas e commitadas (commits `4a68d7f`→`166890e`). **Gates de código verdes:** typecheck/build/lint + suíte Vitest **93 passed / 8 skipped** (as 2 suítes RLS local-only puladas no CI); rota `ƒ /resenha/[slug]` compila como dinâmica (SSR). **Verificação local Supabase pendente** (Docker indisponível nesta sessão, padrão TD-02): T-23 (`pg_policies`/grant), T-24 (`db reset` conta linhas), T-30 (axe da rota seeded), T-31 (`RUN_RLS_INTEGRATION=1`) — todos reproduzíveis com `supabase start && db reset`. **⚠️ TD-03 permanece ABERTA:** a 0005 (T-23) concede GRANT só a `review` — não fecha a TD-03 (demais tabelas + service_role pré-M2). **Próximo: verificação local dos gates de banco → abrir PR da `review-page`.** | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
+**Current Work:** M1 `review-page` — **fase Execute CONCLUÍDA** (branch `feat/review-page`). 10/10 tasks `T-23..T-32` implementadas e commitadas (commits `4a68d7f`→`166890e`; ajuste pré-Execute `7f0d925` dividiu T-26 formatRating/T-27 Rating e renumerou). **Gates de código verdes:** typecheck/build/lint + suíte Vitest **93 passed / 8 skipped** (as 2 suítes RLS local-only puladas no CI); rota `ƒ /resenha/[slug]` compila como dinâmica (SSR). **Verificação local Supabase pendente** (Docker indisponível nesta sessão, padrão TD-02): T-23 (`pg_policies`/grant), T-24 (`db reset` conta linhas), T-30 (axe da rota seeded), T-31 (`RUN_RLS_INTEGRATION=1`) — todos reproduzíveis com `supabase start && db reset`. **⚠️ TD-03 permanece ABERTA:** a 0005 (T-23) concede GRANT só a `review` — não fecha a TD-03 (demais tabelas + service_role pré-M2). **Próximo: verificação local dos gates de banco → abrir PR da `review-page`.** | `book-data` (M1 anterior) — ✅ COMPLETA, mergeada (PR #1).
 
 ---
 
@@ -99,7 +99,8 @@ Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DEC
 - [x] Especificar a feature `review-page` (M1) — spec.md + context.md criados; gray areas C-1 (nota só número) e C-2 (placeholders "em breve") resolvidas; **aguardando revisão antes do Design**
 - [x] Desenhar a feature `review-page` (design.md) — **aprovado** 2026-06-12; 27/27 reqs mapeados a componentes; 3 pontos da revisão resolvidos (draft via 5º book; `<h2>Resenha`; `metadataBase`)
 - [x] Fase Tasks de `review-page` concluída — **9 tasks (T-23..T-31), 27/27 reqs mapeados**, alocação de modelo definida; `tasks.md` criado
-- [x] Execute `review-page` — **9/9 tasks (T-23..T-31) implementadas e commitadas**; gates de código verdes (typecheck/build/lint + 93 passed/8 skipped). Verificação local Supabase (T-23/24/30/31) pendente (TD-02)
+- [x] Execute `review-page` — **10/10 tasks (T-23..T-32) implementadas e commitadas**; gates de código verdes (typecheck/build/lint + 93 passed/8 skipped). Verificação local Supabase (T-23/24/31/32) pendente (TD-02)
+- [x] Ajuste pré-Execute `review-page` — T-26 dividida (formatRating util + Rating componente), renumeração T-27..T-32, dependency graph corrigido (T-23→T-24 sequencial); código realinhado (`rating.ts`→`formatRating.ts`, commit `7f0d925`)
 - [ ] `review-page`: rodar verificação local dos gates de banco (`supabase start && db reset`; axe da rota; `RUN_RLS_INTEGRATION=1`) e abrir PR
 - [ ] **TD-03 (Alta, pré-M2):** a migration 0005 (T-23) concede GRANT só a `review`; abrir frente de infra para GRANTs de `comment`/`recommendation`/`editor` + `service_role`/Data API **antes do M2 (`reviews-crud`)**
 
