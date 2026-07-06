@@ -23,6 +23,13 @@
   --color-oxblood-700: #7e2d24;
   --color-oxblood-800: #651f18;
 
+  /* Cores: sálvia — acento de marca da seção "Em destaque" da home (DD-7).
+     sage-100 = fundo pastel; sage-700 = eyebrow/acento. Verificado:
+     ink-900 sobre sage-100 = 13.0:1 (AAA, texto dos slides);
+     sage-700 sobre sage-100 = 5.5:1 (AA, eyebrow). Só tokens — sem hex fora daqui. */
+  --color-sage-100: #dce5d3;
+  --color-sage-700: #4f5c47;
+
   /* Cores: feedback */
   --color-red-700: #9b2620;
   --color-red-50: #fbeae8;
