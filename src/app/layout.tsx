@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { Spectral, Newsreader, IBM_Plex_Sans } from 'next/font/google'
+import { SiteFooter } from '@/components/listing/SiteFooter'
 import './globals.css'
 
 const spectral = Spectral({
@@ -52,9 +54,16 @@ export default function RootLayout({
           Ir para o conteúdo principal
         </a>
         <header className="px-5 py-4 border-b border-[var(--border-subtle)]">
-          <span className="font-display font-semibold text-base text-ink-900">LIA</span>
+          <Link
+            href="/"
+            className="font-display font-semibold text-base text-ink-900 no-underline"
+            aria-label="LIA — página inicial"
+          >
+            LIA
+          </Link>
         </header>
         <main id="main">{children}</main>
+        <SiteFooter />
       </body>
     </html>
   )
