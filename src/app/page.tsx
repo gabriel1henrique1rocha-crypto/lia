@@ -1,6 +1,16 @@
 import type { Metadata } from 'next'
-import { listFeaturedReviews, listPublishedReviews, listFilterOptions } from '@/lib/review/queries'
-import { parseListingParams, PAGE_SIZE, type RawSearchParams } from '@/lib/review/listingParams'
+import {
+  listFeaturedReviews,
+  listPublishedReviews,
+  listFilterOptions,
+  type ReviewListItem,
+} from '@/lib/review/queries'
+import {
+  parseListingParams,
+  PAGE_SIZE,
+  type ListingParams,
+  type RawSearchParams,
+} from '@/lib/review/listingParams'
 import { FeaturedCarousel } from '@/components/review/FeaturedCarousel'
 import { ReviewCard } from '@/components/review/ReviewCard'
 import { ListingControls } from '@/components/listing/ListingControls'
@@ -9,6 +19,13 @@ import { EmptyState } from '@/components/listing/EmptyState'
 import { ResultsCount } from '@/components/listing/ResultsCount'
 
 type SearchParams = Promise<RawSearchParams>
+
+type HomeData = {
+  featured: ReviewListItem[]
+  options: { genres: { name: string; slug: string }[]; authors: string[] }
+  listing: { rows: ReviewListItem[]; total: number }
+  clampedParams: ListingParams
+}
 
 const PARAM_KEYS = ['q', 'genero', 'autor', 'nota', 'ordem', 'pagina'] as const
 
@@ -42,6 +59,20 @@ export async function generateMetadata({
   }
 }
 
+/** Leitura da home (ANON). Normaliza a página além do total (DD-2) após o count. */
+async function loadHome(params: ListingParams): Promise<HomeData> {
+  const [featured, options, initialListing] = await Promise.all([
+    listFeaturedReviews(),
+    listFilterOptions(),
+    listPublishedReviews(params),
+  ])
+  const lastPage = Math.max(1, Math.ceil(initialListing.total / PAGE_SIZE))
+  const clampedParams = params.pagina > lastPage ? { ...params, pagina: lastPage } : params
+  const listing =
+    clampedParams === params ? initialListing : await listPublishedReviews(clampedParams)
+  return { featured, options, listing, clampedParams }
+}
+
 /**
  * Home pública `/` (App Router, SSR). Lê `searchParams` (Promise no Next 16),
  * consulta a listagem/destaque/opções via ANON e monta a estrutura semântica
@@ -52,17 +83,30 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   const raw = await searchParams
   const params = parseListingParams(raw)
 
-  const [featured, options, initialListing] = await Promise.all([
-    listFeaturedReviews(),
-    listFilterOptions(),
-    listPublishedReviews(params),
-  ])
+  let data: HomeData | null = null
+  try {
+    data = await loadHome(params)
+  } catch {
+    // Leitura indisponível (ex.: banco inacessível) → degrada SEM 500: a rota
+    // segue 200 e acessível (edge case "degradar com segurança"; não vaza o erro).
+    data = null
+  }
 
-  // Página além do total → normaliza para a última válida (DD-2), após o count.
-  const lastPage = Math.max(1, Math.ceil(initialListing.total / PAGE_SIZE))
-  const clampedParams = params.pagina > lastPage ? { ...params, pagina: lastPage } : params
-  const listing =
-    clampedParams === params ? initialListing : await listPublishedReviews(clampedParams)
+  if (!data) {
+    return (
+      <div className="lia-home">
+        <h1 className="lia-home__title">Resenhas</h1>
+        <div className="lia-empty" role="status">
+          <p className="lia-empty__title">Não foi possível carregar as resenhas</p>
+          <p className="lia-empty__text">
+            Houve um problema ao buscar as resenhas agora. Tente recarregar a página em instantes.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const { featured, options, listing, clampedParams } = data
   const { rows, total } = listing
 
   // Acervo vazio (nenhuma publicada) ≠ busca sem resultados.
