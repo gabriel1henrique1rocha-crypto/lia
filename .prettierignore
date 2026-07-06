@@ -4,6 +4,7 @@ public
 *.lock
 next-env.d.ts
 src/lib/database.types.ts
+supabase/.temp/
 docs/
 .specs/
 .claude/
