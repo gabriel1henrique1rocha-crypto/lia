@@ -9,7 +9,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-01 | Escala da nota | A decidir | `reviews-crud` (M2) |
 | D-02 | Anti-spam de comentários sem login | A decidir | `public-comments` (M3) |
 | D-03 | Modelo de indicação (recomendam vs votação) | A decidir | `recommendations` (M3) |
-| D-04 | Estratégia de busca | A decidir | `review-listing-search` (M1) |
+| D-04 | Estratégia de busca | **Aceita** | `review-listing-search` (M1) |
 | D-05 | Hospedagem | **Aceita** | `infra-foundation` (M0) |
 | D-06 | Linguagem tipada | **Aceita** | `infra-foundation` (M0) |
 | D-07 | Versão do Tailwind + estratégia de tokens | **Aceita** | `infra-foundation` (M0) |
@@ -108,12 +108,16 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 ## D-04 — Estratégia de busca
 
-**Status:** A decidir · **Resolver em:** `review-listing-search` (M1)
+**Status:** Aceita · **Data:** 2026-07-06 · **Milestone:** M1 (`review-listing-search`)
 
 **Contexto:** a listagem precisa de busca por título e filtros combináveis. A abordagem afeta o schema e a infra.
 
-**Opções:** (a) Postgres full-text search / `ilike` no Supabase no MVP; (b) busca avançada / serviço dedicado (fase futura).
+**Opções:** (a) Postgres full-text search / `ilike` no Supabase no MVP; (b) busca avançada / serviço dedicado (fase futura); (c) busca client-side sobre dados carregados (rejeitada — quebra o DoD de a11y sem-JS e a paginação real).
 
-**Recomendação do PRD:** Postgres full-text / `ilike` no Supabase no MVP; busca avançada depois.
+**Decisão:** **server-side no Supabase via `ilike`** (`%termo%`, case-insensitive), alvo **só `review.title`** (C-1 — autor/gênero são FILTROS, não busca textual). Filtros/ordenação/paginação compõem na mesma query, via cliente **anon** lendo só `status='published'`.
 
-**Decisão:** _pendente._
+**Razão:** única opção que honra o DoD de a11y (busca/filtros funcionam **sem JS**, via `searchParams` na URL) e a paginação real (`range` + `count`); RLS permanece o gate na origem. Recomendação do PRD.
+
+**Trade-off (registrado):** `ilike '%termo%'` **não usa índice B-tree** — full scan na tabela. Irrelevante no volume do MVP; **migrar para Postgres full-text (tsvector) ou `pg_trgm` quando o volume justificar** (evolução aditiva, sem quebrar o contrato da query).
+
+**Impacto:** `listPublishedReviews(params)` na camada de query; home lê `searchParams`; controles como form GET + links (progressive enhancement).
