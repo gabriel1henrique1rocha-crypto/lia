@@ -573,4 +573,298 @@
     letter-spacing: var(--tracking-caps);
     color: var(--text-secondary); /* ink-700 → contraste forte (AA+) */
   }
+
+  /* ================= LISTAGEM / HOME (review-listing-search, T5) =================
+     Só tokens (inclui sálvia T3). Foco visível herda o anel global (@layer base). */
+
+  /* ---------- Estrutura da home ---------- */
+  .lia-home {
+    max-width: var(--container-lg);
+    margin-inline: auto;
+    padding: var(--spacing-6) var(--spacing-5) var(--spacing-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-7);
+  }
+  .lia-home__title {
+    margin: 0;
+    font: var(--type-heading);
+    font-size: var(--text-3xl);
+    line-height: var(--text-3xl--line-height);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-strong);
+  }
+  .lia-section__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-5);
+  }
+  .lia-section__title {
+    margin: 0;
+    font: var(--type-heading);
+    color: var(--text-strong);
+  }
+  /* Contagem de resultados (role="status") — DD-9/LST-23 */
+  .lia-results__count {
+    margin: 0;
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+
+  /* ---------- Grid de resultados ---------- */
+  .lia-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: var(--spacing-5);
+  }
+  .lia-grid > li {
+    display: flex;
+  }
+
+  /* ---------- ReviewCard: cartão inteiro clicável (overlay) ---------- */
+  /* O link do TÍTULO se expande a todo o cartão via ::after — cartão inteiro
+     clicável (LST-02) SEM inflar o nome acessível do link (só o título). */
+  .lia-review-card {
+    position: relative;
+    width: 100%;
+  }
+  .lia-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .lia-card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  /* Anel de foco no cartão inteiro quando o link recebe foco por teclado */
+  .lia-review-card:has(.lia-card__link:focus-visible) {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset-width);
+  }
+  .lia-review-card:has(.lia-card__link:focus-visible) .lia-card__link:focus-visible {
+    outline: none;
+  }
+  .lia-review-card:hover {
+    border-color: var(--border-default);
+    box-shadow: var(--shadow-lg);
+  }
+  .lia-card__author {
+    margin: 0;
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+
+  /* ---------- Seção "Em destaque" (região de marca sálvia — DD-7) ---------- */
+  .lia-featured {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding: var(--spacing-6) var(--spacing-5);
+    background: var(--color-sage-100);
+    border-radius: var(--radius-lg);
+  }
+  .lia-featured__eyebrow {
+    margin: 0;
+    font: var(--type-meta);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--color-sage-700); /* 5.5:1 sobre sage-100 (AA) */
+  }
+  .lia-featured__title {
+    margin: 0;
+    font: var(--type-heading);
+    color: var(--color-ink-900); /* 13.0:1 sobre sage-100 (AAA) */
+  }
+  .lia-featured__viewport {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--spacing-3);
+  }
+  .lia-featured__track {
+    list-style: none;
+    margin: 0;
+    padding: var(--spacing-1);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(15rem, 18rem);
+    gap: var(--spacing-4);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+  }
+  .lia-featured__track > li {
+    scroll-snap-align: start;
+    display: flex;
+  }
+  .lia-featured__nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--spacing-target-min);
+    height: var(--spacing-target-min);
+    border-radius: var(--radius-full);
+    border: var(--border-width) solid var(--color-sage-700);
+    background: var(--surface-card);
+    color: var(--color-sage-700);
+    font-size: var(--text-lg);
+    line-height: 1;
+    cursor: pointer;
+  }
+  .lia-featured__nav:hover {
+    border-color: var(--color-ink-900);
+    color: var(--color-ink-900);
+  }
+  .lia-featured__nav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .lia-featured__dots {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: var(--spacing-2);
+    justify-content: center;
+  }
+  .lia-featured__dot {
+    width: var(--spacing-2);
+    height: var(--spacing-2);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-sage-700) 35%, transparent);
+  }
+  .lia-featured__dot[data-active] {
+    background: var(--color-sage-700);
+  }
+
+  /* ---------- Controles de busca/filtro (form GET) ---------- */
+  .lia-listing-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding: var(--spacing-5);
+    background: var(--surface-card);
+    border: var(--border-width) solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+  }
+  .lia-listing-controls__search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--spacing-3);
+  }
+  .lia-listing-controls__search .lia-field {
+    flex: 1 1 16rem;
+  }
+  .lia-listing-controls__filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--spacing-4);
+    align-items: end;
+  }
+
+  /* ---------- Paginação ---------- */
+  .lia-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-2);
+  }
+  .lia-pagination__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+  .lia-pagination__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--spacing-target-min);
+    height: var(--spacing-target-min);
+    padding-inline: var(--spacing-3);
+    border-radius: var(--radius-md);
+    border: var(--border-width) solid var(--border-subtle);
+    background: var(--surface-card);
+    color: var(--text-body-color);
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    text-decoration: none;
+  }
+  .lia-pagination__link:hover {
+    border-color: var(--border-default);
+    background: var(--surface-subtle);
+  }
+  /* Página atual: distinção NÃO-cromática (fundo forte + peso) além de cor */
+  .lia-pagination__link[aria-current='page'] {
+    background: var(--action-primary-bg);
+    border-color: var(--action-primary-bg);
+    color: var(--action-primary-text);
+    font-weight: var(--font-weight-semibold);
+  }
+  .lia-pagination__nav[aria-disabled='true'] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .lia-pagination__ellipsis {
+    display: inline-flex;
+    align-items: center;
+    padding-inline: var(--spacing-2);
+    color: var(--text-muted);
+  }
+
+  /* ---------- Estado vazio ---------- */
+  .lia-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: var(--spacing-8) var(--spacing-5);
+    text-align: center;
+    background: var(--surface-subtle);
+    border-radius: var(--radius-lg);
+  }
+  .lia-empty__title {
+    margin: 0;
+    font: var(--type-heading);
+    color: var(--text-strong);
+  }
+  .lia-empty__text {
+    margin: 0;
+    max-width: var(--container-prose);
+    font: var(--type-prose);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+  }
+  .lia-empty__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-3);
+    justify-content: center;
+  }
+
+  /* ---------- Rodapé mínimo (SiteFooter) ---------- */
+  .lia-site-footer {
+    margin-top: var(--spacing-8);
+    padding: var(--spacing-6) var(--spacing-5);
+    border-top: var(--border-width) solid var(--border-subtle);
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    text-align: center;
+  }
 }
