@@ -109,6 +109,27 @@ function toListItem(row: RawListRow): ReviewListItem {
  * default — confirmado no teste de integração (q='%'/'_' retornam 0, provando
  * que o curinga do usuário virou literal). Não emitimos `ESCAPE ''`.
  */
+/**
+ * Aplica `status='published'` + os filtros combináveis ao select da listagem.
+ * Reusado pela fatia e pela contagem-fallback; `head:true` conta sem transferir
+ * linhas. O `let query = …; query = query.eq(…)` preserva o tipo do builder.
+ */
+function buildFilteredSelect(
+  client: ReadClient,
+  params: ListingParams,
+  { head }: { head?: boolean } = {}
+) {
+  let query = client
+    .from('review')
+    .select(LIST_SELECT, { count: 'exact', head })
+    .eq('status', 'published')
+  if (params.q) query = query.ilike('title', `%${escapeLike(params.q)}%`)
+  if (params.genero) query = query.eq('book.genre.slug', params.genero)
+  if (params.autor) query = query.eq('book.author', params.autor)
+  if (params.nota != null) query = query.gte('rating', params.nota)
+  return query
+}
+
 export async function listPublishedReviews(
   params: ListingParams,
   client: ReadClient = createServerClient()
@@ -116,28 +137,33 @@ export async function listPublishedReviews(
   const from = (params.pagina - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  let query = client
-    .from('review')
-    .select(LIST_SELECT, { count: 'exact' })
-    .eq('status', 'published')
-
-  if (params.q) query = query.ilike('title', `%${escapeLike(params.q)}%`)
-  if (params.genero) query = query.eq('book.genre.slug', params.genero)
-  if (params.autor) query = query.eq('book.author', params.autor)
-  if (params.nota != null) query = query.gte('rating', params.nota)
-
+  const filtered = buildFilteredSelect(client, params)
   // Mapa de ordenação (design §3): nota/recentes com nulls last (sem nota não
   // "vence"); título asc pela collation do banco (suficiente no MVP).
-  if (params.ordem === 'nota') {
-    query = query.order('rating', { ascending: false, nullsFirst: false })
-  } else if (params.ordem === 'titulo') {
-    query = query.order('title', { ascending: true })
-  } else {
-    query = query.order('published_at', { ascending: false, nullsFirst: false })
-  }
+  const ordered =
+    params.ordem === 'nota'
+      ? filtered.order('rating', { ascending: false, nullsFirst: false })
+      : params.ordem === 'titulo'
+        ? filtered.order('title', { ascending: true })
+        : filtered.order('published_at', { ascending: false, nullsFirst: false })
 
-  const { data, error, count } = await query.range(from, to)
-  if (error) throw error
+  const { data, error, count } = await ordered.range(from, to)
+  if (error) {
+    // Página além do total (offset fora do alcance) → PostgREST PGRST103 (HTTP
+    // 416). Não há fatia, mas o total é válido: devolve vazio com a contagem
+    // (head, sem transferir linhas); a página normaliza para a última válida na
+    // camada acima (DD-2), sem 500.
+    const rangeError =
+      error.code === 'PGRST103' || /range not satisfiable/i.test(error.message ?? '')
+    if (rangeError) {
+      const { count: total, error: countError } = await buildFilteredSelect(client, params, {
+        head: true,
+      })
+      if (countError) throw countError
+      return { rows: [], total: total ?? 0 }
+    }
+    throw error
+  }
   const rows = ((data as RawListRow[] | null) ?? []).map(toListItem)
   return { rows, total: count ?? 0 }
 }
