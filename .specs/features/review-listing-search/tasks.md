@@ -1,7 +1,7 @@
 # review-listing-search — Tasks
 
 **Design**: [design.md](design.md) (DD-1..10, 27/27) · **Spec**: [spec.md](spec.md) (LST-01..27) · **Context**: [context.md](context.md) (C-1..C-5, D-04 Aceita)
-**Status**: Draft — **aguardando revisão antes de Execute**
+**Status**: Done — Execute concluído (2026-07-06, 14/14 tasks + migration 0006 + hardening da home); PR em revisão
 
 > **Leitura via `anon`** (RLS no controle — validada em produção; **sem `service_role`** no caminho público, **TD-04**). **Nenhuma migration nova** nesta feature (LST-19): reusa policies/GRANTs `0004` (`book`+`genre`) e `0005` (`review`).
 > **a11y WCAG 2.1 AA é DoD embutida** — não há task de a11y separada; cada task de UI carrega foco visível, teclado, semântica e o anúncio de resultados no seu "Done when".

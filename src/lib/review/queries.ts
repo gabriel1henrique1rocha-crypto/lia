@@ -97,7 +97,9 @@ function toListItem(row: RawListRow): ReviewListItem {
  * (gênero/autor/nota mín.), ordenação e fatia por `range` — tudo numa ÚNICA
  * viagem (`count:'exact'` + `range`). Leitura via ANON; `status='published'`
  * EXPLÍCITO como defesa em profundidade além da RLS (mesmo racional de
- * getPublishedReviewBySlug; TD-04). Nenhuma migration nova (LST-19).
+ * getPublishedReviewBySlug; TD-04). Leitura reusa policies/GRANTs 0003–0006 —
+ * a 0006 abriu o SELECT de `genre` (lacuna da 0003 achada nesta feature;
+ * exceção pontual, aprovada, ao "sem migration" do LST-19).
  *
  * Perf/D-04: `ilike '%…%'` não usa índice B-tree (full scan) — aceito no MVP;
  * gatilho de evolução: milhares de linhas → pg_trgm (GIN)/tsvector, migration
