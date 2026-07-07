@@ -1,21 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPublishedReviewBySlug } from '@/lib/review/queries'
+import { excerpt } from '@/lib/review/excerpt'
 import { BookDetails } from '@/components/book/BookDetails'
 import { BookCover } from '@/components/book/BookCover'
 import { Rating } from '@/components/review/Rating'
 
 type Params = { slug: string }
-
-/** Resumo do corpo para meta description (corte em palavra, ~160 chars). */
-function excerpt(body: string | null, max = 160): string {
-  if (!body) return ''
-  const text = body.replace(/\s+/g, ' ').trim()
-  if (text.length <= max) return text
-  const cut = text.slice(0, max)
-  const lastSpace = cut.lastIndexOf(' ')
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`
-}
 
 /** Quebra o corpo (texto puro no M1) em parágrafos por linha em branco. */
 function splitParagraphs(body: string | null): string[] {
