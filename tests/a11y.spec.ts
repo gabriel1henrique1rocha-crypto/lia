@@ -6,7 +6,7 @@ import AxeBuilder from '@axe-core/playwright'
  * Roda o axe-core nas rotas SSR e reprova com QUALQUER violação de impacto
  * `critical`. Meta: 0 críticos.
  */
-const ROUTES = ['/', '/styleguide']
+const ROUTES = ['/', '/styleguide', '/admin/login']
 
 for (const route of ROUTES) {
   test(`axe: ${route} sem violações críticas`, async ({ page }) => {
