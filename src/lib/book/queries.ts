@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import type { Tables } from '@/lib/database.types'
 
 /**
@@ -14,7 +14,7 @@ const BOOK_SELECT = '*, genre(name, slug)'
 
 /** Retorna a ficha pelo id, ou `null` quando não encontrada (sem lançar). */
 export async function getBookById(id: string): Promise<BookView | null> {
-  const supabase = createServerClient()
+  const supabase = createPublicClient()
   const { data, error } = await supabase.from('book').select(BOOK_SELECT).eq('id', id).maybeSingle()
   if (error) throw error
   return (data as BookView | null) ?? null
@@ -22,7 +22,7 @@ export async function getBookById(id: string): Promise<BookView | null> {
 
 /** Lista todas as fichas (ordenadas por título), com o gênero embutido. */
 export async function listBooks(): Promise<BookView[]> {
-  const supabase = createServerClient()
+  const supabase = createPublicClient()
   const { data, error } = await supabase.from('book').select(BOOK_SELECT).order('title')
   if (error) throw error
   return (data as BookView[] | null) ?? []

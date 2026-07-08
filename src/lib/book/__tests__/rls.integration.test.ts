@@ -3,8 +3,8 @@
 // Teste de integração de RLS contra o Supabase LOCAL (não roda no CI atual —
 // o pipeline não sobe Postgres/Supabase; mover para o CI é avaliado no M4).
 //
-// Por que NÃO reaproveita o singleton de src/lib/supabase/client.ts:
-// aquele client lê .env.local, que aponta para o projeto REMOTO. Este teste
+// Por que cria clients próprios em vez de reaproveitar uma fábrica do app:
+// as fábricas do app leem .env.local, que aponta para o projeto REMOTO. Este teste
 // precisa falar com a stack LOCAL (seed + policies aplicados localmente), então
 // cria clients próprios apontando para 127.0.0.1.
 //

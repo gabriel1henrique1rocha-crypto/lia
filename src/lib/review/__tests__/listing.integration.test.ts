@@ -6,7 +6,7 @@
 // prova busca (ilike), escape de curinga, filtros combináveis, ordenação,
 // paginação por range e que DRAFT nunca aparece (LST-06/08/09/10/12/14/20).
 //
-// ⚠️ IMPORT DINÂMICO obrigatório: `../queries` → supabase/server → env.ts, e
+// ⚠️ IMPORT DINÂMICO obrigatório: `../queries` → supabase/public → env.ts, e
 // env.ts valida process.env com Zod NO LOAD do módulo. Um import estático aqui
 // detona essa validação no job vitest do CI (sem vars do Supabase) ANTES de o
 // describe.skipIf pular a suíte — o arquivo falha inteiro. Por isso `queries` é
