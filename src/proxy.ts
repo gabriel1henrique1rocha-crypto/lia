@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { env } from '@/lib/env'
+import { SESSION_COOKIE_OPTIONS } from '@/lib/auth/cookieOptions'
 
 // PROXY do Next 16 (sucessor do middleware — A-5). Runtime Node OBRIGATÓRIO e
 // não configurável: NÃO declarar `export const runtime` (o Next 16 lança).
@@ -24,6 +25,9 @@ export async function proxy(request: NextRequest) {
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
+      // Refresh reescreve cookies com a mesma política httpOnly (D-10) — sem isso
+      // o refresh rebaixaria os atributos setados no callback.
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll()

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import type { Database } from '@/lib/database.types'
 import { env } from '@/lib/env'
+import { SESSION_COOKIE_OPTIONS } from '@/lib/auth/cookieOptions'
 
 // Client AUTENTICADO — o PADRÃO de escrita do painel (C-2/SEC-11). Usa a
 // publishable key + o JWT do editor logado transportado por COOKIES; opera como
@@ -24,6 +25,8 @@ export async function createAuthenticatedClient() {
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
+      // httpOnly/Secure(prod)/SameSite=Lax (D-10) — a lib faz merge nas escritas.
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return cookieStore.getAll()

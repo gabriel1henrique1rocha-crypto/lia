@@ -13,6 +13,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-05 | Hospedagem | **Aceita** | `infra-foundation` (M0) |
 | D-06 | Linguagem tipada | **Aceita** | `infra-foundation` (M0) |
 | D-07 | Versão do Tailwind + estratégia de tokens | **Aceita** | `infra-foundation` (M0) |
+| D-10 | Sessão server-only + cookies httpOnly | **Aceita** | `security-foundation` (M2) |
 
 ---
 
@@ -61,6 +62,22 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 **Trade-off:** v4 é mais novo (menos material legado); a escala numérica do token (`p-8`=64px) diverge da convenção numérica do Tailwind — documentado no `globals.css` e no design.
 
 **Impacto:** `infra-foundation` configura tokens via `@theme`; componentes consomem só tokens; sem segundo arquivo a sincronizar.
+
+---
+
+## D-10 — Sessão do editor server-only + cookies de auth httpOnly
+
+**Status:** Aceita · **Data:** 2026-07-08 · **Milestone:** M2 (`security-foundation`)
+
+**Contexto:** o M2 introduz autenticação de editor (magic link + `@supabase/ssr`). É preciso definir ONDE a sessão é lida e QUAIS atributos os cookies de auth carregam. O default do `@supabase/ssr` é `httpOnly:false` (para que um browser client consiga ler a sessão).
+
+**Decisão:** a sessão do editor/admin é consumida **exclusivamente no servidor** — guards (`requireEditor`/`requireAdmin`) em server component / route handler; refresh server-side no `proxy.ts`; **nenhum browser client lê a sessão**. Os cookies de sessão são setados no callback (`/auth/confirm`) com **`httpOnly: true` + `Secure` (produção) + `SameSite=Lax`**, aplicados de forma consistente também no proxy e no client autenticado (`cookieOptions` do `createServerClient`, que a lib faz merge nas escritas).
+
+**Razão:** `httpOnly` torna o cookie de sessão inacessível a JavaScript, mitigando roubo de sessão por XSS (F-13). É possível **porque** a sessão nunca é lida no browser — nenhuma funcionalidade depende de ler o token no cliente. `SameSite=Lax` protege contra CSRF em navegação cross-site preservando o fluxo de clique no link do e-mail. `Secure` só em produção porque um cookie Secure não é gravado sobre HTTP (dev/local + Mailpit usam `http://127.0.0.1`).
+
+**Trade-off:** features futuras que precisem falar com o Supabase a partir do browser **não** poderão usar o JWT no cliente — deverão passar por **server action / route handler** usando o client autenticado. É o precedente pretendido (uploads de Storage, realtime de moderação seguem esse caminho), não uma limitação incidental.
+
+**Impacto:** `src/lib/auth/cookieOptions.ts` centraliza `SESSION_COOKIE_OPTIONS`, consumido por `authenticated.ts`, `proxy.ts` e pelo callback. Fecha o resíduo A-10 do design (era "verificar no Execute") como decisão de primeira classe.
 
 ---
 
