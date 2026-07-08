@@ -16,6 +16,13 @@ export default defineConfig(({ mode }) => ({
     env: loadEnv(mode, process.cwd(), ''),
   },
   resolve: {
-    alias: { '@': '/src' },
+    alias: {
+      '@': '/src',
+      // `server-only` real LANÇA fora de ambiente server do Next → aliasado para
+      // um stub vazio SÓ no runner de testes, permitindo importar módulos
+      // server-only em unit tests. O build de produção usa o pacote real
+      // (fronteira SEC-03 intacta). Ver src/test/server-only-stub.ts.
+      'server-only': '/src/test/server-only-stub.ts',
+    },
   },
 }))
