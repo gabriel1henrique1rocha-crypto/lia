@@ -19,7 +19,7 @@ O magic link **não funciona em produção** com o SMTP default do Supabase (rat
    O default do template usa `{{ .ConfirmationURL }}` (fluxo `?code=`/PKCE). Trocar para `token_hash` é o que permite abrir o link em **outro dispositivo/browser** (comum em e-mail) — ver a decisão do callback no design.
 3. **Authentication → URL Configuration → Site URL**: apontar para o domínio de produção; adicionar `…/auth/confirm` aos redirect URLs se necessário.
 
-> **Local (dev):** o SMTP é o **Mailpit** embutido (`supabase_inbucket_lia`, http://127.0.0.1:54324). Nenhuma config extra; os e-mails aparecem lá. É o que a verificação end-to-end (T19) usa.
+> **Local (dev):** o SMTP é o **Mailpit** embutido (`supabase_inbucket_lia`, http://127.0.0.1:54324). Nenhuma config extra; os e-mails aparecem lá. O script [scripts/e2e-magic-link.mjs](../scripts/e2e-magic-link.mjs) dirige o fluxo inteiro (login → Mailpit → callback → sessão httpOnly → gate) contra o `next dev` local e afirma D-10 — reprodução da verificação T19 (env: `LOCAL_URL/LOCAL_ANON/LOCAL_SECRET/APP_URL/MAILPIT_URL/DB_CONTAINER`).
 
 ---
 
