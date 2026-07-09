@@ -78,10 +78,13 @@ O módulo do client admin (`service_role`) existe e está **isolado** (server-on
 ## 5. Gate de rollout (SEC-17)
 
 - **`SUPABASE_SERVICE_ROLE_KEY` NÃO entra em Production (Vercel)** — nem no merge desta feature, nem depois, **até** que uma feature futura especifique uma exceção real de bypass (com ADR + GRANT mínimo). O caminho público é anon; a auth de editor usa o client autenticado sob RLS.
-- **Checklist antes/depois do merge:**
+- **Checklist de rollout (ordem PRÉ-merge — ver refinamento do A-11 abaixo):**
   - [ ] Vercel → Project → Settings → Environment Variables (Production): contém **apenas** `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (+ `NEXT_PUBLIC_SITE_URL` se aplicável). **Sem** `SUPABASE_SERVICE_ROLE_KEY`.
-  - [ ] Migrations 0007/0008 aplicadas em produção por `supabase db push` **humano** (passo pós-merge, A-11) — nunca automatizado no Execute.
+  - [ ] `supabase db push` das 0007/0008 em produção **a partir do checkout da branch** (humano) e **verificar `pg_policies`** (4 de `editor`, 5 de `review` incl. `review_public_read`) — **antes** de mergear. Nunca automatizado no Execute.
+  - [ ] **Só então** mergear o PR do código.
   - [ ] SMTP de produção + template token_hash configurados (§1) antes de convidar editores reais.
   - [ ] 1º admin criado pelo §2 (SQL privilegiado), verificado por login.
 
-> **Ordem recomendada (A-11):** merge do código → `db push` das 0007/0008 em produção → configurar SMTP/template → bootstrap do 1º admin → verificar login. As migrations são seguras de aplicar antes do merge (só adicionam privilégio a `authenticated`, papel que nenhum fluxo público usa), mas seguem o fluxo padrão de revisão.
+> **Ordem recomendada — refinamento explícito do A-11 (`db push` PRÉ-merge):** aplicar as migrations **antes** do merge, a partir do checkout da branch → verificar `pg_policies` → **e só então mergear** o código → SMTP/template → bootstrap do 1º admin → verificar login.
+>
+> **Por que PRÉ-merge (e por que não contradiz o A-11):** as 0007/0008 são **aditivas e idempotentes** e só concedem privilégio/policies a `authenticated` (papel que o **código antigo em produção não exerce** — a área de auth é toda nova); a leitura pública (`review_public_read`, 0005) foi **provada intacta** (SEC-13). Logo, aplicar o schema com o código velho ainda no ar **não quebra nada** e **elimina a janela** "deploy do código antes do schema" (em que o painel recém-mergeado bateria 42501 no `SELECT editor` até o push). É a mesma natureza dos demais refinamentos registrados nesta feature (não uma reversão): o A-11 original priorizava segurança de ordem; a verificação empírica (T14/T16 + `review_public_read` intacto) mostra que o schema-primeiro é o mais seguro dos dois. **Gate SEC-17 inalterado:** nada disso introduz `SUPABASE_SERVICE_ROLE_KEY` em produção.

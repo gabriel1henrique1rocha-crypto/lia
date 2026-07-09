@@ -60,12 +60,14 @@
 
 ### Features
 
-**`security-foundation`** — EXECUTE (1ª do M2, T1–T18 commitadas em `feat/security-foundation`; T19 + revisão final pendentes; sem push) — fundação de segurança **antes** de qualquer painel/CRUD. Inclui **a autenticação de editores** (a antiga `admin-auth-editors` foi **fundida** aqui — C-5): separação de clients Supabase (público anon sem fallback · autenticado JWT · admin `service_role` server-only), remoção do fallback `??` (fecha TD-04), **auth de editor via Supabase Auth (magic link) + RBAC (papéis `admin`/`editor`)**, GRANTs/policies das tabelas do M2 (reduz TD-03), teste de regressão de RLS. Escrita padrão = autenticado+RLS; `service_role` só exceção documentada. Gate: nenhuma `service_role` em Production até uma exceção real existir (nunca antes do merge).
+**`security-foundation`** — EXECUTE CONCLUÍDO (1ª do M2, T1–T19 + 2 chores commitadas em `feat/security-foundation`; PR humano pendente; sem push) — fundação de segurança **antes** de qualquer painel/CRUD. Inclui **a autenticação de editores** (a antiga `admin-auth-editors` foi **fundida** aqui — C-5): separação de clients Supabase (público anon sem fallback · autenticado JWT · admin `service_role` server-only), remoção do fallback `??` (fecha TD-04), **auth de editor via Supabase Auth (magic link) + RBAC (papéis `admin`/`editor`)**, GRANTs/policies das tabelas do M2 (reduz TD-03), teste de regressão de RLS. Escrita padrão = autenticado+RLS; `service_role` só exceção documentada. Gate: nenhuma `service_role` em Production até uma exceção real existir (nunca antes do merge).
 **`reviews-crud`** — PLANNED — formulário completo de cadastro/edição (D-01), sobre a fundação
 **`admin-reviews`** — PLANNED — painel: listar, criar, editar, publicar, despublicar, excluir (UI)
 **Políticas de Storage por papel de editor** — PLANNED
 
 > *`admin-auth-editors` (login/papéis/RBAC) foi absorvida por `security-foundation` (C-5) — não é mais uma feature separada.*
+>
+> **Gatilho de CI (TD-02, ligado ao onboarding, não a milestone):** antes da entrada do **2º editor REAL** — quando a RLS-por-papel passa a proteger dados de mais de uma pessoa — as suítes de integração/e2e de RLS (matriz A×B do M2 + as futuras de `comment`/`recommendation` do M3) devem subir Supabase no CI e entrar nos **required checks** da branch protection. Até lá rodam local (`RUN_RLS_INTEGRATION=1`) antes de cada `db push` que toque policies.
 
 ---
 
