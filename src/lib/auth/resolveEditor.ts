@@ -1,12 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
+export type EditorRole = 'admin' | 'editor'
+
+/** Editor autenticado e autorizado — o payload do estado 'ok'. Sem dado sensível. */
+export type AuthenticatedEditor = { id: string; role: EditorRole }
+
 // Resultado do gate de sessão+papel (SEC-09). Só o enum + id/role — NUNCA vaza
 // dado sensível (e-mail, etc.).
 export type EditorSession =
   | { status: 'unauthenticated' } // sem sessão válida
   | { status: 'forbidden' } // sessão ok, mas SEM linha editor ativa (SEC-07)
-  | { status: 'ok'; editor: { id: string; role: 'admin' | 'editor' } }
+  | { status: 'ok'; editor: AuthenticatedEditor }
 
 /**
  * Núcleo do gate — PURO em relação ao ambiente (recebe o client já pronto), por

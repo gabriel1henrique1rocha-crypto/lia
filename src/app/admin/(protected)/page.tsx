@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { requireEditor } from '@/lib/auth/requireEditor'
+import { getAuthenticatedEditor } from '@/lib/auth/requireEditor'
 
 export const metadata: Metadata = {
   title: 'Painel — LIA',
@@ -7,11 +7,11 @@ export const metadata: Metadata = {
 }
 
 // Stub mínimo pós-login (fundação — C-5/escopo: SEM painel de CRUD ainda). Prova
-// que o gate resolveu a sessão e o papel. requireEditor() aqui reusa o resultado
-// já resolvido no layout (cache() por request). O layout garante status 'ok'.
+// que o gate resolveu a sessão e o papel. O acessor estreitado reusa o resultado
+// já resolvido no layout (cache() por request) e devolve o editor SEM união nem
+// null — o layout garante 'ok'; se a garantia mudar, isto falha barulhento.
 export default async function AdminHome() {
-  const session = await requireEditor()
-  const role = session.status === 'ok' ? session.editor.role : null
+  const { role } = await getAuthenticatedEditor()
 
   return (
     <section className="lia-login" aria-labelledby="admin-heading">
