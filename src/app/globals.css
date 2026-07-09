@@ -867,4 +867,38 @@
     color: var(--text-muted);
     text-align: center;
   }
+
+  /* ---------- Login do painel (security-foundation) ---------- */
+  .lia-login {
+    max-width: 26rem;
+    margin: 0 auto;
+    padding: var(--spacing-8) var(--spacing-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+  .lia-login__heading {
+    font: var(--type-heading);
+    color: var(--text-strong);
+  }
+  .lia-login__intro {
+    color: var(--text-secondary);
+  }
+  .lia-login__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    margin-top: var(--spacing-2);
+  }
+  /* Live region: reserva altura para o texto não deslocar o layout ao chegar. */
+  .lia-login__status {
+    color: var(--text-secondary);
+    min-height: var(--spacing-5);
+  }
+  .lia-login__callback-error {
+    color: var(--feedback-error-text);
+    background: var(--feedback-error-bg);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-md);
+  }
 }

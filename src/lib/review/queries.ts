@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createServerClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import type { Database, Tables } from '@/lib/database.types'
 import type { BookView } from '@/lib/book/queries'
 import { excerpt } from '@/lib/review/excerpt'
@@ -32,7 +32,7 @@ const REVIEW_SELECT = '*, book(*, genre(name, slug))'
  * função na mesma requisição; o cache deduplica para uma única viagem ao banco.
  */
 export const getPublishedReviewBySlug = cache(async (slug: string): Promise<ReviewView | null> => {
-  const supabase = createServerClient()
+  const supabase = createPublicClient()
   const { data, error } = await supabase
     .from('review')
     .select(REVIEW_SELECT)
@@ -134,7 +134,7 @@ function buildFilteredSelect(
 
 export async function listPublishedReviews(
   params: ListingParams,
-  client: ReadClient = createServerClient()
+  client: ReadClient = createPublicClient()
 ): Promise<{ rows: ReviewListItem[]; total: number }> {
   const from = (params.pagina - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -172,7 +172,7 @@ export async function listPublishedReviews(
 
 /** Destaque derivado: 4 mais recentes publicadas, sem filtros (C-5/DD-5). */
 export async function listFeaturedReviews(
-  client: ReadClient = createServerClient()
+  client: ReadClient = createPublicClient()
 ): Promise<ReviewListItem[]> {
   const { data, error } = await client
     .from('review')
@@ -189,7 +189,7 @@ export async function listFeaturedReviews(
  * valor de filtro sem resultado possível. Query leve + dedupe/sort em JS.
  */
 export async function listFilterOptions(
-  client: ReadClient = createServerClient()
+  client: ReadClient = createPublicClient()
 ): Promise<{ genres: { name: string; slug: string }[]; authors: string[] }> {
   const { data, error } = await client
     .from('review')
