@@ -1,7 +1,7 @@
 # Roadmap — LIA
 
-**Current Milestone:** M2 — Painel administrativo (1ª feature: `security-foundation`, em Specify)
-**Status:** M0–M1 entregues (público no ar); M2 aberto pela fundação de segurança
+**Current Milestone:** M2 — Painel administrativo (1ª feature: `security-foundation`, em Execute — T1–T18 commitadas, T19 + revisão final pendentes)
+**Status:** M0–M1 entregues (público no ar); M2 em andamento pela fundação de segurança
 
 > Cada feature vira uma pasta em `.specs/features/<id>/`.
 > **Regra transversal:** acessibilidade WCAG 2.1 AA (`accessibility-wcag`) é Definition of Done de **toda** feature, em **todo** milestone. M4 é apenas a auditoria formal final.
@@ -60,7 +60,7 @@
 
 ### Features
 
-**`security-foundation`** — SPECIFY (1ª do M2) — fundação de segurança **antes** de qualquer painel/CRUD. Inclui **a autenticação de editores** (a antiga `admin-auth-editors` foi **fundida** aqui — C-5): separação de clients Supabase (público anon sem fallback · autenticado JWT · admin `service_role` server-only), remoção do fallback `??` (fecha TD-04), **auth de editor via Supabase Auth (magic link) + RBAC (papéis `admin`/`editor`)**, GRANTs/policies das tabelas do M2 (reduz TD-03), teste de regressão de RLS. Escrita padrão = autenticado+RLS; `service_role` só exceção documentada. Gate: nenhuma `service_role` em Production até uma exceção real existir (nunca antes do merge).
+**`security-foundation`** — EXECUTE (1ª do M2, T1–T18 commitadas em `feat/security-foundation`; T19 + revisão final pendentes; sem push) — fundação de segurança **antes** de qualquer painel/CRUD. Inclui **a autenticação de editores** (a antiga `admin-auth-editors` foi **fundida** aqui — C-5): separação de clients Supabase (público anon sem fallback · autenticado JWT · admin `service_role` server-only), remoção do fallback `??` (fecha TD-04), **auth de editor via Supabase Auth (magic link) + RBAC (papéis `admin`/`editor`)**, GRANTs/policies das tabelas do M2 (reduz TD-03), teste de regressão de RLS. Escrita padrão = autenticado+RLS; `service_role` só exceção documentada. Gate: nenhuma `service_role` em Production até uma exceção real existir (nunca antes do merge).
 **`reviews-crud`** — PLANNED — formulário completo de cadastro/edição (D-01), sobre a fundação
 **`admin-reviews`** — PLANNED — painel: listar, criar, editar, publicar, despublicar, excluir (UI)
 **Políticas de Storage por papel de editor** — PLANNED

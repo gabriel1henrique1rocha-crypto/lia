@@ -13,6 +13,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-05 | Hospedagem | **Aceita** | `infra-foundation` (M0) |
 | D-06 | Linguagem tipada | **Aceita** | `infra-foundation` (M0) |
 | D-07 | Versão do Tailwind + estratégia de tokens | **Aceita** | `infra-foundation` (M0) |
+| D-09 | Modelo de escrita do painel (autenticado+RLS; service_role exceção) | **Aceita** | `security-foundation` (M2) |
 | D-10 | Sessão server-only + cookies httpOnly | **Aceita** | `security-foundation` (M2) |
 
 ---
@@ -62,6 +63,22 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 **Trade-off:** v4 é mais novo (menos material legado); a escala numérica do token (`p-8`=64px) diverge da convenção numérica do Tailwind — documentado no `globals.css` e no design.
 
 **Impacto:** `infra-foundation` configura tokens via `@theme`; componentes consomem só tokens; sem segundo arquivo a sincronizar.
+
+---
+
+## D-09 — Modelo de escrita do painel: autenticado + RLS por padrão; `service_role` como exceção mínima
+
+**Status:** Aceita · **Data:** 2026-07-08 · **Milestone:** M2 (`security-foundation`)
+
+**Contexto:** o painel admin introduz escrita no banco pela primeira vez. Duas rotas possíveis: toda escrita via `service_role` (bypassa RLS) ou via o JWT do editor logado (papel `authenticated`, sob RLS). A escolha define a superfície de risco de todo o M2+.
+
+**Decisão:** o **padrão é o client AUTENTICADO** (JWT do editor, `authenticated`) operando **sob RLS**. A `service_role` é reservada **apenas** a operações que comprovadamente precisam furar a RLS, e **cada uma é uma exceção documentada** (ADR própria + GRANT mínimo + gate de sessão/papel no servidor). Nesta fundação a `service_role` fica **dormente**: o módulo do client admin existe e está isolado (server-only + env sem `NEXT_PUBLIC` + lint com allowlist vazia), mas **nenhuma operação a usa**.
+
+**Razão:** privilégio mínimo (C-2). A RLS vira o gate no banco mesmo se uma checagem de app falhar (defesa em profundidade). Consequência de requisito: exige **policies de RLS de escrita** keyed no papel via `auth.uid() → editor` (migrations 0007/0008), o que a feature entrega e prova (matriz T16, 17/17).
+
+**Trade-off:** escrever policies de escrita por papel dá mais trabalho que "bypass e valida no app". Compensa: a segurança não depende de lembrar de checar no app; um bug de app não vira vazamento porque a RLS reavalia por statement.
+
+**Impacto:** provado empiricamente que o `service_role` **não** tem GRANT de tabela nas tabelas do M2 (T16: `42501`) — a dormência é real, não só convenção. Bootstrap e fixtures usam `postgres` (superuser) privilegiado, não `service_role` (ver [runbook](../../docs/runbook-admin-bootstrap.md)). Gate SEC-17: `SUPABASE_SERVICE_ROLE_KEY` fora de Production até uma exceção real existir.
 
 ---
 
