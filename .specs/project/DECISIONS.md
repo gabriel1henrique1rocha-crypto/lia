@@ -13,8 +13,12 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-05 | Hospedagem | **Aceita** | `infra-foundation` (M0) |
 | D-06 | Linguagem tipada | **Aceita** | `infra-foundation` (M0) |
 | D-07 | Versão do Tailwind + estratégia de tokens | **Aceita** | `infra-foundation` (M0) |
+<<<<<<< HEAD
 | D-09 | Modelo de escrita do painel (autenticado+RLS; service_role exceção) | **Aceita** | `security-foundation` (M2) |
 | D-10 | Sessão server-only + cookies httpOnly | **Aceita** | `security-foundation` (M2) |
+=======
+| D-08 | Domínio canônico de produção | **Aceita** | `infra-foundation` (M0) |
+>>>>>>> d48ff11 (docs(decisions): D-08 — domínio canônico passa para observatorioolda.com.br)
 
 ---
 
@@ -66,6 +70,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 ---
 
+<<<<<<< HEAD
 ## D-09 — Modelo de escrita do painel: autenticado + RLS por padrão; `service_role` como exceção mínima
 
 **Status:** Aceita · **Data:** 2026-07-08 · **Milestone:** M2 (`security-foundation`)
@@ -95,6 +100,21 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 **Trade-off:** features futuras que precisem falar com o Supabase a partir do browser **não** poderão usar o JWT no cliente — deverão passar por **server action / route handler** usando o client autenticado. É o precedente pretendido (uploads de Storage, realtime de moderação seguem esse caminho), não uma limitação incidental.
 
 **Impacto:** `src/lib/auth/cookieOptions.ts` centraliza `SESSION_COOKIE_OPTIONS`, consumido por `authenticated.ts`, `proxy.ts` e pelo callback. Fecha o resíduo A-10 do design (era "verificar no Execute") como decisão de primeira classe.
+=======
+## D-08 — Domínio canônico de produção
+
+**Status:** Aceita · **Data:** 2026-07-30 · **Milestone:** M0 (`infra-foundation`)
+
+**Contexto:** o domínio inicialmente registrado para produção, `www.literaturainclusiva.com.br`, permaneceu em **Invalid Configuration** na Vercel — o DNS nunca chegou a apontar corretamente (zona no Registro.br) — e o site seguiu servido pelo alias `lia-kappa.vercel.app`. Um novo domínio, `www.observatorioolda.com.br`, foi registrado na Hostinger.
+
+**Decisão:** o domínio canônico de produção passa a ser **`www.observatorioolda.com.br`** (apex responde `308` → `www`). Substitui `www.literaturainclusiva.com.br` como domínio de referência do projeto.
+
+**Razão:** registro efetivo do domínio na Hostinger, com DNS validado e SSL válido; o domínio anterior nunca saiu do estado "Invalid Configuration" na Vercel.
+
+**Trade-off:** nenhum — é a resolução de uma pendência de infraestrutura (DNS), não uma escolha entre alternativas técnicas.
+
+**Impacto:** `NEXT_PUBLIC_SITE_URL` de Production (setada na Vercel, fora deste repo) passa a `https://www.observatorioolda.com.br`, consumida por `metadataBase` em [layout.tsx](../../src/app/layout.tsx) (`og:url`/canonical) e pelo futuro sitemap (`seo-core`). `.env.example` atualizado como referência. Fecha a pendência de DNS registrada no backlog do [STATE.md](STATE.md).
+>>>>>>> d48ff11 (docs(decisions): D-08 — domínio canônico passa para observatorioolda.com.br)
 
 ---
 
