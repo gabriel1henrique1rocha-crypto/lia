@@ -100,7 +100,7 @@ Itens fora de escopo do MVP, preservados para fases futuras (não bloquear o mod
 Decisões em aberto a resolver na feature correspondente (ver [DECISIONS.md](DECISIONS.md)):
 
 - [x] D-04 (busca) — **RESOLVIDA (Aceita, 2026-07-06)**: server-side no Supabase via `ilike` sobre `review.title` (C-1), full-text/pg_trgm adiado para quando o volume justificar. ADR completa em DECISIONS.md
-- [ ] D-01 (escala da nota) — resolver em `reviews-crud` (M3)
+- [x] D-01 (escala da nota) — **RESOLVIDA (Aceita, 2026-08-09)**: escala inteira 0–5, sem meio-ponto (elimina a granularidade de meia-estrela do PRD). ADR completa em DECISIONS.md
 - [ ] D-02 (anti-spam) — resolver em `public-comments` (M3)
 - [ ] D-03 (modelo de indicação) — resolver em `recommendations` (M3)
 - [x] Especificar a feature `infra-foundation` (M0) — spec.md criado

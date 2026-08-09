@@ -6,7 +6,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 | ID | Decisão | Status | Resolver em |
 |---|---|---|---|
-| D-01 | Escala da nota | A decidir | `reviews-crud` (M2) |
+| D-01 | Escala da nota | **Aceita** | `reviews-crud` (M3) |
 | D-02 | Anti-spam de comentários sem login | A decidir | `public-comments` (M3) |
 | D-03 | Modelo de indicação (recomendam vs votação) | A decidir | `recommendations` (M3) |
 | D-04 | Estratégia de busca | **Aceita** | `review-listing-search` (M1) |
@@ -116,7 +116,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 ## D-01 — Escala da nota
 
-**Status:** A decidir · **Resolver em:** `reviews-crud` (M2)
+**Status:** Aceita · **Data:** 2026-08-09 · **Milestone:** M3 (`reviews-crud`)
 
 **Contexto:** a resenha tem uma nota exibida na listagem, na página e usada em filtros/ordenação. A escala precisa ser definida antes do CRUD.
 
@@ -124,7 +124,13 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 **Recomendação do PRD:** 0–5 estrelas com meia estrela, armazenar como número (`0.0`–`5.0`).
 
-**Decisão:** _pendente._
+**Decisão:** **(b) escala inteira 0–5** — nota numérica de 0 a 5, **só inteiros**, **sem meio-ponto**.
+
+**Razão:** simplicidade do cadastro (controle acessível de 0–5 sem parsear decimais). A coluna `review.rating numeric(2,1)` é **mantida** (aceita `4.0`); a restrição a inteiros é regra de validação — o mecanismo de enforcement (CHECK no banco × validação no app) é detalhe de Design da `reviews-crud`.
+
+**Trade-off:** granularidade menor que meia-estrela; aceitável no MVP e reversível de forma aditiva (afrouxar para meio-ponto não exige recriar coluna).
+
+**Impacto:** `reviews-crud` valida a nota como inteiro 0–5 de forma acessível (REV-07). O seed de produção **tem dados existentes com meio-ponto** (`dom-casmurro` e `iracema` = 4,5) — a migration 0009 vai precisar tratá-los antes de qualquer CHECK no banco; a **estratégia de normalização (round/floor/ceil) fica para a revisão do Design** (ponto A-3), fora do escopo desta ADR.
 
 ---
 
