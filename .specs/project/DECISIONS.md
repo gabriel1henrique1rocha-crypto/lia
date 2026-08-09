@@ -13,9 +13,9 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-05 | Hospedagem | **Aceita** | `infra-foundation` (M0) |
 | D-06 | Linguagem tipada | **Aceita** | `infra-foundation` (M0) |
 | D-07 | Versão do Tailwind + estratégia de tokens | **Aceita** | `infra-foundation` (M0) |
+| D-08 | Domínio canônico de produção | **Aceita** | `infra-foundation` (M0) |
 | D-09 | Modelo de escrita do painel (autenticado+RLS; service_role exceção) | **Aceita** | `security-foundation` (M2) |
 | D-10 | Sessão server-only + cookies httpOnly | **Aceita** | `security-foundation` (M2) |
-
 ---
 
 ## D-05 — Hospedagem: Vercel
@@ -63,6 +63,22 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 **Trade-off:** v4 é mais novo (menos material legado); a escala numérica do token (`p-8`=64px) diverge da convenção numérica do Tailwind — documentado no `globals.css` e no design.
 
 **Impacto:** `infra-foundation` configura tokens via `@theme`; componentes consomem só tokens; sem segundo arquivo a sincronizar.
+
+---
+
+## D-08 — Domínio canônico de produção
+
+**Status:** Aceita · **Data:** 2026-07-30 · **Milestone:** M0 (`infra-foundation`)
+
+**Contexto:** o domínio inicialmente registrado para produção, `www.literaturainclusiva.com.br`, permaneceu em **Invalid Configuration** na Vercel — o DNS nunca chegou a apontar corretamente (zona no Registro.br) — e o site seguiu servido pelo alias `lia-kappa.vercel.app`. Um novo domínio, `www.observatorioolda.com.br`, foi registrado na Hostinger.
+
+**Decisão:** o domínio canônico de produção passa a ser **`www.observatorioolda.com.br`** (apex responde `308` → `www`). Substitui `www.literaturainclusiva.com.br` como domínio de referência do projeto.
+
+**Razão:** registro efetivo do domínio na Hostinger, com DNS validado e SSL válido; o domínio anterior nunca saiu do estado "Invalid Configuration" na Vercel.
+
+**Trade-off:** nenhum — é a resolução de uma pendência de infraestrutura (DNS), não uma escolha entre alternativas técnicas.
+
+**Impacto:** `NEXT_PUBLIC_SITE_URL` de Production (setada na Vercel, fora deste repo) passa a `https://www.observatorioolda.com.br`, consumida por `metadataBase` em [layout.tsx](../../src/app/layout.tsx) (`og:url`/canonical) e pelo futuro sitemap (`seo-core`). `.env.example` atualizado como referência. Fecha a pendência de DNS registrada no backlog do [STATE.md](STATE.md).
 
 ---
 
