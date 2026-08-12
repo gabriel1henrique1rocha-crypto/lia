@@ -67,6 +67,16 @@ T1..T12 ──► T13 (ensaio final: gate full + axe + NVDA + checklist de merge
 T13 ──► [FORA] db push produção (STOP humano, A-11) + verificação no ar
 ```
 
+### Tasks por dia (explícito — é o que torna o gatilho do Plano de Corte verificável)
+
+| Dia | Tasks |
+| --- | --- |
+| **13/08** | T1, T2, T3, **T4** |
+| **14/08** | T5, T6, T7, T8, T9, T10 |
+| **15/08** | T11, T12, T13 |
+
+O gatilho do Corte #1 ("fim do dia 13") é literalmente: **T4 não verde depois de T1–T3 concluídas nesse mesmo dia.**
+
 ---
 
 ## Task Breakdown
@@ -85,8 +95,10 @@ T13 ──► [FORA] db push produção (STOP humano, A-11) + verificação no a
 **Done when**:
 - [ ] `npx supabase db reset` local verde, **duas vezes seguidas** (idempotência via guards `if not exists`/`drop ... if exists`)
 - [ ] `pg_policies` local mostra as 3 novas policies de `book`; `book_public_read` (0003) intacta ao lado
-- [ ] Cabeçalho do arquivo documenta o contrato anti-recursão do 0007 e sua aplicação em `owns_book_via_review`
-- [ ] Prova manual do CHECK: `update review set rating=4.5` fora do bloco de normalização → rejeitado; `rating` das 4 seeds confere **inteiro** (`dom-casmurro`=5, `iracema`=4, demais mantidas) após o reset
+- [ ] Cabeçalho do arquivo documenta o contrato anti-recursão do 0007 (self direto + admin via função `security definer`, editor `NO FORCE`) e como `owns_book_via_review` o respeita
+- [ ] **Ordem interna da migration verificada (crítico):** dentro do arquivo, os dois UPDATEs de normalização editorial (por slug + rede residual `round()`) executam **antes** de `alter table ... add constraint review_rating_integer` — exatamente a ordem de design.md §2.2, não uma reordenação nova
+- [ ] **Precondição do teste — banco com nota não-inteira antes de aplicar:** o `db reset` local semeia `seed.sql`, que já grava `dom-casmurro`=4,5 e `iracema`=4,5 (confirmado: mesmos valores de produção) **antes** de a 0009 rodar — logo um `db reset` comum já exercita a ordem. **Se o `seed.sql` mudar e deixar de ter nota não-inteira**, inserir/ajustar manualmente uma linha com `rating=4.5` **antes** de aplicar a 0009 para o teste continuar válido. Aplicar a 0009 contra um banco **já normalizado** (sem nenhuma linha não-inteira) **não satisfaz este critério** — a ordem não teria sido de fato exercitada, só coincidentemente não-testada
+- [ ] Prova positiva: `db reset` **não falha** no CHECK (falharia se a ordem estivesse invertida — o CHECK rejeitaria as duas linhas ainda não normalizadas); após o reset, `rating` confere **inteiro** para as 4 seeds (`dom-casmurro`=5, `iracema`=4, `o-crime-do-padre-amaro`=4, `o-cortico`=5) e para o 5º livro de teste (rascunho, também normalizado)
 - [ ] Nenhum GRANT de escrita de `book` a `anon`
 
 **Tests**: integration (matriz completa na T3; aqui: reset + inspeção `pg_policies`/`pg_constraint`) · **Gate**: integration (local)
@@ -402,6 +414,44 @@ Requisitos do spec **conscientemente não cobertos** por nenhuma task acima — 
 | **DD-13 (parte)** — `getEditorReviewForEdit(id)` | Consequência direta do REV-19 diferido — não há tela de edição para popular | Junto com REV-19 |
 
 **Nenhum outro requisito (REV-01..24 + REV-07-schema) fica sem task.** REV-08/REV-09 (tags/keywords) **não** estão diferidos — são T12, cobertos integralmente, inclusive exibição.
+
+---
+
+## Mapa requisito → task
+
+Tabela explícita (a versão condensada no final da Validação repete o mesmo mapeamento em prosa) — todo REV-* aparece aqui, inclusive os diferidos.
+
+| Requisito | Task(s) | Nota |
+| --- | --- | --- |
+| REV-01 | T10 | por reuso do gate `(protected)`, sem lógica nova |
+| REV-02 | T2, T6 | |
+| REV-03 | T2 | |
+| REV-04 | T2, **T4** | T4 = teste de rollback, task própria (A-9) |
+| REV-05 | T2 | |
+| REV-06 | T1, T5 | |
+| REV-07 | T1, T5, T9 | T9 é cortável (§ Plano de Corte) sem afetar o requisito (Zod idêntico) |
+| REV-07-schema | T1, T3 | |
+| REV-08 | T5, T8, T12 | |
+| REV-09 | T5, T8, T12 | |
+| REV-10 | T5, T8 | |
+| REV-11 | T5, T8, **T11** | T11 cortável (corte #1) — captura sempre entra, exibição pode atrasar |
+| REV-12 | — | **Diferido** (ver Diferidos) |
+| REV-13 | T5, T8 | |
+| REV-14 | T5, T8, **T11** (parte de exibição) | idem REV-11 |
+| REV-15 | T5, T6 | |
+| REV-16 | T5, T6 | a emenda A-1 (schema pelo status validado) vive em T6 |
+| REV-17 | T6 | |
+| REV-18 | T6 | |
+| REV-19 | — | **Diferido** (ver Diferidos) |
+| REV-20 | T5, T8 | |
+| REV-21 | T8, T9, T10, T11, T12, **T13** | embutida no "done" de cada uma — T13 é o passo final (NVDA manual + axe agregado), não task de a11y separada |
+| REV-22 | T6, T8 | |
+| REV-23 | T2, T5 | |
+| REV-24 | T7, T10 | |
+| D-01 | T1 | normalização + CHECK |
+| A-9 | **T4** | task própria, não item de outra task |
+
+**O que é T13, para não confundir com o `db push` (eles aparecem lado a lado no diagrama do dia 15):** T13 é trabalho de verificação — rodar o gate, as 4 suítes integration, e o roteiro manual com NVDA — feito **pela equipe, antes do merge**. O `db push` é um passo **humano, pós-merge, fora de qualquer task** (seção acima). São coisas diferentes: T13 tem "done when" verificável e produz um commit se achar ajuste; o `db push` não é uma task e não tem "done when" — é um checklist de deploy. T13 mapeia para REV-21 de forma legítima (não inventada): REV-21 exige WCAG 2.1 AA como DoD, e a verificação manual com leitor de tela é parte real desse DoD, não coberta só por `axe` automatizado nas tasks individuais.
 
 ---
 
