@@ -1,0 +1,479 @@
+# reviews-crud — Tasks
+
+**Design**: [design.md](design.md) (DD-1..18, §1–§13 — **APROVADO com emendas 2026-08-09**) · **Spec**: [spec.md](spec.md) (REV-01..24 + REV-07-schema) · **Context**: [context.md](context.md) (gray areas resolvidas)
+**Status**: Draft — aguardando revisão antes do Execute
+
+> **Escopo já reduzido pelo Design (§13, não é corte desta fase):** `further_reading`/`RepeatableLinks`, chips dinâmicos de tags/keywords (→ input único separado por vírgula), `update_review_with_book` exercido pelo app e a rota `/admin/resenhas/[id]/editar` estão **FORA do Execute**. A 0009 continua **ÍNTEGRA** (todas as colunas, o CHECK, os GRANTs, as policies de `book`, **ambos** os RPCs, o helper de slug) — o corte é só na superfície de UI/app. Ver seção **Diferidos** abaixo para o mapeamento requisito→estado.
+> **Calendário real: 3 dias, ~3h/dia, SEM buffer** (13–15/08/2026). Ver seção **Plano de Corte** para o que sai *desta* janela se o tempo apertar — é um plano de contingência de cronograma, distinto do corte já feito pelo Design.
+> **`db push` de produção NÃO é uma task** — passo humano pós-merge (A-11 herdado do M2), no fim do dia 15. Ver checklist ao final.
+> **a11y WCAG 2.1 AA é DoD embutida** nas tasks de UI (T8, T9, T10, T11, T12) — não existe task de a11y separada.
+
+---
+
+## Gate Check Commands
+
+Mesmo padrão de `security-foundation`/`review-listing-search` — o gate local espelha o CI.
+
+| Nível | Comando | Quando |
+| --- | --- | --- |
+| **quick** | `npm run typecheck && npm run lint && npm run format:check && npm test` | toda task de lógica/componente (unit) |
+| **full** | quick **+** `npm run test:a11y` | tasks que criam/alteram rota (axe na rota nova) |
+| **build** | `npm run build` | provas de compilação/fronteira |
+| **integration (local-only, TD-02)** | `npx supabase start && npx supabase db reset` → `$env:RUN_RLS_INTEGRATION='1'; npx vitest run <arquivo>` | policies/GRANTs/RPC contra Supabase local; **CI PULA** via `describe.skipIf` |
+
+**Baseline atual:** `192 passed / 36 skipped` (pós-merge das emendas do design, `main` em `1de7a0e`). Todo "Done when" exige baseline verde + novos testes passando.
+
+### Matriz de cobertura derivada (precedente do repo)
+
+| Camada criada/modificada | Teste exigido | Precedente |
+| --- | --- | --- |
+| Migration SQL (colunas/CHECK/GRANTs/policies) | **integration** local-only (matriz por papel + inspeção `pg_policies`) | 0007/0008 |
+| RPC transacional (`SECURITY INVOKER`) | **integration** local-only (matriz de rollback — A-9, task própria) | precedente novo desta feature |
+| Função pura / módulo (`lib/**`) | **unit** (Vitest) | `formatRating.test.ts`, `isbn.test.ts` |
+| Fábrica/leitura via client autenticado | **unit** (contrato) + **integration** local p/ efeito RLS | `rls.integration.test.ts` (TD-02) |
+| Componente React (render/semântica/aria) | **unit** (Testing Library) | `Rating.test.tsx` |
+| `page.tsx`/route (SSR wiring) | **a11y de rota** (axe) + build; lógica extraível → unit | `review-page`, `admin/login` |
+| Config/regen de tipos | **none** (o próprio gate/typecheck é a prova) | `database.types.ts` pós-0006 |
+
+---
+
+## Execution Plan
+
+### Dia 13/08 — 0009 + RPC + provas de banco (sequencial no banco local)
+
+```
+T1 (0009 parte A: colunas + CHECK + GRANTs/policies de book) ──► T2 (0009 parte B: RPCs + slug helper + regen tipos)
+T1 ──► T3 (matriz RLS de book)                    [P com T2]
+T1,T2 ──► T4 (rollback/atomicidade do RPC — A-9)
+```
+
+### Dia 14/08 — schema, actions, form, rotas (paralela onde possível)
+
+```
+T5 (reviewInputSchema + slugify)                              [P, independente do banco]
+T2,T5 ──► T6 (actions.ts: create/publish/unpublish + gate)
+T1 ──► T7 (adminQueries: listEditorReviews)                   [P com T6]
+T5 ──► T8 (ReviewForm — scaffolding)
+T5 ──► T9 (RatingInput — a11y)                    [P com T8]
+T6,T7,T8,T9 ──► T10 (rotas /admin/resenhas + /nova)
+```
+
+### Dia 15/08 — exibição pública + ensaio (db push FORA das tasks)
+
+```
+T1,T2,T6 ──► T11 (exibição pública A — reviewer_name/highlight_quote/publication_city) [CORTÁVEL #1]
+T1,T2,T6 ──► T12 (exibição pública B — tags/keywords)                [P com T11]
+T1..T12 ──► T13 (ensaio final: gate full + axe + NVDA + checklist de merge)
+T13 ──► [FORA] db push produção (STOP humano, A-11) + verificação no ar
+```
+
+---
+
+## Task Breakdown
+
+### T1: Migration `0009` parte A — colunas aditivas + CHECK de nota + GRANTs/policies de `book`
+
+**What**: Escrever no início de `0009_reviews_crud.sql` (design §2.1–§2.4, **exatamente** como especificado): colunas aditivas (`book.publication_city`, `review.reviewer_name/tags/keywords/highlight_quote/further_reading` + CHECK `is_array`); normalização da nota — **UPDATE editorial explícito por slug** (`dom-casmurro`→5, `iracema`→4) **seguido** da rede residual `round()` idempotente, **depois** o CHECK `review_rating_integer` (A-3, já resolvido — não reabrir a escolha, só implementar); `grant insert, update, delete on book to authenticated`; helper `owns_book_via_review` (`stable security definer set search_path=''`) + policies `book_editor_insert`/`book_editor_update`/`book_admin_delete`. **Cabeçalho do arquivo** deve documentar o **contrato anti-recursão herdado da 0007** (self direto + admin via função `security definer`, editor `NO FORCE`) e como `owns_book_via_review` o respeita (não reentra na RLS de `review`). Aplicar **apenas local** (`db reset`). **NÃO** rodar `db push`.
+**Where**: `supabase/migrations/0009_reviews_crud.sql` (novo)
+**Depends on**: None (banco local independente do código de app)
+**Reuses**: padrão de idempotência 0003/0005/0006/0007/0008; `is_active_editor()`/`is_admin()` da 0007 (sem alteração)
+**Requirement**: REV-06, REV-07 (CHECK), REV-07-schema, D-01, DD-1/2/3/4
+**Model**: **Opus** (SQL de GRANTs/RLS + normalização de dado real de produção — revisão linha a linha)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] `npx supabase db reset` local verde, **duas vezes seguidas** (idempotência via guards `if not exists`/`drop ... if exists`)
+- [ ] `pg_policies` local mostra as 3 novas policies de `book`; `book_public_read` (0003) intacta ao lado
+- [ ] Cabeçalho do arquivo documenta o contrato anti-recursão do 0007 e sua aplicação em `owns_book_via_review`
+- [ ] Prova manual do CHECK: `update review set rating=4.5` fora do bloco de normalização → rejeitado; `rating` das 4 seeds confere **inteiro** (`dom-casmurro`=5, `iracema`=4, demais mantidas) após o reset
+- [ ] Nenhum GRANT de escrita de `book` a `anon`
+
+**Tests**: integration (matriz completa na T3; aqui: reset + inspeção `pg_policies`/`pg_constraint`) · **Gate**: integration (local)
+**Verify**: `npx supabase db reset` (2×) + `psql` local em `pg_policies`/`pg_constraint` (`review_rating_integer`).
+**Commit**: `feat(db): 0009 pt.1 — colunas + CHECK de nota (A-3) + GRANTs/policies de book (REV-06/07/07-schema, D-01)`
+
+---
+
+### T2: Migration `0009` parte B — RPCs `create_review_with_book`/`update_review_with_book` + helper de slug + regen de tipos
+
+**What**: Completar `0009_reviews_crud.sql` (design §3–§4, **exatamente** como especificado) com **ambos** os RPCs `SECURITY INVOKER` — `create_review_with_book` (exercido pelo app esta sprint) **e** `update_review_with_book` (criado e provisionado, **não** exercido — a 0009 fica íntegra mesmo com a rota de edição cortada) — e o helper `unique_review_slug` (`security definer`, lê todos os slugs, backstop UNIQUE). `search_path = ''` em **todas** as funções da migration (padronizado — nenhuma diverge). Regenerar `database.types.ts` após o `db reset` (DD-16).
+**Where**: `supabase/migrations/0009_reviews_crud.sql` (continuação) · `src/lib/supabase/database.types.ts` (regenerado)
+**Depends on**: T1 (RPC insere em `book`/`review` sob as policies daquela parte; mesmo arquivo)
+**Reuses**: padrão `SECURITY INVOKER` já justificado no design (D-09 — RLS continua o gate); geração de tipos já usada pós-0006
+**Requirement**: REV-02, REV-03, REV-04, REV-05, REV-23, DD-5, DD-6, DD-7, DD-16
+**Model**: **Opus** (RPC transacional + segurança de `search_path`)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] `npx supabase db reset` local verde (0001→0009 completa)
+- [ ] `\df public.create_review_with_book`/`update_review_with_book`/`unique_review_slug` mostram `security invoker`/`definer` conforme o design e `search_path=''`
+- [ ] `database.types.ts` regenerado inclui as colunas novas de `book`/`review` (conferido por diff/typecheck)
+- [ ] Gate **quick** (typecheck cobre os tipos novos)
+
+**Tests**: integration (rollback na T4; aqui: reset + inspeção `pg_proc`) · **Gate**: integration (local) + quick
+**Verify**: `npx supabase db reset`; `npx supabase gen types typescript --local > src/lib/supabase/database.types.ts`; `npm run typecheck`.
+**Commit**: `feat(db): 0009 pt.2 — RPCs create/update_review_with_book + slug único (REV-02/03/04/05/23)`
+
+---
+
+### T3: Matriz RLS de `book` — INSERT/UPDATE/DELETE por papel [P com T2]
+
+**What**: Suíte integration local-only análoga à `rbac-matrix.integration.test.ts` (0007/0008), agora para `book`: **editor ativo** → INSERT ok; UPDATE só do `book` cuja `review` é dele (`owns_book_via_review`), UPDATE de book de outro editor → nega; **admin** → UPDATE de qualquer book; DELETE → **admin-only** (editor não-admin nega mesmo sendo dono); **`authenticated` sem linha `editor`/inativo** → tudo nega (herdado do 0007); **anon** → toda escrita nega (sem GRANT). `book_public_read` (SELECT anon) segue permitindo em paralelo (SEC-13, não regride).
+**Where**: `src/lib/supabase/__tests__/book-rbac-matrix.integration.test.ts` (novo)
+**Depends on**: T1 (policies + helper)
+**Reuses**: padrão TD-02 completo de `rbac-matrix.integration.test.ts` (setup de usuários via API admin local, cleanup idempotente); lição de oráculo (ler estado real via `psql`/superuser, nunca pelo role sob teste)
+**Requirement**: REV-07-schema, DD-4
+**Model**: **Opus** (cada célula é uma afirmação de segurança)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] Todas as células da matriz batem o esperado, incluindo "editor dono de review A não edita book de review B"
+- [ ] Verificação de estado real via `psql`/superuser (não pelo client sob teste — lição da rbac-matrix original)
+- [ ] CI PULA a suíte (`describe.skipIf`); local verde
+- [ ] Gate **integration** + quick
+
+**Tests**: integration · **Gate**: integration (local)
+**Verify**: `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/supabase/__tests__/book-rbac-matrix.integration.test.ts`.
+**Commit**: `test(db): matriz RLS de book — own-or-admin transitivo via review (REV-07-schema)`
+
+---
+
+### T4: Rollback/atomicidade do RPC `create_review_with_book` (A-9) — task própria
+
+**What**: Suíte integration local-only, **exclusivamente** sobre a garantia de atomicidade (REV-04): (a) confirmar que `.rpc()` sob JWT `authenticated` propaga `auth.uid()` dentro da função INVOKER (não fabricar — provar); (b) forçar a `review` a falhar **dentro** da transação (ex.: `p_rating` fora de 0–5, violando o CHECK da T1) → **nenhuma linha em `book`** deve persistir (rollback completo); (c) sucesso → `book` **e** `review` presentes, ligados por `book_id`, na mesma consulta pós-commit. **Este é o teste que decide o gatilho do Plano de Corte** (ver seção própria) — não pode ser dobrado com T3 nem com nenhuma outra suíte.
+**Where**: `src/lib/supabase/__tests__/create-review-rollback.integration.test.ts` (novo)
+**Depends on**: T1, T2
+**Reuses**: padrão TD-02; `create_review_with_book` (T2)
+**Requirement**: REV-04, A-9
+**Model**: **Opus** (é a prova central da atomicidade — maior risco da feature, design §3)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] Caso de sucesso: `book`+`review` persistidos atomicamente, ligados
+- [ ] Caso de falha (CHECK de rating): **zero** linhas em `book` após o rollback — consulta via superuser/psql
+- [ ] `auth.uid()` dentro do RPC resolve o editor chamador (não nulo, não outro editor)
+- [ ] Gate **integration** + quick
+- [ ] **Resultado registrado explicitamente** (verde/vermelho) — alimenta o gatilho do Plano de Corte
+
+**Tests**: integration · **Gate**: integration (local)
+**Verify**: `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/supabase/__tests__/create-review-rollback.integration.test.ts`.
+**Commit**: `test(db): rollback atômico de create_review_with_book — sem book órfão (REV-04, A-9)`
+
+---
+
+### T5: `reviewInputSchema` (Zod draft/publish) + `slugify` [P, independente do banco]
+
+**What**: `src/lib/review/schema.ts` — estende `bookInputSchema` (ficha) com os campos de resenha (design §5.3): `publicationCity`, `reviewTitle` (default = título do livro), `body`, `rating` (`z.number().int().min(0).max(5)`), `tagsInput`/`keywordsInput` como **string única separada por vírgula** transformada em `text[]` (`.transform(s => s.split(',').map(t => t.trim()).filter(Boolean))` — corte de escopo, sem chips), `highlightQuote`, `coverUrl` (`http`/`https` só — A-4). Exporta `reviewDraftSchema` (mínimo estrutural) e `reviewPublishSchema` (`.superRefine` exigindo `body`+`rating`+ficha completa — tabela do design §5.4). Exporta também `reviewStatusSchema = z.enum(['draft','published'])` (usado pelo T6 para decidir qual schema aplicar — **não** vive dentro do action). `src/lib/review/slug.ts` — `slugify(title)`: minúsculas, sem acento, hífens (puro, testável).
+**Where**: `src/lib/review/schema.ts` + `src/lib/review/__tests__/schema.test.ts` (novos) · `src/lib/review/slug.ts` + `src/lib/review/__tests__/slug.test.ts` (novos)
+**Depends on**: None
+**Reuses**: `bookInputSchema` + `isbn.ts` (checksum já embutido)
+**Requirement**: REV-06, REV-07, REV-08, REV-09, REV-10, REV-11, REV-13, REV-14, REV-15, REV-16, REV-20, DD-9
+**Model**: **Sonnet** (composição mecânica de Zod sobre schema existente)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] `reviewDraftSchema`: só ficha (title/author/genre_id) obrigatória, resto opcional — aceita rascunho mínimo
+- [ ] `reviewPublishSchema`: rejeita ausência de `body`/`rating`; aceita quando completo
+- [ ] Transform de `tagsInput`/`keywordsInput`: `"ficção, clássico"` → `['ficção','clássico']`; string vazia → `[]`
+- [ ] `rating` não-inteiro ou fora de 0–5 → rejeitado por ambos os schemas
+- [ ] `coverUrl` com `javascript:`/sem esquema → rejeitado (A-4)
+- [ ] `slugify('Dom Casmurro, 50 anos!')` → slug ascii/hífen determinístico; testado com acentos/pontuação
+- [ ] Gate **quick**
+
+**Tests**: unit · **Gate**: quick
+**Verify**: `npx vitest run src/lib/review/__tests__/schema.test.ts src/lib/review/__tests__/slug.test.ts`.
+**Commit**: `feat(review): reviewInputSchema draft/publish + slugify — sem chips, tags/keywords por vírgula (REV-06..16/20)`
+
+---
+
+### T6: `actions.ts` — `createReview`, `publishReview`, `unpublishReview` (gate de publicação)
+
+**What**: `src/app/admin/(protected)/resenhas/actions.ts` (`'use server'`). Cada action chama `requireEditor()` **antes** de qualquer escrita (SEC-08). `createReview`: parseia `status` do `FormData` com `reviewStatusSchema` **primeiro** (falha → erro genérico, nada persistido); **deriva** o schema (`reviewDraftSchema` × `reviewPublishSchema`) do status **validado**, nunca do botão (§5.2 — a emenda A-1); em sucesso, chama `createAuthenticatedClient().rpc('create_review_with_book', …)` com o **mesmo** status validado como `p_status`; `redirect` para `/admin/resenhas`. `publishReview`/`unpublishReview`: carregam a review, validam (`reviewPublishSchema` no publish), `update` só de `review.status`/`published_at` (`coalesce`, nunca reescreve — E-3); `revalidatePath` das rotas públicas **nas duas direções** (publicar **e** despublicar — E-4, sem isso a despublicação fica cacheada como se seguisse no ar). Erros mapeados por cenário (§9): 42501 → mensagem amigável; 23505 (slug) → "tente novamente"; Zod → `fieldErrors`.
+**Where**: `src/app/admin/(protected)/resenhas/actions.ts` + `src/app/admin/(protected)/resenhas/__tests__/actions.test.ts` (novos)
+**Depends on**: T2 (RPC), T5 (schemas)
+**Reuses**: `requireEditor`/`getAuthenticatedEditor`, `createAuthenticatedClient` — mesmo padrão de `admin/login/actions.ts`
+**Requirement**: REV-01 (gate), REV-02, REV-15, REV-16, REV-17, REV-18, REV-22, DD-8, DD-10, A-1 (emenda)
+**Model**: **Opus** (é o gate de publicação — a emenda E-2 vive aqui; erro de implementação reabre o furo que a revisão fechou)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] **Teste obrigatório da emenda A-1:** `FormData` com `status=published` e `body`/`rating` ausentes → cai em `reviewPublishSchema`, é **rejeitado**, nada é persistido (não em `reviewDraftSchema`, mesmo request "parecendo" um create qualquer)
+- [ ] `status` ausente/forjado fora do enum → erro **antes** de tocar o RPC
+- [ ] `publishReview`/`unpublishReview`: `published_at` só carimba na 1ª publicação (`coalesce`); `unpublish` → `revalidatePath` disparado (asserção de chamada, não só o status)
+- [ ] Sem `requireEditor()` ok → nenhuma escrita ocorre (unit com client/gate stub)
+- [ ] Erros 42501/23505 mapeados para mensagem amigável (sem stack) nos testes
+- [ ] Gate **quick**
+
+**Tests**: unit (client/gate stub, padrão `requireEditor.test.ts`) · **Gate**: quick
+**Verify**: `npx vitest run src/app/admin/\(protected\)/resenhas/__tests__/actions.test.ts`.
+**Commit**: `feat(review): actions create/publish/unpublish — schema pelo status validado, revalidatePath nas 2 direções (REV-01/02/15-18/22, A-1)`
+
+---
+
+### T7: `adminQueries.ts` — `listEditorReviews()` [P com T6]
+
+**What**: `src/lib/review/adminQueries.ts`: `listEditorReviews()` via `createAuthenticatedClient()` — sob RLS own-or-admin (0008), retorna as resenhas do editor logado (admin vê todas), rascunhos + publicadas, campos mínimos para a lista (título, slug, status, livro). **Não** inclui `getEditorReviewForEdit` (edição diferida — ver Diferidos).
+**Where**: `src/lib/review/adminQueries.ts` + `src/lib/review/__tests__/adminQueries.test.ts` (novos)
+**Depends on**: T1 (colunas/GRANTs já presentes para o select)
+**Reuses**: padrão de injeção de client de `queries.ts` (público) — mesma forma, client diferente
+**Requirement**: REV-24, DD-13 (parcial — só a lista, não a leitura de edição)
+**Model**: **Sonnet** (select simples sob client já provado)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] Unit com client stub: retorna a forma esperada; não vaza campos de outro editor no teste (RLS é responsabilidade do banco — aqui só o contrato)
+- [ ] Efeito de RLS (editor só vê próprias, admin vê todas) coberto por integration — **merge-forward declarado para a matriz de `review` já existente (0008)**, não repetida aqui
+- [ ] Gate **quick**
+
+**Tests**: unit (+ merge-forward integration existente) · **Gate**: quick
+**Verify**: `npx vitest run src/lib/review/__tests__/adminQueries.test.ts`.
+**Commit**: `feat(review): listEditorReviews — leitura admin sob RLS own-or-admin (REV-24)`
+
+---
+
+### T8: `ReviewForm` — scaffolding do formulário (client component)
+
+**What**: `src/app/admin/(protected)/resenhas/ReviewForm.tsx` (`'use client'`, `useActionState`). `<fieldset>` por seção (*Ficha bibliográfica*, *Classificação*, *Conteúdo*) com `<legend>`; campos via `Field` (autor, título, cidade, editora, ano, ISBN, gênero-select, corpo, frase de destaque, capa-URL, **tags/keywords como um único input de texto por vírgula** — sem chips, sem `RepeatableLinks` — §13); **sem** campo de "para saber mais" (cortado). Dois botões (`Salvar rascunho`/`Publicar`) que só **diferem no `status` enviado** — a escolha do schema é 100% do servidor (T6), nunca do cliente (§6.3). Resumo de erros em live region presente desde o 1º render; foco movido ao resumo em falha (WCAG 2.4.3/3.3.1); sucesso anunciado em `role="status"`. Slot para `RatingInput` (T9), consumido como componente à parte.
+**Where**: `src/app/admin/(protected)/resenhas/ReviewForm.tsx` + `__tests__/ReviewForm.test.tsx` (novos)
+**Depends on**: T5 (tipos/validação de referência para os campos)
+**Reuses**: `Field`/`Button` (M0), padrão `useActionState`+live region de `LoginForm.tsx`
+**Requirement**: REV-08, REV-09, REV-10, REV-11, REV-13, REV-14, REV-20, REV-21, REV-22, DD-11, DD-12, A-6
+**Model**: **Sonnet** (scaffolding — reuso extenso de `Field`/`Button`, sem lógica de segurança nova)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] Todos os campos com `label` associado (via `Field`); tags/keywords como **um** input de texto, não lista dinâmica
+- [ ] Resumo de erros existe (vazio) no 1º render; recebe foco (`tabIndex={-1}`) quando a submissão falha
+- [ ] Os dois botões enviam `status` diferente e **nada mais** determina o schema no cliente
+- [ ] Erros por campo via `Field.error`/`aria-describedby`/`aria-invalid` (sem depender só de cor — WCAG 1.4.1)
+- [ ] Gate **quick** (a11y de rota fica na T10, onde a página existe)
+
+**Tests**: unit (Testing Library) · **Gate**: quick
+**Verify**: `npx vitest run "src/app/admin/(protected)/resenhas/__tests__/ReviewForm.test.tsx"`.
+**Commit**: `feat(review): ReviewForm — fieldsets, tags/keywords por vírgula, botões só mudam status (REV-08..14/20-22, DD-11/12)`
+
+---
+
+### T9: `RatingInput` — nota 0–5 como radiogroup acessível [P com T8] — **CORTÁVEL #2**
+
+**What**: `src/components/review/RatingInput.tsx`: `<fieldset><legend>Nota (0 a 5)</legend>` + 6 `radio` (0..5), rótulo textual por opção (não estrelas-só — WCAG 1.1.1/1.4.1), operável por setas/teclado, integrado ao `ReviewForm` (T8) e a `reviewInputSchema` (T5). **Se o gatilho do Plano de Corte disparar** (ver seção própria), este componente **não é construído**: o campo de nota vira um `<input type="number" min="0" max="5" step="1">` via o próprio `Field` (reuso direto, zero componente novo) — a validação Zod (T5) já é a mesma nos dois casos, então o corte não muda `reviewInputSchema`.
+**Where**: `src/components/review/RatingInput.tsx` + `__tests__/RatingInput.test.tsx` (novos) — **ou, se cortado, nenhum arquivo novo** (campo absorvido em T8 via `Field`)
+**Depends on**: T5 (contrato de valor — inteiro 0–5)
+**Reuses**: — (componente novo; ou `Field` puro, se cortado)
+**Requirement**: REV-07 (entrada acessível), REV-21, DD-11
+**Model**: **Opus** (componente de a11y customizado — radiogroup, navegação por teclado, rótulo textual — carga de a11y explícita na alocação)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when** (versão completa):
+- [ ] `fieldset`/`legend` presentes; 6 opções com rótulo textual (não só ícone/estrela)
+- [ ] Navegação por setas entre opções (padrão nativo de radiogroup); seleção refletida no valor do form
+- [ ] `aria-invalid`/erro do grupo quando ausente no gate de publicação
+- [ ] Gate **quick**
+
+**Done when** (versão cortada — `<input type="number">` via `Field`):
+- [ ] `Field` com `type="number"`, `min={0}` `max={5}` `step={1}`, label "Nota (0 a 5)" explícito
+- [ ] Erro de fora-de-faixa/decimal via `Field.error` (mesmo padrão dos outros campos)
+- [ ] Gate **quick**
+
+**Tests**: unit (Testing Library) · **Gate**: quick
+**Verify**: `npx vitest run src/components/review/__tests__/RatingInput.test.tsx` (se construído) — ou o teste de `ReviewForm` cobre o `<input type="number">` (se cortado).
+**Commit**: `feat(review): RatingInput radiogroup acessível (REV-07/21)` — ou, se cortado: `feat(review): nota via input number no ReviewForm (corte #2, REV-07/21)`
+
+---
+
+### T10: Rotas `/admin/resenhas` (lista) + `/admin/resenhas/nova` (criar)
+
+**What**: `resenhas/page.tsx` — lista mínima via `listEditorReviews()` (T7): título/status/link para despublicar (**sem** link de editar funcional — a rota de edição está cortada; se a UI expuser um link, ele **não** deve existir esta sprint, para não apontar a 404/rota inexistente). `resenhas/nova/page.tsx` — renderiza `ReviewForm` (T8+T9) ligado a `createReview` (T6). Ambas sob `(protected)` — herdam o gate autoritativo (`requireEditor()`), satisfazendo REV-01 **por reuso**, sem lógica de gate nova aqui. `metadata.robots: noindex`.
+**Where**: `src/app/admin/(protected)/resenhas/page.tsx` + `src/app/admin/(protected)/resenhas/nova/page.tsx` (novos) · specs axe das 2 rotas
+**Depends on**: T6, T7, T8, T9
+**Reuses**: `(protected)/layout.tsx` (gate); padrão de página server-first de `admin/(protected)/page.tsx`
+**Requirement**: REV-01 (por reuso), REV-24, DD-13 (lista + nova; editar fora)
+**Model**: **Sonnet** (wiring de rota sobre peças já prontas)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] `/admin/resenhas` sem sessão → redirect ao login (herdado do layout, conferência rápida); lista renderiza para editor com sessão
+- [ ] `/admin/resenhas/nova` completa o fluxo: preencher, "Salvar rascunho" → aparece na lista como draft; "Publicar" completo → status published
+- [ ] Nenhum link para `/admin/resenhas/[id]/editar` na lista (rota não existe esta sprint)
+- [ ] Axe das 2 rotas sem violações críticas
+- [ ] Gate **full**
+
+**Tests**: unit (wiring) + a11y de rota · **Gate**: full
+**Verify**: `npm run test:a11y` (rotas novas); fluxo manual local (criar rascunho → publicar → ver na lista).
+**Commit**: `feat(review): rotas /admin/resenhas (lista) e /nova (criar) — REV-01/24, DD-13`
+
+---
+
+### T11: Exibição pública A — resenhista, frase de destaque, cidade de publicação — **CORTÁVEL #1**
+
+**What**: Estender `/resenha/[slug]/page.tsx` (design §7): byline `review.reviewer_name` no `<header>`; `<blockquote>` com `review.highlight_quote` (novo `HighlightQuote`, omitido se vazio — REV-11); linha `publication_city` em `BookDetails`. **Este é o 1º item do Plano de Corte** — se o gatilho disparar (ver seção própria), esta task **não entra** nesta sprint: os dados **já estão gravados** (T1/T2/T6 não mudam), só o render público espera um follow-up.
+**Where**: `src/app/resenha/[slug]/page.tsx` · `src/components/book/BookDetails.tsx` · `src/components/review/HighlightQuote.tsx` (novo, se não cortado)
+**Depends on**: T1, T2 (colunas/tipos), T6 (dados reais gravados para exercitar)
+**Reuses**: `REVIEW_SELECT = '*, book(*, …)'` já traz as colunas por `*` (sem mudança de query — só regen de tipos, já feito na T2)
+**Requirement**: REV-11, REV-14 (exibição), DD-14 (parcial)
+**Model**: **Sonnet** (extensão de exibição sobre componentes existentes)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] Byline exibe `reviewer_name` quando presente
+- [ ] `highlight_quote` renderiza com realce quando preenchido; **omitido** (sem placeholder) quando vazio
+- [ ] `publication_city` aparece em `BookDetails` quando presente
+- [ ] Axe da rota `/resenha/[slug]` sem violações críticas (regressão + campos novos)
+- [ ] Gate **full**
+
+**Tests**: unit (render condicional) + a11y de rota · **Gate**: full
+**Verify**: `npm run test:a11y` na rota; conferência visual com uma resenha publicada via T10.
+**Commit**: `feat(review): exibição pública de reviewer_name/highlight_quote/publication_city (REV-11/14)`
+
+---
+
+### T12: Exibição pública B — tags e palavras-chave [P com T11]
+
+**What**: Estender `/resenha/[slug]/page.tsx`: lista de tags exibida (REV-08, **sem** filtro/link — TAGS=c, adiado); `keywords` entram em `generateMetadata` como `keywords` (SEO, REV-09), **não** como filtro nem UI visível. **Não é cortável** — ao contrário da T11, o Plano de Corte não toca aqui (tags/keywords não estão na lista de campos cortáveis).
+**Where**: `src/app/resenha/[slug]/page.tsx` (mesma extensão da T11, seção distinta)
+**Depends on**: T1, T2, T6
+**Reuses**: mesmo `REVIEW_SELECT` da T11
+**Requirement**: REV-08, REV-09
+**Model**: **Sonnet**
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] Tags exibidas como lista simples (sem link/filtro clicável — TAGS=c)
+- [ ] `keywords` presentes em `generateMetadata` da rota (conferível no `<head>` renderizado), ausentes da UI visível
+- [ ] Axe da rota sem violações críticas
+- [ ] Gate **full**
+
+**Tests**: unit (render + metadata) + a11y de rota · **Gate**: full
+**Verify**: `npm run test:a11y`; inspeção do `<head>` gerado (`generateMetadata`).
+**Commit**: `feat(review): exibição pública de tags + keywords em metadata (REV-08/09)`
+
+---
+
+### T13: Ensaio final — gate completo + axe + NVDA + checklist de merge
+
+**What**: Rodar o gate **full** completo (quick + `test:a11y`) mais as 4 suítes integration (T3, T4, T3-book-matrix, e a matriz de `review` 0008 herdada) contra a stack local; percorrer manualmente com **NVDA** as rotas novas (`/admin/resenhas`, `/nova`, e a `/resenha/[slug]` estendida): navegação por teclado até o fim, leitura do resumo de erros ao falhar o gate de publicação, leitura do sucesso ao salvar. Preencher o checklist de merge (padrão T19 de `security-foundation`): `pg_policies` local mostra as policies novas de `book`; nenhuma pendência de `db push` esquecida; ordem de rollout (A-11) documentada no PR.
+**Where**: — (verificação; ajustes pontuais achados entram no mesmo commit se triviais)
+**Depends on**: T1–T12 (todas)
+**Reuses**: padrão de UAT de `security-foundation` T19
+**Requirement**: success criteria do spec; REV-21 (a11y, verificação final); todas as stories P1
+**Model**: **Opus** (julgamento de UAT + a11y real com leitor de tela — não é execução mecânica de comando)
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] Gate full verde (baseline 192/36 + todos os testes novos desta feature)
+- [ ] As 4 suítes integration verdes local; CI seguirá pulando-as (skipIf)
+- [ ] Roteiro NVDA sem bloqueio: criar rascunho, tentar publicar incompleto (ouve o resumo de erros), completar, publicar (ouve o sucesso), despublicar
+- [ ] `npm run build` compila
+- [ ] Checklist de merge preenchido no PR (policies de `book` confirmadas local; STOP do `db push` produção documentado, pós-merge)
+
+**Tests**: e2e manual guiado + suítes existentes · **Gate**: full + integration + build
+**Verify**: roteiro acima; contagem final de testes registrada no PR.
+**Commit**: `chore(review): ensaio final + gates completos (checklist de merge)` *(se houver ajustes)*
+
+---
+
+## [FORA das tasks] `db push` produção — STOP humano (A-11)
+
+Não é uma task numerada — é o mesmo passo humano pós-merge já usado em M2/D-08. Ordem: **T1–T13 concluídas e mergeadas** → `db push` produção (0009 completa, aditiva) → verificar `pg_policies` em produção (policies de `book` presentes) → **confirmar que a normalização da nota rodou** (`dom-casmurro`=5, `iracema`=4, as outras duas inalteradas — a mesma prova da T1, agora em produção) → smoke test manual (criar/publicar uma resenha real, ver no ar) → seed/dados existentes intactos (4 resenhas antigas continuam publicadas). **Sem `SUPABASE_SERVICE_ROLE_KEY` em Production** (gate herdado, SEC-17) — a 0009 não muda esse gate.
+
+---
+
+## Diferidos
+
+Requisitos do spec **conscientemente não cobertos** por nenhuma task acima — estado **correto**, não órfão. Motivo: corte de escopo do Design (§13), decisão já aprovada em 2026-08-09, não desta fase.
+
+| Requisito | Por que está fora | Quando volta |
+| --- | --- | --- |
+| **REV-12** (para saber mais — `further_reading`) | `RepeatableLinks` não construído (componente mais caro do design — lista dinâmica, foco gerido, Zod por item, filtro XSS, `<nav>` público) | Feature futura; **coluna `jsonb` + CHECK já existem na 0009** (T1) — schema não muda quando voltar |
+| **REV-19** (editar resenha existente sob RLS own-or-admin) | `update_review_with_book` **criado** na T2 mas **não exercido**; rota `/admin/resenhas/[id]/editar` fora do Execute | Feature de edição, follow-up. RPC e policies de UPDATE de `book` já prontos (T1/T2) — só faltam `updateReview` (action), `getEditorReviewForEdit` (query) e a rota |
+| **DD-13 (parte)** — `getEditorReviewForEdit(id)` | Consequência direta do REV-19 diferido — não há tela de edição para popular | Junto com REV-19 |
+
+**Nenhum outro requisito (REV-01..24 + REV-07-schema) fica sem task.** REV-08/REV-09 (tags/keywords) **não** estão diferidos — são T12, cobertos integralmente, inclusive exibição.
+
+---
+
+## Plano de Corte (contingência de cronograma — distinto do corte do Design)
+
+**Por que existe:** o calendário é real (3 dias, ~3h/dia, sem buffer) — este plano decide **o que sai primeiro** se o tempo não fechar, para não haver escolha de última hora sob pressão.
+
+### Corte #1 — Exibição pública de `reviewer_name`/`highlight_quote`/`publication_city` (T11)
+
+**O que sai:** só a T11 (a extensão da `review-page`). O schema (T1/T2) e o formulário (T8) **ficam** — os dados continuam sendo capturados e gravados, só não aparecem no público ainda.
+**Gatilho:** se, **ao fim do dia 13/08**, o teste de rollback do RPC (T4, A-9) **não estiver verde**, o Corte #1 é **acionado imediatamente, sem reavaliação** — o tempo perdido no dia 13 vem daqui, não de uma escolha nova no dia 15.
+**Consequência a registrar:** enquanto T11 não entra, REV-11 e a parte de exibição de REV-14 (`publication_city` visível) ficam **parcialmente atendidos** — captura sim, exibição não. Isso é diferente de REV-12 (Diferidos): aqui a intenção original **não muda**, só atrasa.
+
+### Corte #2 — `RatingInput` dedicado (T9)
+
+**O que sai:** o componente radiogroup. Substituído por `<input type="number" min="0" max="5" step="1">` via `Field` (reuso direto — T8 absorve o campo, T9 não gera arquivo). A validação Zod (T5) é **a mesma** nos dois casos — cortar T9 não muda `reviewInputSchema`.
+**Gatilho:** avaliado no dia 14/08, **depois** do Corte #1 já ter sido decidido no dia 13 — se o dia 14 também apertar, este é o próximo a cair, nessa ordem (nunca o contrário: T11 sempre cai antes de T9, porque T11 depende de dados que T9 não afeta).
+**Consequência a registrar:** `<input type="number">` ainda é acessível (label explícito, min/max, validação por Zod, erro via `Field.error`) — **não** é uma regressão de a11y, é uma forma mais simples do mesmo requisito (REV-07/21 continuam atendidos, só sem o padrão radiogroup mais rico).
+
+**O que este plano NÃO corta, em nenhuma circunstância desta janela de 3 dias:** a 0009 (T1/T2), os RPCs, as policies de `book`, o gate de publicação (T6), a captura de qualquer campo no formulário (T8), a exibição de tags/keywords (T12). Esses são o núcleo do MVP (P1 do spec) — se apertarem, o corte é de **prazo do calendário inteiro** (empurrar T13/`db push` para depois do dia 15), não de escopo do núcleo.
+
+---
+
+## Validação pré-aprovação (3 gates do skill)
+
+### Check 1 — Granularidade
+
+| Task | Escopo | Status |
+| --- | --- | --- |
+| T1–T2 | 1 migration, 2 partes coesas (schema/GRANTs × RPCs/tipos — indivisível sem deixar o arquivo pela metade num commit) | ✅ coeso |
+| T3–T4 | 1 suíte integration cada, propósito distinto (matriz de papel × rollback transacional) | ✅ |
+| T5 | 2 utilitários puros do mesmo domínio (schema + slugify), sem dependência de banco | ✅ coeso |
+| T6 | 3 actions do mesmo fluxo de escrita (create/publish/unpublish compartilham gate e padrão de erro) | ✅ coeso |
+| T7 | 1 módulo de leitura | ✅ |
+| T8–T9 | 1 componente cada, split deliberado (scaffolding × a11y customizada) para isolar o corte #2 | ✅ |
+| T10 | 2 rotas da mesma feature (lista+criar), entrega conjunta natural | ✅ coeso |
+| T11–T12 | 1 extensão de página cada, split deliberado (cortável × não-cortável) | ✅ |
+| T13 | 1 verificação final | ✅ |
+
+### Check 2 — Diagrama × Depends on
+
+| Task | Body diz | Diagrama mostra | Status |
+| --- | --- | --- | --- |
+| T1 | None | início dia 13 | ✅ |
+| T2 | T1 | T1→T2 | ✅ |
+| T3 | T1 | T1→T3 [P com T2] | ✅ |
+| T4 | T1, T2 | T1,T2→T4 | ✅ |
+| T5 | None | [P, independente] | ✅ |
+| T6 | T2, T5 | T2,T5→T6 | ✅ |
+| T7 | T1 | T1→T7 [P com T6] | ✅ |
+| T8 | T5 | T5→T8 | ✅ |
+| T9 | T5 | T5→T9 [P com T8] | ✅ |
+| T10 | T6,T7,T8,T9 | T6,T7,T8,T9→T10 | ✅ |
+| T11 | T1,T2,T6 | T1,T2,T6→T11 | ✅ |
+| T12 | T1,T2,T6 | T1,T2,T6→T12 [P com T11] | ✅ |
+| T13 | T1–T12 | T1..T12→T13 | ✅ |
+
+### Check 3 — Co-locação de testes × matriz
+
+| Task | Camada | Matriz exige | Task diz | Status |
+| --- | --- | --- | --- | --- |
+| T1 | migration (colunas/CHECK/GRANTs/policies) | integration | integration (+ merge-forward matriz completa → T3) | ✅ |
+| T2 | migration (RPCs/helper) | integration | integration (+ merge-forward rollback → T4) | ✅ |
+| T3 | policies de book | integration | integration | ✅ |
+| T4 | RPC transacional | integration (task própria — A-9) | integration, task própria | ✅ |
+| T5 | módulos puros | unit | unit | ✅ |
+| T6 | server actions | unit (client/gate stub) | unit | ✅ |
+| T7 | leitura autenticada | unit + merge-forward integration (0008 já prova o efeito RLS) | unit + merge-forward declarado | ✅ |
+| T8 | componente form | unit | unit | ✅ |
+| T9 | componente a11y | unit | unit | ✅ |
+| T10 | rotas (SSR wiring) | a11y de rota + build | a11y + build (gate full) | ✅ |
+| T11–T12 | extensão de página | a11y de rota | a11y (gate full) | ✅ |
+| T13 | verificação | none (é a própria verificação) | e2e manual + suítes existentes | ✅ |
+
+**Cobertura de requisitos: 22/25 cobertos por task nesta sprint (REV-01..11, REV-13..18, REV-20..24, REV-07-schema) + 3 diferidos explicitamente (REV-12, REV-19, e a parte de DD-13 de edição) = 25/25 sem órfão** — REV-01 (T10, por reuso do gate) · REV-02 (T2/T6) · REV-03 (T2) · REV-04 (T2/T4) · REV-05 (T2) · REV-06 (T1/T5) · REV-07 (T1/T5/T9) · REV-07-schema (T1/T3) · REV-08 (T5/T8/T12) · REV-09 (T5/T8/T12) · REV-10 (T5/T8) · REV-11 (T5/T8/**T11 cortável**) · REV-12 (**diferido**) · REV-13 (T5/T8) · REV-14 (T5/T8/**T11 cortável para a parte de exibição**) · REV-15 (T5/T6) · REV-16 (T5/T6) · REV-17 (T6) · REV-18 (T6) · REV-19 (**diferido**) · REV-20 (T5/T8) · REV-21 (T8/T9/T10/T11/T12/T13, embutida) · REV-22 (T6/T8) · REV-23 (T2/T5) · REV-24 (T7/T10).
