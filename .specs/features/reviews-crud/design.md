@@ -1,10 +1,10 @@
 # reviews-crud — Design
 
-> Milestone **M2 · Painel administrativo** · Fase **Design** · Branch alvo `feat/reviews-crud` (a criar).
+> Milestone **M3 · Painel administrativo** · Fase **Design** · Branch alvo `feat/reviews-crud` (a criar).
 > Fonte de verdade: [spec.md](spec.md) (REV-01..24 + REV-07-schema) + [context.md](context.md) (gray areas resolvidas) · precedente de segurança: [security-foundation/design.md](../security-foundation/design.md) (D-09/D-10, matriz own-or-admin 0008).
 > **NATUREZA DESTE DOCUMENTO: somente design.** Nenhum SQL executado, nenhuma migration aplicada, nenhuma dependência instalada, nenhum arquivo de código criado. Todo DDL/TSX é **ILUSTRATIVO — NÃO APLICAR** até a fase Execute (o `db push` da 0009 tem STOP humano próprio, §12 / A-11 herdado).
 > **Mudança desde o Specify (aplicada aqui):** resenhista **DENORMALIZADO** em `review.reviewer_name` (não derivado de `editor.name` em exibição) — motivo e semântica em §5. A RLS de `editor` (0007) **não é tocada**.
-> Estado do repo verificado 2026-07-10: maior migration = **0008**; `review` já tem GRANT `insert/update/delete` a `authenticated` + policies own-or-admin (0008); `book` só tem **leitura pública** (0003/0004), **sem escrita**; `@supabase/ssr` e `server-only` já instalados (M2); `Field`/`Button` a11y prontos; a rota `/admin/(protected)` e o gate `requireEditor()` já existem.
+> Estado do repo verificado 2026-07-10, **reconfirmado 2026-08-09**: maior migration = **0008** (`0008_review_editor_write.sql` — logo a numeração **0009** deste design segue válida); `review` já tem GRANT `insert/update/delete` a `authenticated` + policies own-or-admin (0008); `book` só tem **leitura pública** (0003/0004), **sem escrita**; `@supabase/ssr` e `server-only` já instalados (M2); `Field`/`Button` a11y prontos; a rota `/admin/(protected)` e o gate `requireEditor()` já existem.
 
 ---
 
@@ -38,7 +38,7 @@ graph TD
 
 **Fluxos:**
 - **Criar** → `ReviewForm` → `createReview` (action) → RPC `create_review_with_book` (book+review numa transação).
-- **Editar conteúdo** → `updateReview` → RPC `update_review_with_book` (book+review, sem mexer slug/reviewer_name/editor_id).
+- **Editar conteúdo** → `updateReview` → RPC `update_review_with_book` (book+review, sem mexer slug/reviewer_name/editor_id). **CORTADO do Execute** (§13) — desenhado e provisionado na 0009, exercido em follow-up.
 - **Publicar/Despublicar** → `publishReview`/`unpublishReview` → UPDATE **só de `review.status`** (uma tabela, sem RPC — não há escrita de book). O **gate de publicação** (todos os campos) roda **no server action** (§5.4).
 - **Ler no painel** (lista/edição) → client **autenticado** (drafts próprios visíveis sob RLS own; admin vê todos).
 - **Exibir no público** → a `review-page`/home já leem por `*` (as colunas novas entram sozinhas após regen de tipos, §7).
@@ -74,9 +74,20 @@ alter table public.review add  constraint review_further_reading_is_array
 
 ```sql
 -- ILUSTRATIVO — NÃO APLICAR · 0009 (2) nota inteira (D-01)
--- Normaliza legado ANTES do CHECK: o bug histórico ",5/5" pode ter deixado 4.5 no
--- banco → o CHECK falharia na aplicação. round() = inteiro mais próximo; o editor
--- reajusta depois se quiser. VERIFICAR as 4 seeds de produção antes do push (A-3).
+-- Normaliza legado ANTES do CHECK: o dado de produção tem meio-ponto, então sem
+-- isto o CHECK falharia na aplicação.
+--
+-- NORMALIZAÇÃO EDITORIAL EXPLÍCITA (A-3 — verificado em produção 2026-08-09):
+-- dom-casmurro = 4,5 e iracema = 4,5; as outras duas resenhas já são inteiras
+-- (4,0 e 5,0). Os valores 5 e 4 abaixo são ESCOLHA EDITORIAL do autor — NÃO
+-- resultado de arredondamento (ver §13/A-3 para por que round() foi rejeitado
+-- como estratégia).
+update public.review set rating = 5 where slug = 'dom-casmurro';
+update public.review set rating = 4 where slug = 'iracema';
+
+-- REDE RESIDUAL para qualquer não-inteiro remanescente (linha nova criada entre
+-- a verificação e o push, ou ambiente cujo dado divirja do de produção).
+-- Idempotente: após os dois UPDATEs acima não casa com nada no dado conhecido.
 update public.review set rating = round(rating)
   where rating is not null and rating <> trunc(rating);
 
@@ -86,6 +97,8 @@ alter table public.review add  constraint review_rating_integer
 ```
 
 A coluna permanece `numeric(2,1)` (não recriada — reversível/aditivo; afrouxar para meio-ponto no futuro é só trocar o CHECK). O CHECK 0–5 original da 0001 continua; este acrescenta a integralidade.
+
+**A-3 RESOLVIDO por verificação empírica (2026-08-09).** O `round()` cego que este bloco continha foi rejeitado **como estratégia** para as duas linhas conhecidas: em `numeric`, o Postgres arredonda meio **para longe do zero**, então `4,5` → `5` nas duas — deixando **3 das 4 resenhas com nota 5**, o que achata a listagem e torna a ordenação "Melhor nota" inútil. A escolha por slug (`dom-casmurro`→5, `iracema`→4) é editorial e preserva a dispersão das notas.
 
 ### 2.3 GRANTs de escrita de `book` (TD-03 — resolve REV-07-schema)
 
@@ -164,7 +177,7 @@ create or replace function public.create_review_with_book(
   p_tags text[], p_keywords text[], p_highlight_quote text, p_further_reading jsonb,
   p_status public.review_status, p_slug_base text
 ) returns public.review
-language plpgsql security invoker set search_path = public
+language plpgsql security invoker set search_path = ''
 as $$
 declare
   v_book_id uuid;
@@ -203,6 +216,8 @@ grant execute on function public.create_review_with_book(
   text,text,uuid,text,text,text,smallint,text,text,text,numeric,text[],text[],text,jsonb,public.review_status,text
 ) to authenticated;
 ```
+
+**`search_path = ''` em TODAS as funções da 0009 (padronizado).** O RPC usava `set search_path = public` enquanto os dois helpers definers (`owns_book_via_review`, `unique_review_slug`) já usavam `''` — divergência sem motivo. Como o corpo do RPC **já qualifica tudo** com `public.` (`public.editor`, `public.book`, `public.review`, `public.unique_review_slug`) e `auth.uid()` traz o próprio schema, `''` funciona sem outra alteração e elimina a diferença de postura entre funções da mesma migration. `''` é a forma estrita (nada resolve sem qualificação), coerente com o hardening da 0007.
 
 `update_review_with_book(p_review_id uuid, …mesmos campos…)` é análoga: UPDATE `book` (via join pela review) + UPDATE `review`, na mesma transação, sob `book_editor_update`/`review_editor_update`. **Não** altera `slug`, `reviewer_name` nem `editor_id` (§4/§5). `published_at` só é carimbado numa transição para `published` (§5.4).
 
@@ -259,12 +274,26 @@ export type ReviewFormState = {
   values?: ReviewFormValues            // eco dos valores p/ repopular (sem perder digitação)
 }
 export async function createReview(prev: ReviewFormState, form: FormData): Promise<ReviewFormState>
-export async function updateReview(id: string, prev: ReviewFormState, form: FormData): Promise<ReviewFormState>
+export async function updateReview(id: string, prev: ReviewFormState, form: FormData): Promise<ReviewFormState>  // CORTADA do Execute (§13)
 export async function publishReview(id: string): Promise<ReviewFormState>    // gate §5.4
 export async function unpublishReview(id: string): Promise<ReviewFormState>
 ```
 
+**REQUISITO — o schema é escolhido pelo STATUS VALIDADO, nunca pelo botão (§5.4).** `createReview` lê `status` do `FormData`, **valida contra um enum** (`z.enum(['draft','published'])`) e **deriva dele** qual schema aplicar — `reviewDraftSchema` para `draft`, `reviewPublishSchema` para `published`. Não existe caminho em que o `p_status` enviado ao RPC divirja do schema que validou o payload:
+
+```ts
+// ILUSTRATIVO — NÃO APLICAR · o status decide o schema (não o botão)
+const parsedStatus = reviewStatusSchema.safeParse(form.get('status'))
+if (!parsedStatus.success) return { status: 'error', message: 'Ação inválida.', /* … */ }
+const schema = parsedStatus.data === 'published' ? reviewPublishSchema : reviewDraftSchema
+// …parse com `schema`, e o MESMO `parsedStatus.data` vai como p_status ao RPC
+```
+
+Por que é requisito e não detalhe: os dois botões são apenas UI. Uma `FormData` forjada com `status=published` (curl, DevTools, extensão) chega pelo **caminho normal do app** — se o schema viesse do botão, ela publicaria incompleta sem nunca tocar a API direta. Derivar do status validado fecha esse furo; sobra só o residual de API direta (A-1), que é outra coisa. `updateReview` segue a mesma regra. **Teste obrigatório:** `FormData` com `status=published` e corpo/nota ausentes **falha** no `reviewPublishSchema` (§9, §10).
+
 Sucesso de create/update → `redirect` para `/admin/resenhas` (ou para o editar) + `revalidatePath` das rotas públicas afetadas quando `published`.
+
+**`revalidatePath` também no `unpublishReview`** (e não só ao publicar): despublicar **remove** a resenha do público, e sem revalidar a `/resenha/[slug]` e a home seguem servindo a versão em cache de uma resenha que não está mais publicada — o efeito visível de "despublicar não despublicou". Regra: **toda transição de status revalida**, nas duas direções.
 
 ### 5.3 Validação Zod (DD-9) — reuso de `bookInputSchema`
 `src/lib/review/schema.ts` compõe a ficha (reusa/estende [bookInputSchema](../../../src/lib/book/schema.ts) — ISBN checksum via `isbn.ts` já embutido) + os campos da resenha:
@@ -292,7 +321,7 @@ export const reviewPublishSchema = reviewBase.superRefine(/* §5.4 exige body + 
 
 ### 5.4 Ciclo rascunho→publicado e o **gate de publicação** (DD-8)
 - **Rascunho** salvável com o mínimo que persiste (a ficha exige `title`/`author`/`genre_id` — NOT NULL de schema; `review.title` default = título do livro).
-- **Publicar** exige o conjunto abaixo (via `reviewPublishSchema` no server action):
+- **Publicar** exige o conjunto abaixo (via `reviewPublishSchema`, selecionado pelo **status validado** — §5.2):
 
   | Obrigatório p/ publicar | Origem |
   | --- | --- |
@@ -304,8 +333,8 @@ export const reviewPublishSchema = reviewBase.superRefine(/* §5.4 exige body + 
 
   Opcionais mesmo publicando: ISBN, `publication_city`, `publisher`, `year`, `cover_url`, `tags`, `keywords`, `highlight_quote`, `further_reading`.
 
-- **publish/unpublish = UPDATE só de `review`** (status + `published_at`): não tocam `book`, logo **não precisam do RPC** nem de atomicidade multi-tabela. `publishReview` **carrega a review, valida `reviewPublishSchema`**, e só então `update ... set status='published', published_at = coalesce(published_at, now())`. `unpublishReview` → `set status='draft'` (mantém `published_at` como carimbo da última publicação — §11/A-8).
-- **Limitação herdada (A-1):** a RLS **não distingue transição de status** de outras edições (mesma limitação registrada no M2, A-4). O gate "todos os campos antes de publicar" é **do app** (server action), não da RLS — um editor que fure o app via API direta pode publicar incompleto (residual aceito para editores internos; §11).
+- **publish/unpublish = UPDATE só de `review`** (status + `published_at`): não tocam `book`, logo **não precisam do RPC** nem de atomicidade multi-tabela. `publishReview` **carrega a review, valida `reviewPublishSchema`**, e só então `update ... set status='published', published_at = coalesce(published_at, now())`. `unpublishReview` → `set status='draft'` (mantém `published_at` — **carimbo da PRIMEIRA publicação**; republicar **não** reescreve, graças ao `coalesce`, logo a resenha **não é empurrada para o topo de "Mais recentes"** ao voltar do rascunho — §11/A-8).
+- **Limitação herdada (A-1):** a RLS **não distingue transição de status** de outras edições (mesma limitação registrada no M2, A-4). O gate "todos os campos antes de publicar" é **do app** (server action), não da RLS. Com a emenda do §5.2, o **caminho do app está fechado** (o schema vem do status validado, não do botão) — o residual restante é **só a API direta**, um editor autenticado chamando PostgREST/`.rpc()` sem passar pelo server action. Aceito para editores internos (§11); fechá-lo exigiria um `trigger` de guarda de transição no banco.
 
 ---
 
@@ -334,18 +363,18 @@ export const reviewPublishSchema = reviewBase.superRefine(/* §5.4 exige body + 
 | **`actions.ts`** | `src/app/admin/(protected)/resenhas/actions.ts` | create/update/publish/unpublish (§5) | authenticated client, requireEditor |
 | **`ReviewForm`** | `src/app/admin/(protected)/resenhas/ReviewForm.tsx` | Client component do formulário (DD-11) | Field, Button, useActionState |
 | **`RatingInput`** | idem (ou `components/review`) | Nota 0–5 como **radiogroup** `fieldset/legend` (acessível, sem meio-ponto) | — |
-| **`RepeatableLinks`** | idem | Lista dinâmica label+url de "para saber mais" | Field |
-| **Rotas** | `resenhas/page.tsx` · `resenhas/nova/page.tsx` · `resenhas/[id]/editar/page.tsx` | Lista mínima + criar + editar (DD-13) | layout (protected) |
+| ~~**`RepeatableLinks`**~~ | idem | ~~Lista dinâmica label+url de "para saber mais"~~ — **CORTADO do Execute** (§13); `further_reading` sai da UI, a coluna fica | — |
+| **Rotas** | `resenhas/page.tsx` · `resenhas/nova/page.tsx` · ~~`resenhas/[id]/editar/page.tsx`~~ | Lista mínima + criar (DD-13). **Editar CORTADO do Execute** (§13) | layout (protected) |
 | **Leitura admin** | `src/lib/review/adminQueries.ts` | `listEditorReviews()` / `getEditorReviewForEdit(id)` via client **autenticado** (drafts sob RLS own) | authenticated client |
 | **Exibição pública** | ver §7 | Renderiza campos novos na `review-page` | review-page |
 
 ### 6.3 Formulário — client component (DD-11, DD-12)
 - **É um client component** (`'use client'`, `useActionState`) — os campos dinâmicos (`tags`, `further_reading`) exigem estado no browser. **Decisão DD-12:** o painel admin **assume JS** (ferramenta interna); o requisito "funciona sem JS" do projeto vale para as **páginas públicas**, que continuam SSR/no-JS. WCAG 2.1 AA é cumprido **com** JS ligado (teclado, labels, aria-live, foco — §8).
-- **Estrutura:** `<fieldset>` por seção — *Ficha bibliográfica*, *Classificação*, *Conteúdo* — cada um com `<legend>`. Nota = `RatingInput` (radiogroup). Tags/keywords = inputs que viram `text[]` (chips por vírgula/Enter). `further_reading` = `RepeatableLinks`.
-- **Serialização:** o client monta o payload (arrays/jsonb) e o envia; o action parseia com Zod. Botões distintos **Salvar rascunho** e **Publicar** (dois `formAction` / dois submit) para disparar o schema certo (§5.4).
+- **Estrutura:** `<fieldset>` por seção — *Ficha bibliográfica*, *Classificação*, *Conteúdo* — cada um com `<legend>`. Nota = `RatingInput` (radiogroup). **Tags/keywords = UM input de texto separado por vírgula** (convertido para `text[]` no server action — chips dinâmicos CORTADOS, §13). **`further_reading` não tem campo** (CORTADO do Execute, §13).
+- **Serialização:** o client monta o payload (arrays/jsonb) e o envia; o action parseia com Zod. Botões distintos **Salvar rascunho** e **Publicar** (dois `formAction` / dois submit) apenas **enviam `status` diferente** — quem escolhe o schema é o **status validado no server action**, nunca o botão (§5.2). Os botões são UI; a regra é do servidor.
 
 ### 6.4 Rota e nomenclatura
-`/admin/resenhas` (lista) · `/admin/resenhas/nova` (criar) · `/admin/resenhas/[id]/editar` (editar). Adota **`nova`** — fecha a divergência `novo`/`nova` do backlog do STATE. Tudo dentro de `(protected)`.
+`/admin/resenhas` (lista) · `/admin/resenhas/nova` (criar) · ~~`/admin/resenhas/[id]/editar`~~ (**editar CORTADA do Execute** — §13; a nomenclatura fica decidida para quando voltar). Adota **`nova`** — fecha a divergência `novo`/`nova` do backlog do STATE. Tudo dentro de `(protected)`.
 
 ---
 
@@ -357,7 +386,7 @@ Os campos novos existem para **serem vistos** (REV-08/11/12/14) — o design **e
 - **`review-page` (`/resenha/[slug]/page.tsx`):**
   - **Byline** do resenhista: `review.reviewer_name` no `<header>`.
   - **Frase de destaque:** `<blockquote>` com realce (novo `HighlightQuote`); omitido se vazio (REV-11).
-  - **Para saber mais:** `<nav aria-label="Para saber mais">` com `<a>` — **renderiza só URLs `http/https`** (defesa XSS, A-4); omitido se lista vazia (REV-12).
+  - ~~**Para saber mais:**~~ **CORTADO do Execute (§13)** — `further_reading` sai da UI e da exibição pública; a coluna e o CHECK ficam na 0009. Quando voltar: `<nav aria-label="Para saber mais">` com `<a>`, **renderizando só URLs `http/https`** (defesa XSS, A-4), omitido se lista vazia (REV-12).
   - **Tags:** lista exibida (REV-08). **Palavras-chave:** entram em `generateMetadata` como `keywords` (SEO, REV-09), não como filtro.
   - **`publication_city`:** nova linha em `BookDetails` (ficha).
 - **`cover_url` (DD-15):** guardado como **texto**; a **renderização da imagem** (`<img>`) fica **adiada** (`storage-covers`/polish do "bloco vinho"). `BookCover` segue tipográfico por ora — evita reabrir o bug de layout conhecido. Sinalizado como corte de prazo (§13).
@@ -381,6 +410,7 @@ Os campos novos existem para **serem vistos** (REV-08/11/12/14) — o design **e
 | --- | --- | --- |
 | Validação Zod (campo) | `fieldErrors` → `Field.error` | erro no campo, foco/aria |
 | Gate de publicação incompleto | `reviewPublishSchema` falha → resumo | lista acessível do que falta; nada publicado |
+| **`status` ausente/forjado no `FormData`** | `z.enum(['draft','published'])` falha → action retorna erro **antes** de qualquer escrita (§5.2) | "Ação inválida."; nada persistido. **Teste:** `status=published` sem corpo/nota cai no `reviewPublishSchema` e é rejeitado |
 | RLS/GRANT (42501) | mapear no action → mensagem amigável | "Você não tem permissão para esta ação." (sem stack/500) — REV-22 |
 | Slug em corrida (23505) | catch no action | "Não foi possível gerar o endereço; tente novamente." |
 | ISBN checksum inválido | Zod (`isbn.ts`) | erro no campo ISBN |
@@ -401,13 +431,13 @@ Os campos novos existem para **serem vistos** (REV-08/11/12/14) — o design **e
 | DD-5 | Escrita atômica via RPC `SECURITY INVOKER` (transação; RLS é gate) | REV-04, REV-02, REV-03 |
 | DD-6 | `reviewer_name` denormalizado no create, **congelado** (self-read RLS; sem tocar RLS de editor) | REV-14 (mudança) |
 | DD-7 | Slug gerado 1×, **estável** no edit; unicidade via definer + UNIQUE backstop | REV-23 |
-| DD-8 | publish/unpublish = UPDATE só-status; **gate de publicação no app** | REV-15, REV-16, REV-17, REV-18 |
+| DD-8 | publish/unpublish = UPDATE só-status; **gate de publicação no app**, com o schema derivado do **status validado como enum** (não do botão) — teste de `FormData` forjada (§5.2/§9) | REV-15, REV-16, REV-17, REV-18 |
 | DD-9 | Zod draft/publish reusando `bookInputSchema`+`isbn.ts` | REV-13, REV-16 |
 | DD-10 | Server actions gateadas por `requireEditor` + client autenticado | REV-01, REV-02 |
 | DD-11 | Form client component (Field/Button/useActionState); fieldsets; RatingInput radiogroup | REV-21, REV-07 |
 | DD-12 | Painel assume JS (interno); públicas seguem no-JS | REV-21 (escopo) |
 | DD-13 | Rotas `/admin/resenhas`(lista mínima)`/nova`/`[id]/editar`; leitura admin sob RLS own | REV-24, REV-19 |
-| DD-14 | Exibição pública dos campos novos na review-page | REV-08, REV-09, REV-11, REV-12, REV-14 |
+| DD-14 | Exibição pública dos campos novos na review-page (**menos `further_reading`/REV-12 — cortado do Execute, §13**) | REV-08, REV-09, REV-11, REV-14 (REV-12 adiado) |
 | DD-15 | `cover_url` textual guardado; render de imagem adiado | REV-20 |
 | DD-16 | Regen de `database.types.ts` pós-0009 | REV-06 |
 | DD-17 | Estratégia de erros (42501 amigável, per-field, rollback) | REV-22, REV-04 |
@@ -422,10 +452,10 @@ Sem requisito órfão: REV-01..24 + REV-07-schema todos mapeados. Nomes de arqui
 | # | Modo | Mitigação | Residual |
 | --- | --- | --- | --- |
 | T-1 | **Book órfão** (review falha após book) | RPC transacional (§3) → rollback | INSERT de book direto na API cria órfão inócuo (invisível; book já é leitura pública) |
-| T-2 | **XSS via URL** (`javascript:` em `cover_url`/`further_reading`) | Zod só `http/https`; render público filtra esquema (§7) | — |
+| T-2 | **XSS via URL** (`javascript:` em `cover_url`/`further_reading`) | Zod só `http/https`; render público filtra esquema (§7) | com `further_reading` cortado da UI (§13), a defesa fica **exercida só por `cover_url`** — mantida assim mesmo, pois a coluna segue gravável por RPC/API |
 | T-3 | **Publicar incompleto** furando o app (API direta) | Gate no server action; RLS own-or-admin ainda exige posse | RLS não distingue transição de status (A-1, herdado M2 A-4) — aceito p/ editores internos |
-| T-4 | **CHECK de nota quebra no push** por legado `4.5` | `update ... round()` antes do CHECK (§2.2) + **verificar 4 seeds** (A-3) | dado legado vira inteiro mais próximo (editorial) |
-| T-5 | **Colisão de slug** entre drafts (RLS esconde) | `unique_review_slug` definer lê todos + UNIQUE backstop | corrida concorrente rara → 23505 → "tente novamente" |
+| T-4 | **CHECK de nota quebra no push** por legado `4.5` | UPDATE editorial explícito por slug + rede residual `round()` antes do CHECK (§2.2); as 4 seeds **já verificadas em produção** 2026-08-09 (A-3 resolvido) | as duas linhas com meio-ponto recebem valor **editorial** (`dom-casmurro`→5, `iracema`→4); a rede só cobre não-inteiro que surja entre a verificação e o push |
+| T-5 | **Colisão de slug** entre drafts (RLS esconde) | `unique_review_slug` definer lê todos + UNIQUE backstop | (a) corrida concorrente rara → 23505 → "tente novamente"; (b) **ORÁCULO DE SLUG — residual aceito:** a função é definer e lê *todas* as resenhas, inclusive drafts alheios. Receber `minha-resenha-2` em vez de `minha-resenha` **revela ao editor que existe um draft de outro editor com aquele slug** — um bit de informação que a RLS de `review` esconderia. Vazamento mínimo (existência + título aproximado, nunca o conteúdo) e inerente a qualquer unicidade global sob RLS parcial; **aceito e nomeado** em vez de tratado como não-questão |
 | T-6 | **`owns_book_via_review` mal escrita** (escalonamento) | Mesmo hardening da 0007 (definer, search_path vazio, execute restrito); revisão linha a linha + matriz de teste | função é código de segurança — tratar como crítico |
 | T-7 | **Admin edita resenha alheia** e vira o resenhista | `reviewer_name`/`editor_id` **não** são tocados no update (§4.2) | — |
 | T-8 | **Sessão perde no meio do form longo** | `requireEditor` no action nega; `values` echo repõe digitação | requisição em voo (herdado F-7 do M2) |
@@ -439,20 +469,34 @@ A **0009 NÃO é aplicada nesta fase nem automaticamente no Execute.** `supabase
 
 ## §13. Auditoria — decisões questionadas, gaps e cortes de prazo
 
-> Nenhum BLOCKER que impeça a fase Tasks. Mas **A-1, A-3, A-7 e A-8 pedem sua confirmação** na revisão (são interpretações/consequências, não fatos do spec).
+> **REVISÃO CONCLUÍDA — Design APROVADO com emendas (2026-08-09).** Os quatro pontos que pediam confirmação foram resolvidos: **A-1** confirmado *com emenda* (o schema passa a ser derivado do status validado, não do botão — §5.2); **A-3** resolvido por *verificação empírica* em produção (normalização editorial explícita por slug — §2.2); **A-7** **confirmado como está**, sem emenda (a exibição pública cabe em `reviews-crud`); **A-8** confirmado *com esclarecimento* de prosa (`published_at` = primeira publicação — §5.4). Somou-se um **corte de escopo por prazo** (bloco ao final desta seção). Nenhum BLOCKER para a fase Tasks.
 
-- **A-1 · DECISÃO herdada a confirmar — gate de publicação é do app, não da RLS.** REV-16 ("todos os campos antes de publicar") é enforçado no server action (Zod publish), porque RLS pura não distingue transição de status (mesma limitação do M2, A-4). Um editor que chame a API direto pode publicar incompleto (é dono da linha). **Aceito** para editores internos; um `trigger` de guarda de transição seria a alternativa (complexidade não justificada no MVP). **Confirmar.**
+- **A-1 · CONFIRMADO com emenda (2026-08-09) — gate de publicação é do app, não da RLS.** REV-16 ("todos os campos antes de publicar") é enforçado no server action (Zod publish), porque RLS pura não distingue transição de status (mesma limitação do M2, A-4). **Emenda aplicada (§5.2):** o schema de validação é escolhido pelo **status validado como enum**, não pelo botão clicado — antes o design dizia apenas que "os dois botões disparam o schema certo", o que deixava `FormData` forjada com `status=published` publicar incompleto **pelo caminho normal do app**. Com a emenda, esse furo fecha e o residual encolhe para **API direta apenas** (editor autenticado chamando PostgREST fora do server action) — **aceito** para editores internos; `trigger` de guarda de transição segue como alternativa não justificada no MVP.
 - **A-2 · Consequência — `book` INSERT liberado a qualquer editor ativo.** É a única forma coerente (não há posse a checar antes da review existir). Books órfãos são possíveis via API direta, mas **inócuos** (invisíveis; book já é leitura pública). Limpeza de órfãos = follow-up (`admin-reviews`). **Aceito** (registrado T-1).
-- **A-3 · VERIFICAR antes do push — normalização de nota legada.** O `update ... round()` (§2.2) **altera dados** se alguma das 4 seeds de produção tiver nota não-inteira (o bug ",5/5"). Conferir os valores atuais **antes** do `db push`; se houver meio-ponto, decidir round × trunc × reajuste editorial manual. **Pedido de verificação.**
+- **A-3 · RESOLVIDO (2026-08-09) — normalização de nota legada.** Verificação empírica em produção: **`dom-casmurro` = 4,5 e `iracema` = 4,5**; as outras duas resenhas já são inteiras (4,0 e 5,0). A 0009 normaliza por **UPDATE editorial explícito por slug** — `dom-casmurro`→**5**, `iracema`→**4** —, valores que são **escolha editorial do autor**, não resultado de arredondamento. **`round()` foi rejeitado como estratégia:** sobre `numeric` o Postgres arredonda meio para longe do zero, logo as duas virariam 5 e **3 das 4 resenhas** ficariam com nota 5, achatando a listagem e inutilizando a ordenação "Melhor nota". O `round()` permanece em §2.2 apenas como **rede residual** idempotente (não casa com nada após os dois UPDATEs), cobrindo linha nova que surja entre a verificação e o `db push`. **Sem pendência de decisão.**
 - **A-4 · Materializado — XSS por URL.** `further_reading`/`cover_url` aceitam URL do editor; sem filtro, `javascript:`/`data:` viram vetor ao renderizar `<a>`/`<img>`. Mitigado por Zod (`http/https`) **e** filtro no render público (§7). Tratar como requisito de implementação (teste próprio).
-- **A-5 · Sutileza de RLS — unicidade de slug.** Editor não vê drafts alheios; sem o helper definer, a checagem de slug seria cega e cairia no UNIQUE com erro cru. `unique_review_slug` (definer) resolve; o índice UNIQUE é o backstop. Slug não é dado sensível.
+- **A-5 · Sutileza de RLS — unicidade de slug, com oráculo nomeado.** Editor não vê drafts alheios; sem o helper definer, a checagem de slug seria cega e cairia no UNIQUE com erro cru. `unique_review_slug` (definer) resolve; o índice UNIQUE é o backstop. **Residual explícito (T-5):** por ler todos os slugs, a função é um **pequeno oráculo** — o sufixo `-2` denuncia a existência de um draft alheio com aquele slug. É existência, não conteúdo; **aceito e registrado** — a formulação anterior ("slug não é dado sensível") escondia o vazamento em vez de nomeá-lo.
 - **A-6 · Divergência de DoD — o form exige JS.** As listas dinâmicas (tags, links) não têm caminho no-JS razoável. Decidi que o **painel interno assume JS** (DD-12), preservando o no-JS das páginas **públicas**. Se você exigir no-JS também no admin, o escopo de tags/links muda (campos estáticos) — **sinalizo**, recomendo manter JS no painel.
 - **A-7 · Escopo — a review-page pública é estendida aqui.** Renderizar `reviewer_name`/`highlight_quote`/`further_reading`/tags é **necessário** para os campos novos serem visíveis (REV-11/12 dizem "exibida"). Alternativa: adiar a exibição para uma feature de `review-page v2` — mas aí o cadastro grava campos invisíveis. Incluí a exibição mínima. **Confirmar** que isso cabe em `reviews-crud`.
-- **A-8 · Decisão — `published_at` no unpublish.** Mantenho `published_at` ao despublicar (carimbo da última publicação; republicar não reescreve — `coalesce`). Alternativa: zerar no unpublish. Escolhi manter (preserva ordenação/histórico simples). **Confirmar** ou inverter.
+- **A-8 · CONFIRMADO com esclarecimento (2026-08-09) — `published_at` no unpublish.** Mantenho `published_at` ao despublicar. Semântica correta, agora explícita no §5.4: é o **carimbo da PRIMEIRA publicação**, não da última — o `coalesce(published_at, now())` só preenche quando está nulo, então **republicar não reescreve** e a resenha **não sobe para o topo de "Mais recentes"** ao sair e voltar do rascunho. (A redação anterior dizia "carimbo da última publicação", contradizendo o próprio `coalesce`; era erro de prosa, não de código.) Alternativa descartada: zerar no unpublish — perderia o histórico e faria a ordenação pular.
 - **A-9 · VERIFICAR no Execute — `.rpc()` INVOKER + `auth.uid()` + transação.** O modelo inteiro de atomicidade depende de o PostgREST rodar `.rpc()` sob o JWT `authenticated`, propagar `auth.uid()` dentro da função INVOKER e envolver tudo numa transação. É o comportamento documentado, mas **não fabricar** — provar com teste de integração local (matriz de rollback) antes de confiar.
 - **A-10 · Corte de prazo — corpo é texto puro.** Sem editor rich-text/WYSIWYG; o corpo é `textarea` e a review-page já quebra parágrafos por linha em branco ([page.tsx:12](../../../src/app/resenha/[slug]/page.tsx#L12)). "Sobre o autor" fica embutido no corpo (travado). Rich text = follow-up.
 - **Cortes de prazo sinalizados:** (1) **render da imagem de capa** (guarda `cover_url` texto; `<img>` adiado — DD-15); (2) **filtro por tag** na home (TAGS=c); (3) **rich text** do corpo (A-10); (4) **provisionar editor na UI / admin-on-behalf** (fora). Todos preservados como Deferred Ideas — nenhum bloqueia o cadastro funcional do MVP de agosto.
 
+### Corte de escopo por prazo (2026-08-09) — DECISÕES, não omissões
+
+**Princípio: a 0009 permanece ÍNTEGRA.** Todas as colunas, o CHECK da nota, os GRANTs, as policies de `book`, **ambos** os RPCs e o helper de slug entram na migration exatamente como desenhados acima. Coluna aditiva é barata; componente de UI é caro. O corte incide **só na superfície visível** — assim o schema não fica pela metade e **não existe uma 0010 depois** para completar o que faltou.
+
+| Cortado do Execute | O que sai | O que permanece |
+| --- | --- | --- |
+| **`further_reading`** | Fora da UI **e** da exibição pública. **`RepeatableLinks` NÃO será construído** — é o componente mais caro do design (lista dinâmica, foco gerido na remoção, Zod por item, filtro XSS no render, `<nav>` público). | Coluna `jsonb` + CHECK `is_array` na 0009. O campo volta em feature futura **sem tocar o schema**. |
+| **`tags` / `keywords`** | Deixam de ser **chips dinâmicos** (estado no browser, Enter/vírgula, remoção com foco gerido). | **Um input de texto separado por vírgula**, convertido para `text[]` no server action. Mesmo dado no banco, **zero estado no cliente**. |
+| **`update_review_with_book` + rota `/admin/resenhas/[id]/editar`** | **Fora do Execute.** Edição de conteúdo é follow-up. | O RPC **e** as policies de UPDATE de `book` ficam na 0009 — apenas **não são exercidos** por esta feature. |
+
+**MANTIDO integralmente:** `reviewer_name` (denormalizado e congelado), `highlight_quote`, `publication_city`, **nota inteira** (`RatingInput` radiogroup + CHECK), **publish/unpublish**, e a **exibição pública** dos campos mantidos (§7).
+
+**CONSEQUÊNCIA A REGISTRAR — a defesa de XSS por URL perde um exercitador.** Com `further_reading` fora da UI, o filtro `http/https` passa a ser exercido **apenas por `cover_url`**. **Manter o filtro mesmo assim**, no Zod **e** no render público: a coluna continua existindo e gravável por RPC/API, e a feature futura que a trouxer de volta encontra a defesa já montada em vez de ter de redescobri-la. Ver T-2 (§11) e A-4.
+
 ---
 
-**Próxima fase:** Tasks — **não iniciada** (aguardando sua revisão deste design; em especial A-1, A-3, A-7, A-8).
+**Próxima fase:** Tasks — **não iniciada**. Design **APROVADO com emendas em 2026-08-09** (A-1/A-3/A-7/A-8 resolvidos + corte de escopo por prazo, §13); o Tasks parte deste documento já emendado, com o escopo do Execute **já reduzido** (sem `RepeatableLinks`, sem chips dinâmicos, sem `update_review_with_book`/rota de edição).
