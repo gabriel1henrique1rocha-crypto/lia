@@ -1,11 +1,30 @@
 -- 0009_reviews_crud.sql
--- Painel de resenhas (M3 `reviews-crud`): colunas novas do modelo ABNT, nota
--- inteira 0–5 (D-01) e provisionamento da ESCRITA de `book` sob RLS own-or-admin
+-- Painel de resenhas (M3 `reviews-crud`): colunas novas do modelo ABNT e
+-- provisionamento da ESCRITA de `book` sob RLS own-or-admin
 -- (TD-03 — a 0008 cobriu só `review`). Migration ADITIVA e idempotente
 -- (ADD COLUMN IF NOT EXISTS; DROP CONSTRAINT/POLICY IF EXISTS + ADD/CREATE;
 -- CREATE OR REPLACE nas funções). NÃO aplicar em produção aqui
 -- (STOP A-11: `db push` é passo humano pós-merge).
 --
+-- ─────────────────────────────────────────────────────────────────────────────
+-- EMENDA 2026-08-24 — D-11 REMOVEU A NOTA DO PRODUTO.
+--
+-- A versão original deste arquivo trazia, na seção 2, a normalização da nota
+-- legada (UPDATE editorial por slug + rede residual `round()`) e a constraint
+-- `review_rating_integer`, sob D-01 (escala inteira 0–5). **D-11 supersede D-01
+-- e retira a nota do produto** — a normalização e o CHECK foram REMOVIDOS.
+--
+-- A coluna `review.rating` NÃO foi dropada: permanece DORMENTE, com os dados de
+-- produção intactos, porque o código do M1 ainda a lê (filtro e ordenação da
+-- home, exibição no card e na página). O drop é o passo 4 da ORDEM DE REMOÇÃO
+-- de D-11 e terá migration própria, só quando nada mais a ler. Detalhe na
+-- seção 2 abaixo.
+--
+-- Nenhuma migration corretiva foi necessária: esta 0009 nunca chegou a
+-- produção (o registro de migração de produção para na 0008), então foi
+-- editada no lugar.
+-- ─────────────────────────────────────────────────────────────────────────────
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- CONTRATO ANTI-RECURSÃO herdado da 0007 — aplicado a `owns_book_via_review`.
 --
@@ -67,39 +86,45 @@ alter table public.review drop constraint if exists review_further_reading_is_ar
 alter table public.review add  constraint review_further_reading_is_array
   check (jsonb_typeof(further_reading) = 'array');
 
--- 2) Nota inteira 0–5 (D-01, DD-3) ---------------------------------------------
+-- 2) Nota — SEÇÃO REMOVIDA POR D-11 (2026-08-24) -------------------------------
 --
--- ⚠️  ORDEM OBRIGATÓRIA — NÃO REORDENAR ESTE BLOCO.
---     Os UPDATEs de normalização vêm ANTES do ADD CONSTRAINT, e a inversão
---     QUEBRA A MIGRATION EM PRODUÇÃO: `dom-casmurro` e `iracema` estão gravadas
---     com 4,5 (verificado em produção 2026-08-09), então a constraint seria
---     violada NO INSTANTE DA CRIAÇÃO e o `db push` abortaria. Normalizar depois
---     é tarde — o ADD CONSTRAINT valida as linhas existentes na hora.
---     Quem "organizar" este arquivo movendo DDL para cima quebra o deploy.
+-- Esta seção continha a normalização editorial da nota legada (UPDATE por slug
+-- + rede residual `round()`) e a constraint `review_rating_integer`, tudo sob
+-- D-01 (escala inteira 0–5). **D-11 removeu a nota do produto** e SUPERSEDED
+-- D-01: a nota deixa de ser capturada, exibida, filtrada e ordenada.
 --
--- NORMALIZAÇÃO EDITORIAL EXPLÍCITA (A-3, resolvido por verificação empírica):
--- os valores 5 e 4 abaixo são ESCOLHA EDITORIAL do autor, NÃO arredondamento.
--- `round()` foi rejeitado como estratégia para estas duas linhas: sobre `numeric`
--- o Postgres arredonda meio PARA LONGE DO ZERO, então ambas virariam 5 — e 3 das
--- 4 resenhas ficariam com nota 5, achatando a listagem e inutilizando a ordenação
--- "Melhor nota" (design §2.2 e §13/A-3).
-update public.review set rating = 5 where slug = 'dom-casmurro';
-update public.review set rating = 4 where slug = 'iracema';
-
--- REDE RESIDUAL: pega qualquer não-inteiro remanescente — linha criada entre a
--- verificação e o push, ou ambiente (local/staging) cujo dado divirja do de
--- produção. Idempotente: após os dois UPDATEs acima não casa com nada no dado
--- conhecido de produção. Aqui `round()` é aceitável porque é rede, não política:
--- não existe escolha editorial possível para uma linha que ninguém revisou.
-update public.review set rating = round(rating)
-  where rating is not null and rating <> trunc(rating);
-
--- Só AGORA a constraint. O CHECK 0–5 original da 0001 continua vigente ao lado;
--- este acrescenta a INTEGRALIDADE. A coluna permanece `numeric(2,1)` (não é
--- recriada) — afrouxar para meio-ponto no futuro é só trocar este CHECK.
-alter table public.review drop constraint if exists review_rating_integer;
-alter table public.review add  constraint review_rating_integer
-  check (rating is null or (rating >= 0 and rating <= 5 and rating = trunc(rating)));
+-- Nada disso precisou de migration corretiva porque esta 0009 **nunca foi
+-- aplicada em produção** — o registro de migração de produção para na 0008.
+-- Ela ainda era editável, então foi editada em vez de emendada por uma 0010.
+--
+-- A COLUNA `review.rating` PERMANECE — não é dropada aqui, de propósito.
+-- Ela existe em produção desde o M1, com dados, e o código do M1 ainda a lê
+-- (home: filtro por nota mínima e ordenação "Melhor nota"; card e página de
+-- resenha: exibição). D-11 fixa a ORDEM DE REMOÇÃO e esta migration é só o
+-- passo 1 dela:
+--
+--   1. a migration para de CONSTRANGER a coluna  ← É ESTE ARQUIVO, feito aqui
+--   2. a aplicação para de ESCREVER nela (M3)
+--   3. a aplicação para de LER/filtrar/ordenar por ela — SÓ depois que o filtro
+--      por deficiência representada (D-12) existir, senão a home fica sem
+--      filtro algum
+--   4. migration DEDICADA dropa a coluna — só quando nada mais a lê
+--
+-- Entre os passos 2 e 4 a coluna fica DORMENTE com os dados intactos: nada
+-- escreve, o que já estava gravado permanece. É o que mantém a decisão
+-- reversível sem restaurar backup. O passo 4 é a única porta de mão única.
+--
+-- O CHECK 0–5 original da 0001 (`review_rating_check` ou equivalente) NÃO é
+-- tocado por esta migration — continua vigente sobre a coluna dormente, e sai
+-- junto com ela no passo 4.
+--
+-- NOTA PARA AMBIENTE LOCAL: um banco local que tenha aplicado a versão
+-- PRÉ-EMENDA desta 0009 ainda carrega a constraint `review_rating_integer`.
+-- Como o Supabase marca a migration como aplicada, reexecutá-la não a remove —
+-- rode `npx supabase db reset` para reconstruir o schema a partir do arquivo
+-- atual. Nenhum drop defensivo foi deixado aqui: esta migration não cria mais
+-- essa constraint, e um `drop` de objeto que o próprio arquivo não cria só
+-- confundiria quem for lê-lo depois.
 
 -- 3) GRANTs de TABELA para escrita de `book` (TD-03, REV-07-schema) -------------
 -- SELECT já veio de 0003/0004 (leitura pública). Pós-2026-05-30 o Supabase não
