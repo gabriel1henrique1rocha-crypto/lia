@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Spectral, Newsreader, IBM_Plex_Sans } from 'next/font/google'
 import { SiteFooter } from '@/components/listing/SiteFooter'
+import { SiteNav } from '@/components/nav/SiteNav'
 import './globals.css'
 
 const spectral = Spectral({
@@ -53,14 +54,13 @@ export default function RootLayout({
         >
           Ir para o conteúdo principal
         </a>
-        <header className="px-5 py-4 border-b border-[var(--border-subtle)]">
-          <Link
-            href="/"
-            className="font-display font-semibold text-base text-ink-900 no-underline"
-            aria-label="LIA — página inicial"
-          >
+        {/* Ordem no DOM = ordem de tabulação: skip link → marca → navegação →
+            conteúdo. O skip link segue pulando TUDO isto de uma vez. */}
+        <header className="lia-site-header">
+          <Link href="/" className="lia-site-header__brand" aria-label="LIA — página inicial">
             LIA
           </Link>
+          <SiteNav />
         </header>
         <main id="main">{children}</main>
         <SiteFooter />
