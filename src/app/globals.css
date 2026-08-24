@@ -901,4 +901,81 @@
     padding: var(--spacing-3) var(--spacing-4);
     border-radius: var(--radius-md);
   }
+
+  /* ================= HEADER / NAVEGAÇÃO PÚBLICA (public-navigation) =================
+     Só tokens (@theme + aliases :root) — nenhuma cor nova. O anel de foco vem do
+     :where(a, ...):focus-visible do @layer base (especificidade 0: as regras
+     abaixo NÃO o sobrescrevem). */
+
+  .lia-site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-2) var(--spacing-5);
+    padding: var(--spacing-3) var(--spacing-5);
+    border-bottom: var(--border-width) solid var(--border-subtle);
+  }
+  .lia-site-header__brand {
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--text-base);
+    color: var(--text-strong); /* ink-900 sobre paper-50 = 15.9:1 AAA */
+    text-decoration: none;
+  }
+
+  /* Sem hambúrguer: a lista QUEBRA EM LINHAS quando não cabe. Todos os itens
+     permanecem no DOM e tabuláveis em qualquer viewport. */
+  .lia-site-nav__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--spacing-5);
+  }
+  .lia-site-nav__link {
+    display: inline-flex;
+    align-items: center;
+    /* Alvo de toque >= 44px de altura (WCAG 2.5.8) mesmo com o texto pequeno. */
+    min-height: var(--spacing-target-min);
+    font: var(--type-label);
+    color: var(--text-secondary); /* ink-700 sobre paper-50 = 9.3:1 AAA */
+    text-decoration: none;
+    /* Reserva desde já a espessura do indicador de página atual: ao mudar de
+       rota o item não "cresce" e não empurra a linha. */
+    border-bottom: var(--border-width-strong) solid transparent;
+  }
+  .lia-site-nav__link:hover {
+    color: var(--text-strong);
+    text-decoration: underline;
+  }
+  /* Página atual: cor + peso + sublinhado grosso. Nunca só cor (WCAG 1.4.1). */
+  .lia-site-nav__link[aria-current='page'] {
+    color: var(--text-link); /* oxblood-700 sobre paper-50 = 8.7:1 AAA */
+    font-weight: var(--font-weight-semibold);
+    border-bottom-color: var(--text-link);
+  }
+
+  /* ---------- Seção declarada e ainda vazia ---------- */
+  .lia-placeholder {
+    max-width: var(--container-prose);
+    margin-inline: auto;
+    padding: var(--spacing-7) var(--spacing-5) var(--spacing-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+  .lia-placeholder__title {
+    margin: 0;
+    font: var(--type-heading);
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line-height);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-strong);
+  }
+  .lia-placeholder__text {
+    margin: 0;
+    font: var(--type-prose);
+    color: var(--text-secondary); /* ink-700 sobre paper-50 = 9.3:1 AAA */
+  }
 }
