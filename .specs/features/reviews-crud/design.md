@@ -68,9 +68,11 @@ alter table public.review add  constraint review_further_reading_is_array
 
 **DD-2 — formas escolhidas:** `tags`/`keywords` = **`text[]`** (nativo, aditivo; um filtro futuro por tag adiciona índice GIN sem mudar a coluna — a filtragem está CORTADA por prazo, TAGS=c). `further_reading` = **`jsonb`** array de `{label,url}` (estrutura variável, 0..N itens). `publication_city`/`reviewer_name`/`highlight_quote` = `text`. Tabela `tag`+join foi **rejeitada** (overkill sem filtragem; custo de prazo).
 
-### 2.2 Nota inteira 0–5 — CHECK no banco + Zod no app (DD-3, resolve decisão 2 do Specify)
+### 2.2 ~~Nota inteira 0–5 — CHECK no banco + Zod no app~~ — **SEÇÃO REMOVIDA POR D-11 (2026-08-24)**
 
-**Decisão: defesa em profundidade** — CHECK no banco como **fonte de verdade** + validação acessível no form (Zod). Justificativa: espelha exatamente o precedente `book-data` (CHECKs da 0002 + `bookInputSchema`) — a regra não depende de lembrar de validar no app.
+> **[D-11](../../project/DECISIONS.md) retirou a nota do produto e supersede D-01.** A `0009` **já foi emendada**: a normalização editorial e a constraint `review_rating_integer` saíram do arquivo real. O SQL abaixo é **registro histórico** — não foi aplicado em produção (o registro de migração para na 0008) e **não deve ser implementado**. A coluna `review.rating` **não é dropada**: fica dormente até o passo 4 da ORDEM DE REMOÇÃO de D-11.
+
+~~**Decisão: defesa em profundidade** — CHECK no banco como **fonte de verdade** + validação acessível no form (Zod). Justificativa: espelha exatamente o precedente `book-data` (CHECKs da 0002 + `bookInputSchema`) — a regra não depende de lembrar de validar no app.
 
 ```sql
 -- ILUSTRATIVO — NÃO APLICAR · 0009 (2) nota inteira (D-01)
@@ -96,7 +98,7 @@ alter table public.review add  constraint review_rating_integer
   check (rating is null or (rating >= 0 and rating <= 5 and rating = trunc(rating)));
 ```
 
-A coluna permanece `numeric(2,1)` (não recriada — reversível/aditivo; afrouxar para meio-ponto no futuro é só trocar o CHECK). O CHECK 0–5 original da 0001 continua; este acrescenta a integralidade.
+~~A coluna permanece `numeric(2,1)` (não recriada — reversível/aditivo; afrouxar para meio-ponto no futuro é só trocar o CHECK). O CHECK 0–5 original da 0001 continua; este acrescenta a integralidade.~~
 
 **A-3 RESOLVIDO por verificação empírica (2026-08-09).** O `round()` cego que este bloco continha foi rejeitado **como estratégia** para as duas linhas conhecidas: em `numeric`, o Postgres arredonda meio **para longe do zero**, então `4,5` → `5` nas duas — deixando **3 das 4 resenhas com nota 5**, o que achata a listagem e torna a ordenação "Melhor nota" inútil. A escolha por slug (`dom-casmurro`→5, `iracema`→4) é editorial e preserva a dispersão das notas.
 
@@ -173,7 +175,7 @@ create or replace function public.create_review_with_book(
   p_book_title text, p_author text, p_genre_id uuid, p_publisher text,
   p_isbn text, p_cover_url text, p_year smallint, p_publication_city text,
   -- review (conteúdo/classificação/estado)
-  p_review_title text, p_body text, p_rating numeric,
+  p_review_title text, p_body text,   -- p_rating REMOVIDO por D-11
   p_tags text[], p_keywords text[], p_highlight_quote text, p_further_reading jsonb,
   p_status public.review_status, p_slug_base text
 ) returns public.review
@@ -197,10 +199,10 @@ begin
   v_slug := public.unique_review_slug(p_slug_base);   -- §4 (definer)
 
   insert into public.review
-    (book_id, title, slug, body, rating, status, editor_id, reviewer_name,
+    (book_id, title, slug, body, status, editor_id, reviewer_name,
      tags, keywords, highlight_quote, further_reading, published_at)
   values
-    (v_book_id, p_review_title, v_slug, p_body, p_rating, p_status, auth.uid(), v_name,
+    (v_book_id, p_review_title, v_slug, p_body, p_status, auth.uid(), v_name,
      coalesce(p_tags, '{}'), coalesce(p_keywords, '{}'), p_highlight_quote,
      coalesce(p_further_reading, '[]'::jsonb),
      case when p_status = 'published' then now() else null end)
@@ -289,7 +291,7 @@ const schema = parsedStatus.data === 'published' ? reviewPublishSchema : reviewD
 // …parse com `schema`, e o MESMO `parsedStatus.data` vai como p_status ao RPC
 ```
 
-Por que é requisito e não detalhe: os dois botões são apenas UI. Uma `FormData` forjada com `status=published` (curl, DevTools, extensão) chega pelo **caminho normal do app** — se o schema viesse do botão, ela publicaria incompleta sem nunca tocar a API direta. Derivar do status validado fecha esse furo; sobra só o residual de API direta (A-1), que é outra coisa. `updateReview` segue a mesma regra. **Teste obrigatório:** `FormData` com `status=published` e corpo/nota ausentes **falha** no `reviewPublishSchema` (§9, §10).
+Por que é requisito e não detalhe: os dois botões são apenas UI. Uma `FormData` forjada com `status=published` (curl, DevTools, extensão) chega pelo **caminho normal do app** — se o schema viesse do botão, ela publicaria incompleta sem nunca tocar a API direta. Derivar do status validado fecha esse furo; sobra só o residual de API direta (A-1), que é outra coisa. `updateReview` segue a mesma regra. **Teste obrigatório:** `FormData` com `status=published` e corpo ausente **falha** no `reviewPublishSchema` (§9, §10). *(A nota deixou de ser campo obrigatório — D-11.)*
 
 Sucesso de create/update → `redirect` para `/admin/resenhas` (ou para o editar) + `revalidatePath` das rotas públicas afetadas quando `published`.
 
@@ -308,7 +310,7 @@ const reviewBase = bookInputSchema.innerType() /* ficha */ .extend({
   publicationCity: z.string().trim().optional(),
   reviewTitle: z.string().trim().optional(),          // default = título do livro (§6)
   body: z.string().trim().optional(),
-  rating: z.number().int().min(0).max(5).optional(),  // inteiro (D-01) — casa com o CHECK §2.2
+  // rating REMOVIDO por D-11 (a nota saiu do produto; D-01 superseded)
   tags: z.array(z.string().trim().min(1)).default([]),
   keywords: z.array(z.string().trim().min(1)).default([]),
   highlightQuote: z.string().trim().optional(),
@@ -327,7 +329,6 @@ export const reviewPublishSchema = reviewBase.superRefine(/* §5.4 exige body + 
   | --- | --- |
   | `book.title`, `book.author`, `book.genre_id` | ficha (já NOT NULL) |
   | `review.body` (corpo) | REV-10 |
-  | `review.rating` (0–5 inteiro) | REV-07 |
   | `review.title` (headline) | default = título do livro se vazio |
   | *(reviewer_name)* | preenchido pelo sistema no create — nunca falta |
 
@@ -357,7 +358,7 @@ export const reviewPublishSchema = reviewBase.superRefine(/* §5.4 exige body + 
 
 | Componente | Local | Propósito | Reusa |
 | --- | --- | --- | --- |
-| **Migration 0009** | `supabase/migrations/0009_reviews_crud.sql` | Colunas + CHECK nota + GRANTs/policies de book + RPCs + helper slug | padrão 0007/0008 |
+| **Migration 0009** | `supabase/migrations/0009_reviews_crud.sql` | Colunas + GRANTs/policies de book + RPCs + helper slug (~~CHECK nota~~ removido por D-11) | padrão 0007/0008 |
 | **`reviewInputSchema`** | `src/lib/review/schema.ts` | Zod draft/publish (§5.3) | `bookInputSchema`, `isbn.ts` |
 | **`slugify`** | `src/lib/review/slug.ts` | base do slug a partir do título (puro, testável) | — |
 | **`actions.ts`** | `src/app/admin/(protected)/resenhas/actions.ts` | create/update/publish/unpublish (§5) | authenticated client, requireEditor |
@@ -410,7 +411,7 @@ Os campos novos existem para **serem vistos** (REV-08/11/12/14) — o design **e
 | --- | --- | --- |
 | Validação Zod (campo) | `fieldErrors` → `Field.error` | erro no campo, foco/aria |
 | Gate de publicação incompleto | `reviewPublishSchema` falha → resumo | lista acessível do que falta; nada publicado |
-| **`status` ausente/forjado no `FormData`** | `z.enum(['draft','published'])` falha → action retorna erro **antes** de qualquer escrita (§5.2) | "Ação inválida."; nada persistido. **Teste:** `status=published` sem corpo/nota cai no `reviewPublishSchema` e é rejeitado |
+| **`status` ausente/forjado no `FormData`** | `z.enum(['draft','published'])` falha → action retorna erro **antes** de qualquer escrita (§5.2) | "Ação inválida."; nada persistido. **Teste:** `status=published` sem corpo cai no `reviewPublishSchema` e é rejeitado (nota removida — D-11) |
 | RLS/GRANT (42501) | mapear no action → mensagem amigável | "Você não tem permissão para esta ação." (sem stack/500) — REV-22 |
 | Slug em corrida (23505) | catch no action | "Não foi possível gerar o endereço; tente novamente." |
 | ISBN checksum inválido | Zod (`isbn.ts`) | erro no campo ISBN |
@@ -454,7 +455,7 @@ Sem requisito órfão: REV-01..24 + REV-07-schema todos mapeados. Nomes de arqui
 | T-1 | **Book órfão** (review falha após book) | RPC transacional (§3) → rollback | INSERT de book direto na API cria órfão inócuo (invisível; book já é leitura pública) |
 | T-2 | **XSS via URL** (`javascript:` em `cover_url`/`further_reading`) | Zod só `http/https`; render público filtra esquema (§7) | com `further_reading` cortado da UI (§13), a defesa fica **exercida só por `cover_url`** — mantida assim mesmo, pois a coluna segue gravável por RPC/API |
 | T-3 | **Publicar incompleto** furando o app (API direta) | Gate no server action; RLS own-or-admin ainda exige posse | RLS não distingue transição de status (A-1, herdado M2 A-4) — aceito p/ editores internos |
-| T-4 | **CHECK de nota quebra no push** por legado `4.5` | UPDATE editorial explícito por slug + rede residual `round()` antes do CHECK (§2.2); as 4 seeds **já verificadas em produção** 2026-08-09 (A-3 resolvido) | as duas linhas com meio-ponto recebem valor **editorial** (`dom-casmurro`→5, `iracema`→4); a rede só cobre não-inteiro que surja entre a verificação e o push |
+| ~~T-4~~ **SEM OBJETO (D-11)** | ~~**CHECK de nota quebra no push** por legado `4.5`~~ — não há mais CHECK de nota | UPDATE editorial explícito por slug + rede residual `round()` antes do CHECK (§2.2); as 4 seeds **já verificadas em produção** 2026-08-09 (A-3 resolvido) | as duas linhas com meio-ponto recebem valor **editorial** (`dom-casmurro`→5, `iracema`→4); a rede só cobre não-inteiro que surja entre a verificação e o push |
 | T-5 | **Colisão de slug** entre drafts (RLS esconde) | `unique_review_slug` definer lê todos + UNIQUE backstop | (a) corrida concorrente rara → 23505 → "tente novamente"; (b) **ORÁCULO DE SLUG — residual aceito:** a função é definer e lê *todas* as resenhas, inclusive drafts alheios. Receber `minha-resenha-2` em vez de `minha-resenha` **revela ao editor que existe um draft de outro editor com aquele slug** — um bit de informação que a RLS de `review` esconderia. Vazamento mínimo (existência + título aproximado, nunca o conteúdo) e inerente a qualquer unicidade global sob RLS parcial; **aceito e nomeado** em vez de tratado como não-questão |
 | T-6 | **`owns_book_via_review` mal escrita** (escalonamento) | Mesmo hardening da 0007 (definer, search_path vazio, execute restrito); revisão linha a linha + matriz de teste | função é código de segurança — tratar como crítico |
 | T-7 | **Admin edita resenha alheia** e vira o resenhista | `reviewer_name`/`editor_id` **não** são tocados no update (§4.2) | — |
@@ -473,7 +474,7 @@ A **0009 NÃO é aplicada nesta fase nem automaticamente no Execute.** `supabase
 
 - **A-1 · CONFIRMADO com emenda (2026-08-09) — gate de publicação é do app, não da RLS.** REV-16 ("todos os campos antes de publicar") é enforçado no server action (Zod publish), porque RLS pura não distingue transição de status (mesma limitação do M2, A-4). **Emenda aplicada (§5.2):** o schema de validação é escolhido pelo **status validado como enum**, não pelo botão clicado — antes o design dizia apenas que "os dois botões disparam o schema certo", o que deixava `FormData` forjada com `status=published` publicar incompleto **pelo caminho normal do app**. Com a emenda, esse furo fecha e o residual encolhe para **API direta apenas** (editor autenticado chamando PostgREST fora do server action) — **aceito** para editores internos; `trigger` de guarda de transição segue como alternativa não justificada no MVP.
 - **A-2 · Consequência — `book` INSERT liberado a qualquer editor ativo.** É a única forma coerente (não há posse a checar antes da review existir). Books órfãos são possíveis via API direta, mas **inócuos** (invisíveis; book já é leitura pública). Limpeza de órfãos = follow-up (`admin-reviews`). **Aceito** (registrado T-1).
-- **A-3 · RESOLVIDO (2026-08-09) — normalização de nota legada.** Verificação empírica em produção: **`dom-casmurro` = 4,5 e `iracema` = 4,5**; as outras duas resenhas já são inteiras (4,0 e 5,0). A 0009 normaliza por **UPDATE editorial explícito por slug** — `dom-casmurro`→**5**, `iracema`→**4** —, valores que são **escolha editorial do autor**, não resultado de arredondamento. **`round()` foi rejeitado como estratégia:** sobre `numeric` o Postgres arredonda meio para longe do zero, logo as duas virariam 5 e **3 das 4 resenhas** ficariam com nota 5, achatando a listagem e inutilizando a ordenação "Melhor nota". O `round()` permanece em §2.2 apenas como **rede residual** idempotente (não casa com nada após os dois UPDATEs), cobrindo linha nova que surja entre a verificação e o `db push`. **Sem pendência de decisão.**
+- **A-3 · RESOLVIDO (2026-08-09), depois SEM OBJETO por D-11 (2026-08-24) — normalização de nota legada.** *(A normalização saiu da 0009 junto com a nota; o texto abaixo fica como registro de como o problema havia sido resolvido.)* Verificação empírica em produção: **`dom-casmurro` = 4,5 e `iracema` = 4,5**; as outras duas resenhas já são inteiras (4,0 e 5,0). A 0009 normaliza por **UPDATE editorial explícito por slug** — `dom-casmurro`→**5**, `iracema`→**4** —, valores que são **escolha editorial do autor**, não resultado de arredondamento. **`round()` foi rejeitado como estratégia:** sobre `numeric` o Postgres arredonda meio para longe do zero, logo as duas virariam 5 e **3 das 4 resenhas** ficariam com nota 5, achatando a listagem e inutilizando a ordenação "Melhor nota". O `round()` permanece em §2.2 apenas como **rede residual** idempotente (não casa com nada após os dois UPDATEs), cobrindo linha nova que surja entre a verificação e o `db push`. **Sem pendência de decisão.**
 - **A-4 · Materializado — XSS por URL.** `further_reading`/`cover_url` aceitam URL do editor; sem filtro, `javascript:`/`data:` viram vetor ao renderizar `<a>`/`<img>`. Mitigado por Zod (`http/https`) **e** filtro no render público (§7). Tratar como requisito de implementação (teste próprio).
 - **A-5 · Sutileza de RLS — unicidade de slug, com oráculo nomeado.** Editor não vê drafts alheios; sem o helper definer, a checagem de slug seria cega e cairia no UNIQUE com erro cru. `unique_review_slug` (definer) resolve; o índice UNIQUE é o backstop. **Residual explícito (T-5):** por ler todos os slugs, a função é um **pequeno oráculo** — o sufixo `-2` denuncia a existência de um draft alheio com aquele slug. É existência, não conteúdo; **aceito e registrado** — a formulação anterior ("slug não é dado sensível") escondia o vazamento em vez de nomeá-lo.
 - **A-6 · Divergência de DoD — o form exige JS.** As listas dinâmicas (tags, links) não têm caminho no-JS razoável. Decidi que o **painel interno assume JS** (DD-12), preservando o no-JS das páginas **públicas**. Se você exigir no-JS também no admin, o escopo de tags/links muda (campos estáticos) — **sinalizo**, recomendo manter JS no painel.
@@ -485,7 +486,7 @@ A **0009 NÃO é aplicada nesta fase nem automaticamente no Execute.** `supabase
 
 ### Corte de escopo por prazo (2026-08-09) — DECISÕES, não omissões
 
-**Princípio: a 0009 permanece ÍNTEGRA.** Todas as colunas, o CHECK da nota, os GRANTs, as policies de `book`, **ambos** os RPCs e o helper de slug entram na migration exatamente como desenhados acima. Coluna aditiva é barata; componente de UI é caro. O corte incide **só na superfície visível** — assim o schema não fica pela metade e **não existe uma 0010 depois** para completar o que faltou.
+**Princípio: a 0009 permanece ÍNTEGRA.** *(Emenda D-11: o CHECK da nota saiu — ver §2.2. O princípio segue valendo para o restante.)* Todas as colunas, ~~o CHECK da nota,~~ os GRANTs, as policies de `book`, **ambos** os RPCs e o helper de slug entram na migration exatamente como desenhados acima. Coluna aditiva é barata; componente de UI é caro. O corte incide **só na superfície visível** — assim o schema não fica pela metade e **não existe uma 0010 depois** para completar o que faltou.
 
 | Cortado do Execute | O que sai | O que permanece |
 | --- | --- | --- |
@@ -493,7 +494,7 @@ A **0009 NÃO é aplicada nesta fase nem automaticamente no Execute.** `supabase
 | **`tags` / `keywords`** | Deixam de ser **chips dinâmicos** (estado no browser, Enter/vírgula, remoção com foco gerido). | **Um input de texto separado por vírgula**, convertido para `text[]` no server action. Mesmo dado no banco, **zero estado no cliente**. |
 | **`update_review_with_book` + rota `/admin/resenhas/[id]/editar`** | **Fora do Execute.** Edição de conteúdo é follow-up. | O RPC **e** as policies de UPDATE de `book` ficam na 0009 — apenas **não são exercidos** por esta feature. |
 
-**MANTIDO integralmente:** `reviewer_name` (denormalizado e congelado), `highlight_quote`, `publication_city`, **nota inteira** (`RatingInput` radiogroup + CHECK), **publish/unpublish**, e a **exibição pública** dos campos mantidos (§7).
+**MANTIDO integralmente:** `reviewer_name` (denormalizado e congelado), `highlight_quote`, `publication_city`, ~~**nota inteira** (`RatingInput` radiogroup + CHECK)~~ **← REMOVIDO POR D-11**, **publish/unpublish**, e a **exibição pública** dos campos mantidos (§7).
 
 **CONSEQUÊNCIA A REGISTRAR — a defesa de XSS por URL perde um exercitador.** Com `further_reading` fora da UI, o filtro `http/https` passa a ser exercido **apenas por `cover_url`**. **Manter o filtro mesmo assim**, no Zod **e** no render público: a coluna continua existindo e gravável por RPC/API, e a feature futura que a trouxer de volta encontra a defesa já montada em vez de ter de redescobri-la. Ver T-2 (§11) e A-4.
 

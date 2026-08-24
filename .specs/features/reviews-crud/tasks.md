@@ -1,6 +1,9 @@
 # reviews-crud — Tasks
 
 **Design**: [design.md](design.md) (DD-1..18, §1–§13 — **APROVADO com emendas 2026-08-09**) · **Spec**: [spec.md](spec.md) (REV-01..24 + REV-07-schema) · **Context**: [context.md](context.md) (gray areas resolvidas)
+> ---
+> **EMENDA 2026-08-24 — [D-11](../../project/DECISIONS.md) REMOVEU A NOTA DO PRODUTO** (supersede D-01). A `0009` já foi emendada (normalização + `review_rating_integer` fora). **T9 está REMOVIDA** — texto preservado, sem renumerar. **T5/T8/T11/T12 encolhem.** **T4 precisa de novo injetor de falha** (dependia do CHECK de nota — ver a task). A coluna `review.rating` **não é dropada**: fica dormente. A regressão do M1 (filtro/ordenação/exibição) **NÃO se executa neste milestone** — depende do filtro por deficiência (D-12); registrada em Diferidos.
+
 **Status**: Execute em curso — **T1 CONCLUÍDA** (pt.1 da 0009 commitada; os 9 "Done when" fechados com evidência medida em 2026-08-24, ver bloco "T1 — EVIDÊNCIAS DE FECHAMENTO"). T2 em diante não iniciada.
 
 > **Escopo já reduzido pelo Design (§13, não é corte desta fase):** `further_reading`/`RepeatableLinks`, chips dinâmicos de tags/keywords (→ input único separado por vírgula), `update_review_with_book` exercido pelo app e a rota `/admin/resenhas/[id]/editar` estão **FORA do Execute**. A 0009 continua **ÍNTEGRA** (todas as colunas, o CHECK, os GRANTs, as policies de `book`, **ambos** os RPCs, o helper de slug) — o corte é só na superfície de UI/app. Ver seção **Diferidos** abaixo para o mapeamento requisito→estado.
@@ -54,7 +57,7 @@ T5 (reviewInputSchema + slugify)                              [P, independente d
 T2,T5 ──► T6 (actions.ts: create/publish/unpublish + gate)
 T1 ──► T7 (adminQueries: listEditorReviews)                   [P com T6]
 T5 ──► T8 (ReviewForm — scaffolding)
-T5 ──► T9 (RatingInput — a11y)                    [P com T8]
+T5 ──► T9 (RatingInput — a11y)   ◄── REMOVIDA POR D-11 (não executar)
 T6,T7,T8,T9 ──► T10 (rotas /admin/resenhas + /nova)
 ```
 
@@ -259,6 +262,14 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 **Status de T1: Concluída** — os 9 critérios de "Done when" estão `[x]` com evidência medida.
 
+> **NOTA POSTERIOR (2026-08-24, D-11).** A 0009 foi **emendada depois** deste fechamento: a normalização da nota e a constraint `review_rating_integer` saíram do arquivo. Consequência para as evidências acima, registrada para não induzir a erro:
+>
+> - **E-4 (ordem interna) e E-5 (precondição de nota não-inteira)** passam a descrever um **bloco que não existe mais**. Ficam como registro histórico do que foi verificado enquanto o bloco existia — não são reexecutáveis, e não precisam ser: o objeto que protegiam saiu.
+> - **E-1 (reset 2×), E-2 (policies de `book`) e E-6 (ausência de GRANT de escrita a `anon`) foram RE-VERIFICADOS após a emenda** e continuam válidos: dois `db reset` `EXIT=0`, as 4 policies de `book` intactas, `anon` sem INSERT/UPDATE/DELETE, e `review_rating_integer` agora **ausente** (`0 rows`), com a coluna `rating` presente como `numeric(2,1)` — dormente, conforme a ORDEM DE REMOÇÃO de D-11.
+> - **E-3 (cabeçalho anti-recursão)** não foi afetado — a seção do contrato segue no arquivo, agora acompanhada da nota de emenda.
+>
+> T1 continua **Concluída**: o que ela entregou de fato (colunas, GRANTs, helper, policies) está intacto e reverificado.
+
 ---
 
 ### T2: Migration `0009` parte B — RPCs `create_review_with_book`/`update_review_with_book` + helper de slug + regen de tipos
@@ -310,7 +321,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ### T4: Rollback/atomicidade do RPC `create_review_with_book` (A-9) — task própria
 
-**What**: Suíte integration local-only, **exclusivamente** sobre a garantia de atomicidade (REV-04): (a) confirmar que `.rpc()` sob JWT `authenticated` propaga `auth.uid()` dentro da função INVOKER (não fabricar — provar); (b) forçar a `review` a falhar **dentro** da transação (ex.: `p_rating` fora de 0–5, violando o CHECK da T1) → **nenhuma linha em `book`** deve persistir (rollback completo); (c) sucesso → `book` **e** `review` presentes, ligados por `book_id`, na mesma consulta pós-commit. **Este é o teste que decide o gatilho do Plano de Corte** (ver seção própria) — não pode ser dobrado com T3 nem com nenhuma outra suíte.
+**What**: Suíte integration local-only, **exclusivamente** sobre a garantia de atomicidade (REV-04): (a) confirmar que `.rpc()` sob JWT `authenticated` propaga `auth.uid()` dentro da função INVOKER (não fabricar — provar); (b) forçar a `review` a falhar **dentro** da transação → **nenhuma linha em `book`** deve persistir (rollback completo); **⚠️ o injetor de falha original (`p_rating` fora de 0–5, violando o CHECK da T1) DEIXOU DE EXISTIR com D-11** — o CHECK saiu da 0009 e `p_rating` saiu do contrato do RPC. **É preciso escolher outro injetor antes de implementar esta task**; candidatos dentro da mesma transação: violar o CHECK `review_further_reading_is_array` (passando `p_further_reading` que não seja array), violar a FK `book.genre_id`, ou violar o UNIQUE de `review.book_id`. A escolha é decisão de design, não mecânica — **não presumir**; (c) sucesso → `book` **e** `review` presentes, ligados por `book_id`, na mesma consulta pós-commit. **Este é o teste que decide o gatilho do Plano de Corte** (ver seção própria) — não pode ser dobrado com T3 nem com nenhuma outra suíte.
 **Where**: `src/lib/supabase/__tests__/create-review-rollback.integration.test.ts` (novo)
 **Depends on**: T1, T2
 **Reuses**: padrão TD-02; `create_review_with_book` (T2)
@@ -321,7 +332,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 **Done when**:
 - [ ] Caso de sucesso: `book`+`review` persistidos atomicamente, ligados
-- [ ] Caso de falha (CHECK de rating): **zero** linhas em `book` após o rollback — consulta via superuser/psql
+- [ ] Caso de falha (**injetor a definir — o CHECK de rating não existe mais, D-11**): **zero** linhas em `book` após o rollback — consulta via superuser/psql
 - [ ] `auth.uid()` dentro do RPC resolve o editor chamador (não nulo, não outro editor)
 - [ ] Gate **integration** + quick
 - [ ] **Resultado registrado explicitamente** (verde/vermelho) — alimenta o gatilho do Plano de Corte
@@ -334,7 +345,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ### T5: `reviewInputSchema` (Zod draft/publish) + `slugify` [P, independente do banco]
 
-**What**: `src/lib/review/schema.ts` — estende `bookInputSchema` (ficha) com os campos de resenha (design §5.3): `publicationCity`, `reviewTitle` (default = título do livro), `body`, `rating` (`z.number().int().min(0).max(5)`), `tagsInput`/`keywordsInput` como **string única separada por vírgula** transformada em `text[]` (`.transform(s => s.split(',').map(t => t.trim()).filter(Boolean))` — corte de escopo, sem chips), `highlightQuote`, `coverUrl` (`http`/`https` só — A-4). Exporta `reviewDraftSchema` (mínimo estrutural) e `reviewPublishSchema` (`.superRefine` exigindo `body`+`rating`+ficha completa — tabela do design §5.4). Exporta também `reviewStatusSchema = z.enum(['draft','published'])` (usado pelo T6 para decidir qual schema aplicar — **não** vive dentro do action). `src/lib/review/slug.ts` — `slugify(title)`: minúsculas, sem acento, hífens (puro, testável).
+**What**: `src/lib/review/schema.ts` — estende `bookInputSchema` (ficha) com os campos de resenha (design §5.3): `publicationCity`, `reviewTitle` (default = título do livro), `body`, ~~`rating`~~ **(removido — D-11)**, `tagsInput`/`keywordsInput` como **string única separada por vírgula** transformada em `text[]` (`.transform(s => s.split(',').map(t => t.trim()).filter(Boolean))` — corte de escopo, sem chips), `highlightQuote`, `coverUrl` (`http`/`https` só — A-4). Exporta `reviewDraftSchema` (mínimo estrutural) e `reviewPublishSchema` (`.superRefine` exigindo `body`+ficha completa — tabela do design §5.4; **a nota saiu da lista de obrigatórios, D-11**). Exporta também `reviewStatusSchema = z.enum(['draft','published'])` (usado pelo T6 para decidir qual schema aplicar — **não** vive dentro do action). `src/lib/review/slug.ts` — `slugify(title)`: minúsculas, sem acento, hífens (puro, testável).
 **Where**: `src/lib/review/schema.ts` + `src/lib/review/__tests__/schema.test.ts` (novos) · `src/lib/review/slug.ts` + `src/lib/review/__tests__/slug.test.ts` (novos)
 **Depends on**: None
 **Reuses**: `bookInputSchema` + `isbn.ts` (checksum já embutido)
@@ -345,9 +356,9 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 **Done when**:
 - [ ] `reviewDraftSchema`: só ficha (title/author/genre_id) obrigatória, resto opcional — aceita rascunho mínimo
-- [ ] `reviewPublishSchema`: rejeita ausência de `body`/`rating`; aceita quando completo
+- [ ] `reviewPublishSchema`: rejeita ausência de `body`; aceita quando completo *(nota removida — D-11)*
 - [ ] Transform de `tagsInput`/`keywordsInput`: `"ficção, clássico"` → `['ficção','clássico']`; string vazia → `[]`
-- [ ] `rating` não-inteiro ou fora de 0–5 → rejeitado por ambos os schemas
+- [ ] ~~`rating` não-inteiro ou fora de 0–5 → rejeitado por ambos os schemas~~ **REMOVIDO POR D-11** — não há campo de nota
 - [ ] `coverUrl` com `javascript:`/sem esquema → rejeitado (A-4)
 - [ ] `slugify('Dom Casmurro, 50 anos!')` → slug ascii/hífen determinístico; testado com acentos/pontuação
 - [ ] Gate **quick**
@@ -370,7 +381,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] **Teste obrigatório da emenda A-1:** `FormData` com `status=published` e `body`/`rating` ausentes → cai em `reviewPublishSchema`, é **rejeitado**, nada é persistido (não em `reviewDraftSchema`, mesmo request "parecendo" um create qualquer)
+- [ ] **Teste obrigatório da emenda A-1:** `FormData` com `status=published` e `body` ausente → cai em `reviewPublishSchema`, é **rejeitado**, nada é persistido (não em `reviewDraftSchema`, mesmo request "parecendo" um create qualquer)
 - [ ] `status` ausente/forjado fora do enum → erro **antes** de tocar o RPC
 - [ ] `publishReview`/`unpublishReview`: `published_at` só carimba na 1ª publicação (`coalesce`); `unpublish` → `revalidatePath` disparado (asserção de chamada, não só o status)
 - [ ] Sem `requireEditor()` ok → nenhuma escrita ocorre (unit com client/gate stub)
@@ -407,7 +418,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ### T8: `ReviewForm` — scaffolding do formulário (client component)
 
-**What**: `src/app/admin/(protected)/resenhas/ReviewForm.tsx` (`'use client'`, `useActionState`). `<fieldset>` por seção (*Ficha bibliográfica*, *Classificação*, *Conteúdo*) com `<legend>`; campos via `Field` (autor, título, cidade, editora, ano, ISBN, gênero-select, corpo, frase de destaque, capa-URL, **tags/keywords como um único input de texto por vírgula** — sem chips, sem `RepeatableLinks` — §13); **sem** campo de "para saber mais" (cortado). Dois botões (`Salvar rascunho`/`Publicar`) que só **diferem no `status` enviado** — a escolha do schema é 100% do servidor (T6), nunca do cliente (§6.3). Resumo de erros em live region presente desde o 1º render; foco movido ao resumo em falha (WCAG 2.4.3/3.3.1); sucesso anunciado em `role="status"`. Slot para `RatingInput` (T9), consumido como componente à parte.
+**What**: `src/app/admin/(protected)/resenhas/ReviewForm.tsx` (`'use client'`, `useActionState`). `<fieldset>` por seção (*Ficha bibliográfica*, *Classificação*, *Conteúdo*) com `<legend>`; campos via `Field` (autor, título, cidade, editora, ano, ISBN, gênero-select, corpo, frase de destaque, capa-URL, **tags/keywords como um único input de texto por vírgula** — sem chips, sem `RepeatableLinks` — §13); **sem** campo de "para saber mais" (cortado). Dois botões (`Salvar rascunho`/`Publicar`) que só **diferem no `status` enviado** — a escolha do schema é 100% do servidor (T6), nunca do cliente (§6.3). Resumo de erros em live region presente desde o 1º render; foco movido ao resumo em falha (WCAG 2.4.3/3.3.1); sucesso anunciado em `role="status"`. ~~Slot para `RatingInput` (T9), consumido como componente à parte.~~ **REMOVIDO POR D-11** — não há campo de nota no formulário; T9 não será construída.
 **Where**: `src/app/admin/(protected)/resenhas/ReviewForm.tsx` + `__tests__/ReviewForm.test.tsx` (novos)
 **Depends on**: T5 (tipos/validação de referência para os campos)
 **Reuses**: `Field`/`Button` (M0), padrão `useActionState`+live region de `LoginForm.tsx`
@@ -429,7 +440,11 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ---
 
-### T9: `RatingInput` — nota 0–5 como radiogroup acessível [P com T8] — **CORTÁVEL #2**
+### ~~T9: `RatingInput` — nota 0–5 como radiogroup acessível [P com T8] — **CORTÁVEL #2**~~ — **REMOVIDA POR D-11 (2026-08-24)**
+
+> **NÃO EXECUTAR.** [D-11](../../project/DECISIONS.md) retirou a nota do produto, então o componente não tem objeto: não há campo de nota a tornar acessível. **A numeração NÃO foi alterada** — T10..T13 mantêm seus números, e o texto abaixo fica preservado para que as referências cruzadas (mapa requisito→task, Plano de Corte, diagramas de dependência) continuem resolvendo. O `RatingInput` também **não vira** `<input type="number">`: essa era a versão *cortada* da task, e o corte perdeu objeto junto com a task.
+>
+> Nenhum arquivo novo. `src/components/review/RatingInput.tsx` e seu teste **não serão criados**.
 
 **What**: `src/components/review/RatingInput.tsx`: `<fieldset><legend>Nota (0 a 5)</legend>` + 6 `radio` (0..5), rótulo textual por opção (não estrelas-só — WCAG 1.1.1/1.4.1), operável por setas/teclado, integrado ao `ReviewForm` (T8) e a `reviewInputSchema` (T5). **Se o gatilho do Plano de Corte disparar** (ver seção própria), este componente **não é construído**: o campo de nota vira um `<input type="number" min="0" max="5" step="1">` via o próprio `Field` (reuso direto, zero componente novo) — a validação Zod (T5) já é a mesma nos dois casos, então o corte não muda `reviewInputSchema`.
 **Where**: `src/components/review/RatingInput.tsx` + `__tests__/RatingInput.test.tsx` (novos) — **ou, se cortado, nenhum arquivo novo** (campo absorvido em T8 via `Field`)
@@ -554,7 +569,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ## [FORA das tasks] `db push` produção — STOP humano (A-11)
 
-Não é uma task numerada — é o mesmo passo humano pós-merge já usado em M2/D-08. Ordem: **T1–T13 concluídas e mergeadas** → `db push` produção (0009 completa, aditiva) → verificar `pg_policies` em produção (policies de `book` presentes) → **confirmar que a normalização da nota rodou** (`dom-casmurro`=5, `iracema`=4, as outras duas inalteradas — a mesma prova da T1, agora em produção) → **confirmar que `anon` NÃO tem GRANT de INSERT/UPDATE/DELETE em `book`** (`information_schema.role_table_grants`) — produção não tem os `ALTER DEFAULT PRIVILEGES` amplos do stack local (achado da T1/T3, 2026-08-12), então esta é a verificação real de "sem GRANT", que o local não consegue provar → smoke test manual (criar/publicar uma resenha real, ver no ar) → seed/dados existentes intactos (4 resenhas antigas continuam publicadas). **Sem `SUPABASE_SERVICE_ROLE_KEY` em Production** (gate herdado, SEC-17) — a 0009 não muda esse gate.
+Não é uma task numerada — é o mesmo passo humano pós-merge já usado em M2/D-08. Ordem: **T1–T13 concluídas e mergeadas** → `db push` produção (0009 completa, aditiva) → verificar `pg_policies` em produção (policies de `book` presentes) → ~~**confirmar que a normalização da nota rodou**~~ **SEM OBJETO (D-11)** — a normalização saiu da 0009; a nota de produção permanece **como está**, na coluna dormente → **confirmar que `anon` NÃO tem GRANT de INSERT/UPDATE/DELETE em `book`** (`information_schema.role_table_grants`) — *nota: isto **também** é verificável localmente e já foi verificado (T1, evidência E-6); a conferência em produção vale como confirmação do ambiente real, não como único lugar possível* → smoke test manual (criar/publicar uma resenha real, ver no ar) → seed/dados existentes intactos (4 resenhas antigas continuam publicadas). **Sem `SUPABASE_SERVICE_ROLE_KEY` em Production** (gate herdado, SEC-17) — a 0009 não muda esse gate.
 
 ---
 
@@ -567,6 +582,28 @@ Requisitos do spec **conscientemente não cobertos** por nenhuma task acima — 
 | **REV-12** (para saber mais — `further_reading`) | `RepeatableLinks` não construído (componente mais caro do design — lista dinâmica, foco gerido, Zod por item, filtro XSS, `<nav>` público) | Feature futura; **coluna `jsonb` + CHECK já existem na 0009** (T1) — schema não muda quando voltar |
 | **REV-19** (editar resenha existente sob RLS own-or-admin) | `update_review_with_book` **criado** na T2 mas **não exercido**; rota `/admin/resenhas/[id]/editar` fora do Execute | Feature de edição, follow-up. RPC e policies de UPDATE de `book` já prontos (T1/T2) — só faltam `updateReview` (action), `getEditorReviewForEdit` (query) e a rota |
 | **DD-13 (parte)** — `getEditorReviewForEdit(id)` | Consequência direta do REV-19 diferido — não há tela de edição para popular | Junto com REV-19 |
+
+| **REV-07** (nota inteira 0–5) | **REMOVIDO do produto por [D-11](../../project/DECISIONS.md)** (2026-08-24), não diferido — a nota não volta. T9 removida; T5/T8/T11/T12 encolhidas | **Nunca.** Requisito extinto, não adiado |
+
+### PENDÊNCIA DE REGRESSÃO DO M1 — NÃO EXECUTAR NESTE MILESTONE
+
+D-11 remove a nota do produto, mas o **M1 já está em produção lendo `review.rating`**. A limpeza desse código é o **passo 3** da ORDEM DE REMOÇÃO de D-11 e **está bloqueada**: só pode acontecer **depois** que o filtro por deficiência representada (D-12) existir — remover agora deixaria a home **sem filtro algum**.
+
+O que fica pendente, com o que ainda lê a coluna hoje:
+
+| Onde | O que faz com a nota | Arquivo |
+| --- | --- | --- |
+| Filtro "nota mínima" da home | `query.gte('rating', params.nota)` | `src/lib/review/queries.ts` |
+| Ordenação "Melhor nota" | `order('rating', …)` + `SORT_ORDERS` | `src/lib/review/queries.ts`, `src/lib/review/listingParams.ts` |
+| Parse/serialização do param `nota` | `parseListingParams` / `buildListingHref` | `src/lib/review/listingParams.ts` |
+| Select do controle de nota | `<select name="nota">` + rótulo "Melhor nota" | `src/components/listing/ListingControls.tsx` |
+| Eco do filtro no estado vazio | `nota mínima N` | `src/components/listing/EmptyState.tsx` |
+| Exibição no card e no carrossel | `<Rating rating={…} />` | `src/components/review/ReviewCard.tsx`, `FeaturedCarousel.tsx` |
+| Exibição na página de resenha | `<Rating rating={…} />` | `src/app/resenha/[slug]/page.tsx` |
+| Componente e formatador | `Rating`, `formatRating` | `src/components/review/Rating.tsx`, `src/lib/review/formatRating.ts` |
+| Tipo da linha lida | `rating: number \| null` no `REVIEW_SELECT` | `src/lib/review/queries.ts` |
+
+**Nada disso foi alterado nesta emenda** — é levantamento, não execução. O passo 4 (drop da coluna) vem só depois que este passo 3 estiver concluído e verificado em produção.
 
 **Nenhum outro requisito (REV-01..24 + REV-07-schema) fica sem task.** REV-08/REV-09 (tags/keywords) **não** estão diferidos — são T12, cobertos integralmente, inclusive exibição.
 
@@ -584,7 +621,7 @@ Tabela explícita (a versão condensada no final da Validação repete o mesmo m
 | REV-04 | T2, **T4** | T4 = teste de rollback, task própria (A-9) |
 | REV-05 | T2 | |
 | REV-06 | T1, T5 | |
-| REV-07 | T1, T5, T9 | T9 é cortável (§ Plano de Corte) sem afetar o requisito (Zod idêntico) |
+| ~~REV-07~~ | ~~T1, T5, T9~~ | **REQUISITO REMOVIDO POR D-11** — não é diferido, é extinto. T9 removida; T1/T5 encolhidas |
 | REV-07-schema | T1, T3 | |
 | REV-08 | T5, T8, T12 | |
 | REV-09 | T5, T8, T12 | |
@@ -599,11 +636,11 @@ Tabela explícita (a versão condensada no final da Validação repete o mesmo m
 | REV-18 | T6 | |
 | REV-19 | — | **Diferido** (ver Diferidos) |
 | REV-20 | T5, T8 | |
-| REV-21 | T8, T9, T10, T11, T12, **T13** | embutida no "done" de cada uma — T13 é o passo final (NVDA manual + axe agregado), não task de a11y separada |
+| REV-21 | T8, ~~T9~~, T10, T11, T12, **T13** | embutida no "done" de cada uma — T13 é o passo final (NVDA manual + axe agregado), não task de a11y separada |
 | REV-22 | T6, T8 | |
 | REV-23 | T2, T5 | |
 | REV-24 | T7, T10 | |
-| D-01 | T1 | normalização + CHECK |
+| ~~D-01~~ → **D-11** | ~~T1~~ | ~~normalização + CHECK~~ — **superseded**: a nota saiu do produto, normalização e CHECK removidos da 0009 |
 | A-9 | **T4** | task própria, não item de outra task |
 
 **O que é T13, para não confundir com o `db push` (eles aparecem lado a lado no diagrama do dia 15):** T13 é trabalho de verificação — rodar o gate, as 4 suítes integration, e o roteiro manual com NVDA — feito **pela equipe, antes do merge**. O `db push` é um passo **humano, pós-merge, fora de qualquer task** (seção acima). São coisas diferentes: T13 tem "done when" verificável e produz um commit se achar ajuste; o `db push` não é uma task e não tem "done when" — é um checklist de deploy. T13 mapeia para REV-21 de forma legítima (não inventada): REV-21 exige WCAG 2.1 AA como DoD, e a verificação manual com leitor de tela é parte real desse DoD, não coberta só por `axe` automatizado nas tasks individuais.
@@ -616,7 +653,7 @@ Tabela explícita (a versão condensada no final da Validação repete o mesmo m
 
 > **NOTA 2026-08-24 — PLANO DE CORTE SUSPENSO**
 > Motivo: os gatilhos existiam para proteger a janela 13–15/08, que não foi executada e não tem substituta. Escopo integral mantido. Se um prazo externo reaparecer, os cortes voltam com nova âncora antes do reinício — nunca decididos tarefa a tarefa sob pressão.
-> Ressalva: o Corte #2 (T9 → input number) perde objeto se a decisão de remoção da nota for formalizada.
+> Ressalva: o Corte #2 (T9 → input number) perde objeto se a decisão de remoção da nota for formalizada. **CONFIRMADO em 2026-08-24 — D-11 foi formalizada e T9 REMOVIDA; o Corte #2 está sem objeto.**
 
 ### Corte #1 — Exibição pública de `reviewer_name`/`highlight_quote`/`publication_city` (T11)
 
@@ -624,7 +661,9 @@ Tabela explícita (a versão condensada no final da Validação repete o mesmo m
 **Gatilho:** se, **ao fim do dia 13/08**, o teste de rollback do RPC (T4, A-9) **não estiver verde**, o Corte #1 é **acionado imediatamente, sem reavaliação** — o tempo perdido no dia 13 vem daqui, não de uma escolha nova no dia 15.
 **Consequência a registrar:** enquanto T11 não entra, REV-11 e a parte de exibição de REV-14 (`publication_city` visível) ficam **parcialmente atendidos** — captura sim, exibição não. Isso é diferente de REV-12 (Diferidos): aqui a intenção original **não muda**, só atrasa.
 
-### Corte #2 — `RatingInput` dedicado (T9)
+### ~~Corte #2 — `RatingInput` dedicado (T9)~~ — **SEM OBJETO (D-11, 2026-08-24)**
+
+> A task que este corte reduzia foi **removida** por D-11, não cortada. Não há o que decidir aqui.
 
 **O que sai:** o componente radiogroup. Substituído por `<input type="number" min="0" max="5" step="1">` via `Field` (reuso direto — T8 absorve o campo, T9 não gera arquivo). A validação Zod (T5) é **a mesma** nos dois casos — cortar T9 não muda `reviewInputSchema`.
 **Gatilho:** avaliado no dia 14/08, **depois** do Corte #1 já ter sido decidido no dia 13 — se o dia 14 também apertar, este é o próximo a cair, nessa ordem (nunca o contrário: T11 sempre cai antes de T9, porque T11 depende de dados que T9 não afeta).

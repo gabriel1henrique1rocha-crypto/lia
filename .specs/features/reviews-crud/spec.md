@@ -6,6 +6,9 @@
 > **Escopo:** esta feature é a **UI de escrita** do painel sobre as tabelas `book`/`review`/`genre` que **JÁ existem** — **não cria tabelas novas**; escreve via as policies own-or-admin já provadas. Campos que não couberem no schema atual entram por **migration aditiva** (`0009`, TD-03), não por tabela nova.
 > Gray areas em [context.md](context.md) — **algumas PENDENTES** de decisão humana (sobretudo a **CAPA**) antes do Design.
 
+> ---
+> **EMENDA 2026-08-24 — [D-11](../../project/DECISIONS.md) REMOVEU A NOTA DO PRODUTO.** O OLDA é observatório de literatura e deficiência: a avaliação numérica não serve ao propósito editorial. **REV-07 (nota inteira 0–5) está REMOVIDO**; a captura, a exibição, o filtro e a ordenação por nota saem do escopo. O texto original é preservado abaixo, riscado e marcado — apagá-lo quebraria o mapa de rastreabilidade e as referências cruzadas a REV-07. **REV-07-schema NÃO é afetado** (é sobre GRANTs/policies de `book`, não sobre nota). A coluna `review.rating` **não é dropada** — ver ORDEM DE REMOÇÃO em D-11.
+
 ## Problem Statement
 
 A `security-foundation` provou o **caminho seguro de escrita** (editor autenticado, RLS own-or-admin em `review`) mas **não entregou tela nenhuma para escrever**. Hoje uma resenha só entra no banco por seed/SQL. Editores precisam de um **formulário estruturado** em `/admin`, atrás do gate `requireEditor`, para **criar, editar, publicar e despublicar** resenhas no fluxo **rascunho → publicado** — com **todos os campos preenchidos antes de publicar** — mapeando uma submissão única para as **duas tabelas** (`book` + `review`). O modelo de campos segue uma resenha real em padrão ABNT (ficha bibliográfica + classificação + conteúdo estruturado), e vários desses campos **ainda não existem** no schema.
@@ -16,7 +19,7 @@ A `security-foundation` provou o **caminho seguro de escrita** (editor autentica
 - [ ] **Escrita exclusivamente via client autenticado** (`createAuthenticatedClient`) **sob RLS** own-or-admin (precedente D-09/D-10) — **nunca** browser client com JWT, **nunca** `service_role` para escrita normal. Server actions.
 - [ ] **Mapear uma submissão única** para `book` **e** `review` de forma **atômica** (sem livro órfão nem resenha sem livro).
 - [ ] **Ciclo rascunho → publicado** com **gate de publicação**: só publica com o conjunto obrigatório de campos preenchido e válido; despublicar volta a rascunho (some do público via RLS).
-- [ ] **Fechar D-01** (nota inteira 0–5) e **acomodar os campos novos** por migration aditiva idempotente + GRANTs explícitos (TD-03), **provisionando também a escrita de `book`** (a 0008 cobriu só `review`).
+- [ ] ~~**Fechar D-01** (nota inteira 0–5) e~~ **REMOVIDO POR D-11** (a nota saiu do produto; D-01 superseded) — segue valendo: **acomodar os campos novos** por migration aditiva idempotente + GRANTs explícitos (TD-03), **provisionando também a escrita de `book`** (a 0008 cobriu só `review`).
 - [ ] **Acessibilidade WCAG 2.1 AA** como Definition of Done do formulário (labels associados, erros via `aria-live`, foco visível, sem dependência de cor, validação acessível).
 
 ## Out of Scope
@@ -52,7 +55,7 @@ Uma resenha é **uma entidade lógica** que grava em **duas tabelas** (`book` 1�
 | resenhista (autor da resenha) | `editor.name` (via `review.editor_id`) | ✅ | **derivado da conta** (decisão): sem coluna nova. Exibir no público exige expor `editor.name` ao anon — ver Design |
 | **Classificação** | | | |
 | gênero | `book.genre_id` | ✅ | FK `genre`, NOT NULL (0002) |
-| nota (0–5, inteiros) | `review.rating` | ✅ | coluna `numeric(2,1)`; D-01 = só inteiros (REV-07) |
+| ~~nota (0–5, inteiros)~~ | ~~`review.rating`~~ | ❌ | **REMOVIDO POR D-11** — não capturada, não exibida, não filtrada. Coluna fica **dormente** (não dropada aqui; ver ORDEM DE REMOÇÃO em D-11) |
 | tags (filtráveis por conceito) | `review.tags` | 🆕 | **guardadas/exibidas** aqui; filtragem na listagem **adiada** (TAGS=c) |
 | palavras-chave (não-filtráveis) | `review.keywords` | 🆕 | campo distinto de tags (SEO/exibição) |
 | **Conteúdo** | | | |
@@ -89,7 +92,7 @@ Uma resenha é **uma entidade lógica** que grava em **duas tabelas** (`book` 1�
 
 ### Nota (D-01)
 
-- **REV-07** — A nota SHALL ser **inteira de 0 a 5** (D-01 = Aceita nesta feature): **sem meio-ponto**, o que também elimina o bug histórico do `",5/5"`. WHEN o editor informa a nota THEN a entrada aceita **apenas** inteiros 0–5 (controle acessível — ex.: grupo de opções/estrelas com rótulo textual); WHEN um valor fora de {0,1,2,3,4,5} chega THEN é rejeitado com erro acessível. *(Enforcement no banco — CHECK `rating = trunc(rating)` × validação só no app — é decisão de Design; a coluna `numeric(2,1)` é mantida.)*
+- **REV-07** — ~~**REMOVIDO POR D-11 (2026-08-24)**~~ · *Texto original preservado para rastreabilidade; **não implementar**.* ~~A nota SHALL ser **inteira de 0 a 5** (D-01 = Aceita nesta feature): **sem meio-ponto**, o que também elimina o bug histórico do `",5/5"`. WHEN o editor informa a nota THEN a entrada aceita **apenas** inteiros 0–5 (controle acessível — ex.: grupo de opções/estrelas com rótulo textual); WHEN um valor fora de {0,1,2,3,4,5} chega THEN é rejeitado com erro acessível. *(Enforcement no banco — CHECK `rating = trunc(rating)` × validação só no app — é decisão de Design; a coluna `numeric(2,1)` é mantida.)*~~
 
 ### Tags e palavras-chave (campos distintos)
 
@@ -121,7 +124,7 @@ Uma resenha é **uma entidade lógica** que grava em **duas tabelas** (`book` 1�
 
 ### Acessibilidade e feedback
 
-- **REV-21** — O formulário SHALL cumprir **WCAG 2.1 AA** (DoD): cada campo com **label associado**; **erros anunciados via `aria-live`**; **foco visível**; **sem dependência de cor** (erro/estado também por texto/ícone); validação **operável por teclado** e por leitor de tela; grupos (nota, tags, links) com semântica de `fieldset`/`legend` quando aplicável.
+- **REV-21** — O formulário SHALL cumprir **WCAG 2.1 AA** (DoD): cada campo com **label associado**; **erros anunciados via `aria-live`**; **foco visível**; **sem dependência de cor** (erro/estado também por texto/ícone); validação **operável por teclado** e por leitor de tela; grupos (~~nota~~ — removida por D-11 —, tags, links) com semântica de `fieldset`/`legend` quando aplicável.
 - **REV-22** — WHEN a escrita falha por **RLS (42501)**, sessão perdida, ou erro do banco THEN o sistema SHALL mostrar mensagem **acessível e amigável** (não um 500 cru / stack), preservando o que o editor digitou; WHEN a escrita conclui THEN há **confirmação acessível** (sucesso anunciado).
 - **REV-23** — `review.slug` SHALL ser **gerado do título da resenha**, **único**; WHEN há colisão de slug THEN o sistema resolve deterministicamente (ex.: sufixo), sem violar o UNIQUE do schema nem quebrar URLs públicas existentes.
 - **REV-24** — Existe uma **lista mínima** em `/admin/resenhas` (PAINEL=a): as resenhas do editor (own-or-admin), rascunhos + publicadas, **só para navegar até o editar/despublicar** — **sem** filtros, ações em massa ou UI de delete (isso é `admin-reviews`). WHEN um editor abre o painel THEN vê e alcança as próprias resenhas; WHEN é admin THEN vê todas.
@@ -175,7 +178,7 @@ Uma resenha é **uma entidade lógica** que grava em **duas tabelas** (`book` 1�
 - **Publicar com campo obrigatório faltando** → publicação bloqueada, erros via `aria-live`, nada persistido como `published` (REV-16).
 - **Salvar rascunho incompleto** → permitido (só o mínimo estrutural), sem carimbar `published_at` (REV-15).
 - **ISBN com checksum inválido** → salvamento bloqueado com erro acessível; ISBN vazio → resenha válida (REV-13).
-- **Nota não-inteira / fora de 0–5** (ex.: legado `4,5`) → rejeitada; entrada só aceita inteiros (REV-07).
+- ~~**Nota não-inteira / fora de 0–5** (ex.: legado `4,5`) → rejeitada; entrada só aceita inteiros (REV-07).~~ **REMOVIDO POR D-11** — não há entrada de nota.
 - **Editor edita/despublica resenha de outro editor** (não-admin) → negado pela RLS own-or-admin 0008 (REV-19).
 - **Sessão expira no meio do preenchimento** → server action nega no gate; mensagem acessível; texto preservado quando possível (REV-22).
 - **Escrita de `book` sem GRANT/policy** (estado atual) → 42501 até a 0009 provisionar (REV-07-schema).
@@ -197,7 +200,7 @@ Uma resenha é **uma entidade lógica** que grava em **duas tabelas** (`book` 1�
 | REV-05 | Criar/publicar | RLS own (0008) | Specify | Pending |
 | REV-06 | Criar/publicar | TD-03, migration 0009 | Specify | Pending |
 | REV-07-schema | Criar/publicar | TD-03, GRANT `book` | Specify | Pending |
-| REV-07 | Criar/publicar | **D-01 (Aceita)** | Specify | Pending |
+| ~~REV-07~~ | ~~Criar/publicar~~ | ~~D-01~~ → **D-11** | Specify | **Removido (D-11)** |
 | REV-08 | Conteúdo rico | review-listing-search | Specify | Pending |
 | REV-09 | Conteúdo rico | — | Specify | Pending |
 | REV-10 | Criar/publicar | corpo | Specify | Pending |
@@ -242,7 +245,7 @@ Uma resenha é **uma entidade lógica** que grava em **duas tabelas** (`book` 1�
 - **Provisionamento de escrita de `book`** (REV-07-schema): definir o modelo de posse de `book` sob RLS — o `book` é catálogo compartilhado (qualquer editor ativo cria) ou posse transitiva via `review`? INSERT de `book` novo não tem `review` ainda (ordem de gravação). Escrever SQL da 0009 (GRANT + policies) espelhando o padrão anti-recursão da 0007/0008.
 - **Resenhista público** (REV-14, decisão "derivar de `editor.name`"): a página pública é **anon** e a RLS de `editor` (0007) só tem self-read + admin — **anon não lê `editor`**. Para exibir o resenhista, o Design escolhe entre **(i)** policy pública que expõe **só `editor.name`** (subset seguro, sem e-mail) para editores donos de resenha **publicada**, ou **(ii)** **denormalizar** o nome no `review` na publicação. Entra na 0009. É staff-byline intencional (não fere a privacidade de visitantes do PROJECT), mas **não é automático**.
 - **Forma de armazenamento de `tags`/`keywords`/`further_reading`** (REV-08/09/12): `text[]` × tabela `tag` + join × `jsonb`. Decidir por prazo e por como a listagem consumiria a filtragem por tag.
-- **Enforcement de nota inteira** (REV-07): CHECK no banco (`rating = trunc(rating)`) × só validação no app; conferir se há dado legado não-inteiro em produção antes de um CHECK.
+- ~~**Enforcement de nota inteira** (REV-07): CHECK no banco (`rating = trunc(rating)`) × só validação no app; conferir se há dado legado não-inteiro em produção antes de um CHECK.~~ **SEM OBJETO — REMOVIDO POR D-11** (não há nota a constranger; o CHECK saiu da 0009).
 - **Conjunto "obrigatório para publicar"** (REV-16): derivar do modelo de campos; proposta inicial em context.md.
 - **Server actions × route handlers** e onde vivem os caminhos de escrita no segmento `/admin`; reuso de `requireEditor`/`getAuthenticatedEditor`.
 - **Rota**: adotar `/admin/resenhas/nova` (resolve a divergência `novo`/`nova` do backlog do STATE — concordância com "resenha").
