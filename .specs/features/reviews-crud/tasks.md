@@ -1,7 +1,7 @@
 # reviews-crud — Tasks
 
 **Design**: [design.md](design.md) (DD-1..18, §1–§13 — **APROVADO com emendas 2026-08-09**) · **Spec**: [spec.md](spec.md) (REV-01..24 + REV-07-schema) · **Context**: [context.md](context.md) (gray areas resolvidas)
-**Status**: Execute em curso — T1 parcial (pt.1 da 0009 commitada). T2 em diante não iniciada.
+**Status**: Execute em curso — **T1 CONCLUÍDA** (pt.1 da 0009 commitada; os 9 "Done when" fechados com evidência medida em 2026-08-24, ver bloco "T1 — EVIDÊNCIAS DE FECHAMENTO"). T2 em diante não iniciada.
 
 > **Escopo já reduzido pelo Design (§13, não é corte desta fase):** `further_reading`/`RepeatableLinks`, chips dinâmicos de tags/keywords (→ input único separado por vírgula), `update_review_with_book` exercido pelo app e a rota `/admin/resenhas/[id]/editar` estão **FORA do Execute**. A 0009 continua **ÍNTEGRA** (todas as colunas, o CHECK, os GRANTs, as policies de `book`, **ambos** os RPCs, o helper de slug) — o corte é só na superfície de UI/app. Ver seção **Diferidos** abaixo para o mapeamento requisito→estado.
 > **Calendário real: 3 dias, ~3h/dia, SEM buffer** (13–15/08/2026). Ver seção **Plano de Corte** para o que sai *desta* janela se o tempo apertar — é um plano de contingência de cronograma, distinto do corte já feito pelo Design.
@@ -93,30 +93,171 @@ O gatilho do Corte #1 ("fim do dia 13") é literalmente: **T4 não verde depois 
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `npx supabase db reset` local verde, **duas vezes seguidas** (idempotência via guards `if not exists`/`drop ... if exists`)
-- [ ] `pg_policies` local mostra as 3 novas policies de `book`; `book_public_read` (0003) intacta ao lado
-- [ ] Cabeçalho do arquivo documenta o contrato anti-recursão do 0007 (self direto + admin via função `security definer`, editor `NO FORCE`) e como `owns_book_via_review` o respeita
-- [ ] **Ordem interna da migration verificada (crítico):** dentro do arquivo, os dois UPDATEs de normalização editorial (por slug + rede residual `round()`) executam **antes** de `alter table ... add constraint review_rating_integer` — exatamente a ordem de design.md §2.2, não uma reordenação nova
-- [ ] **Precondição do teste — banco com nota não-inteira antes de aplicar:** exige um banco onde pelo menos uma linha tenha nota não-inteira **antes** de a 0009 rodar. Aplicar a 0009 contra um banco **já normalizado** (sem nenhuma linha não-inteira) **não satisfaz este critério** — a ordem não teria sido de fato exercitada, só coincidentemente não-testada
+- [x] `npx supabase db reset` local verde, **duas vezes seguidas** (idempotência via guards `if not exists`/`drop ... if exists`) — **evidência E-1**
+- [x] `pg_policies` local mostra as 3 novas policies de `book`; `book_public_read` (0003) intacta ao lado — **evidência E-2**
+- [x] Cabeçalho do arquivo documenta o contrato anti-recursão do 0007 (self direto + admin via função `security definer`, editor `NO FORCE`) e como `owns_book_via_review` o respeita — **evidência E-3**
+- [x] **Ordem interna da migration verificada (crítico):** dentro do arquivo, os dois UPDATEs de normalização editorial (por slug + rede residual `round()`) executam **antes** de `alter table ... add constraint review_rating_integer` — exatamente a ordem de design.md §2.2, não uma reordenação nova — **evidência E-4**
+- [x] **Precondição do teste — banco com nota não-inteira antes de aplicar:** exige um banco onde pelo menos uma linha tenha nota não-inteira **antes** de a 0009 rodar. Aplicar a 0009 contra um banco **já normalizado** (sem nenhuma linha não-inteira) **não satisfaz este critério** — a ordem não teria sido de fato exercitada, só coincidentemente não-testada. **Satisfeito pelo item imediatamente abaixo** (a corrida de 2026-08-12 partiu do `seed.sql` da época, com `dom-casmurro`/`iracema`/`rascunho` todos em 4,5 — três linhas não-inteiras ANTES da 0009; os três `UPDATE 1` provam que havia o que normalizar). **Evidência E-5**
 - [x] **EXERCITADO em 2026-08-12, via `psql` direto (não pelo `supabase db reset` do CLI — ver nota abaixo).** Sequência: aplicar 0001→0008 + o `seed.sql` **da época** (que ainda gravava `dom-casmurro`=4,5, `iracema`=4,5, `memorias-postumas-rascunho`=4,5) → aplicar a 0009 por cima. 1ª aplicação: `UPDATE 1` (dom-casmurro→5) + `UPDATE 1` (iracema→4) + `UPDATE 1` (rede residual pegou o rascunho, 4,5→5) → `EXIT=0`. **Prova de vermelhidão** (a ordem é mesmo load-bearing, não só a ordem certa "funciona por acaso"): simulada a inversão em transação com rollback — `drop constraint` → `update rating=4.5` → `add constraint` → `ERROR: check constraint "review_rating_integer" ... is violated by some row`, exatamente como esperado se a normalização não tivesse rodado antes. 2ª aplicação (mesmo arquivo, banco já normalizado): idempotente — colunas `already exists, skipping`, `UPDATE 0` na rede residual, ratings inalterados, `EXIT=0`.
 - [x] **`seed.sql` corrigido em seguida (fix(seed), commit `6b1edd9` em `feat/reviews-crud`)** — `dom-casmurro`=5, `iracema`=4, `memorias-postumas-rascunho`=4, gravados como inteiros diretamente (não mais 4,5). **Consequência para este critério, registrada para não confundir quem rodar de novo:** a partir dessa correção, um `supabase db reset` do CLI (que aplica migrations e SÓ DEPOIS o seed) **não exercita mais este bloco** — a 0009 roda contra um banco vazio, os dois UPDATEs editoriais e a rede residual viram no-op (nenhuma linha para tocar), e o seed já entra inteiro. **Isso é o comportamento correto e esperado**, não uma lacuna: a normalização por slug é um evento **histórico**, que roda **uma vez** contra o dado real de produção (que tinha 4,5); depois disso, tanto local quanto produção nunca mais têm nota não-inteira, e o bloco de UPDATEs fica como cicatriz documentada no arquivo, não como algo a re-exercitar a cada reset. A evidência de que a ordem é load-bearing é a prova de vermelhidão acima, não uma repetição indefinida do "reset comum".
 - [x] Confirmado via `db reset` completo do CLI **depois** da correção do seed (2026-08-12): 0001→0009 aplicadas, seed rodou sem erro, `rating` inteiro nas 5 linhas (`dom-casmurro`=5, `iracema`=4, `memorias-postumas-rascunho`=4, `o-crime-do-padre-amaro`=4, `o-cortico`=5) — oráculo `psql` superuser, não o papel sob teste
-- [ ] Nenhum GRANT de escrita de `book` a `anon` **concedido por esta migration** — a 0009 só faz `grant ... to authenticated` (nunca `anon`). **Não verificável como "sem GRANT nenhum" no stack local**: o local tem `ALTER DEFAULT PRIVILEGES` pré-existente concedendo INSERT/UPDATE/DELETE a `anon` em toda tabela nova do schema `public` (confirmado em 2026-08-12 — `comment`/`editor`/`genre`/`recommendation`, que a 0009 nem toca, têm os mesmos grants a `anon` localmente). Ver residual equivalente na T3 — verificação de ausência de GRANT é **produção-only**; localmente o gate real é a RLS (deny-by-default), não a ausência de privilégio de tabela
+- [x] Nenhum GRANT de escrita de `book` a `anon` **concedido por esta migration** — a 0009 só faz `grant insert, update, delete on table public.book to authenticated` (linha 109; nunca `anon`). **VERIFICADO LOCALMENTE em 2026-08-24: `anon` NÃO tem INSERT, UPDATE nem DELETE em `public.book`** — **evidência E-6**.
+  > **CORREÇÃO DE REGISTRO (2026-08-24).** A redação anterior deste critério afirmava que a ausência de GRANT era "**não verificável** no stack local / **produção-only**", porque o local teria `ALTER DEFAULT PRIVILEGES` concedendo INSERT/UPDATE/DELETE a `anon` em toda tabela nova do `public`. **Essa afirmação estava errada e foi refutada por medição** (E-6). `supabase db reset` reconstrói o schema a partir das migrações, GRANTs inclusive — a verificação é local e é a mais sensível das seis. O que o default ACL aplicável concede a `anon` é `Dxtm` (TRUNCATE/REFERENCES/TRIGGER/MAINTAIN), **não** `awd` (INSERT/UPDATE/DELETE). A leitura antiga provavelmente confundiu `REFERENCES/TRIGGER/TRUNCATE` na listagem com "GRANTs amplos de escrita". Mesma correção vale para o residual gêmeo na T3.
 
 **Tests**: integration (matriz completa na T3; aqui: reset + inspeção `pg_policies`/`pg_constraint`) · **Gate**: integration (local)
 **Verify**: `npx supabase db reset` (2×) + `psql` local em `pg_policies`/`pg_constraint` (`review_rating_integer`).
 **Commit**: `feat(db): 0009 pt.1 — colunas + CHECK de nota (A-3) + GRANTs/policies de book (REV-06/07/07-schema, D-01)`
 
-**T1 — PENDÊNCIAS DE FECHAMENTO (2026-08-24):** revisão feita item a item contra o texto já escrito no arquivo e as mensagens de commit `49a47bf`/`6b1edd9` (ambas sem corpo além do assunto — nenhuma evidência adicional ali). Nenhum critério foi marcado sem prova textual própria; os seguintes permanecem `[ ]`:
+### T1 — EVIDÊNCIAS DE FECHAMENTO (2026-08-24)
 
-- `npx supabase db reset` local verde, **duas vezes seguidas** (idempotência via guards `if not exists`/`drop ... if exists`)
-- `pg_policies` local mostra as 3 novas policies de `book`; `book_public_read` (0003) intacta ao lado
-- Cabeçalho do arquivo documenta o contrato anti-recursão do 0007 (self direto + admin via função `security definer`, editor `NO FORCE`) e como `owns_book_via_review` o respeita
-- **Ordem interna da migration verificada (crítico):** dentro do arquivo, os dois UPDATEs de normalização editorial executam **antes** de `alter table ... add constraint review_rating_integer` — exatamente a ordem de design.md §2.2, não uma reordenação nova
-- **Precondição do teste — banco com nota não-inteira antes de aplicar**
-- Nenhum GRANT de escrita de `book` a `anon` **concedido por esta migration**
+Corrida de verificação contra o **stack Supabase LOCAL** (Docker), branch `feat/reviews-crud` em `14615a4`. Nenhum comando tocou o projeto remoto: `db reset` sem `--linked` opera só no local; as leituras são `docker exec supabase_db_lia psql -U postgres` — **oráculo superuser**, não o papel sob teste (Lesson Learned do M2). A 0009 **não foi editada** nesta corrida. Saídas coladas na íntegra, como emitidas.
 
-Status de T1: **Parcial** — não "Concluída" enquanto qualquer item acima seguir `[ ]`.
+**E-1 — reset 2× (critério 1).** Duas execuções consecutivas, ambas `EXIT=0`:
+
+```
+$ npx supabase db reset          # 1ª
+Applying migration 0001_core_schema.sql...
+...
+Applying migration 0009_reviews_crud.sql...
+Seeding data from supabase/seed.sql...
+Finished supabase db reset on branch feat/reviews-crud.
+EXIT=0
+
+$ npx supabase db reset          # 2ª, imediatamente depois
+Applying migration 0001_core_schema.sql...
+...
+Applying migration 0009_reviews_crud.sql...
+Seeding data from supabase/seed.sql...
+Finished supabase db reset on branch feat/reviews-crud.
+EXIT=0
+```
+
+**E-2 — policies de `book` (critério 2).** As 3 novas presentes; `book_public_read` (0003) intacta ao lado, ainda para `{anon,authenticated}`:
+
+```
+$ psql -c "select policyname, cmd, roles from pg_policies
+           where schemaname='public' and tablename='book' order by policyname;"
+
+     policyname     |  cmd   |        roles
+--------------------+--------+----------------------
+ book_admin_delete  | DELETE | {authenticated}
+ book_editor_insert | INSERT | {authenticated}
+ book_editor_update | UPDATE | {authenticated}
+ book_public_read   | SELECT | {anon,authenticated}
+(4 rows)
+```
+
+Constraints da 0009 conferidas no mesmo reset:
+
+```
+ review_further_reading_is_array | CHECK ((jsonb_typeof(further_reading) = 'array'::text))
+ review_rating_integer           | CHECK (((rating IS NULL) OR ((rating >= (0)::numeric)
+                                   AND (rating <= (5)::numeric) AND (rating = trunc(rating)))))
+```
+
+**E-3 — cabeçalho anti-recursão (critério 3).** `0009_reviews_crud.sql` linhas 9–49 trazem a seção `CONTRATO ANTI-RECURSÃO herdado da 0007`, cobrindo os três pontos exigidos — (a) self direto sem função, (b) admin via `SECURITY DEFINER` + `NO FORCE`, e como `owns_book_via_review` se encaixa. Trecho literal:
+
+```sql
+-- CONTRATO ANTI-RECURSÃO herdado da 0007 — aplicado a `owns_book_via_review`.
+--   (a) O caminho SELF/BOOTSTRAP é DIRETO, sem função: `editor_self_read` usa
+--       `id = (select auth.uid())`. (...)
+--   (b) O caminho que precisa LER a tabela para decidir (ex.: "admin vê todos")
+--       usa função SECURITY DEFINER, recursion-safe PORQUE:
+--         · a função é SECURITY DEFINER e seu dono é `postgres` (dono da tabela);
+--         · a tabela está em NO FORCE ROW LEVEL SECURITY → o DONO bypassa a RLS.
+-- COMO `owns_book_via_review` SE ENCAIXA (caso (b), com uma diferença): (...)
+--   Sem o definer, o subselect em `public.review` dentro da policy de `book`
+--   seria avaliado SOB A RLS DE `review` (0005/0008). (...) o teste de posse
+--   retornaria FALSO POR INVISIBILIDADE, não por falta de posse.
+-- PRECONDIÇÃO LOAD-BEARING: o bypass do dono só vale enquanto `public.review`
+-- estiver em NO FORCE ROW LEVEL SECURITY. (...)
+```
+
+**E-4 — ordem interna (critério 4).** Números de linha reais no arquivo. Os três UPDATEs (86, 87, 94) vêm **antes** do `add constraint review_rating_integer` (101):
+
+```
+$ grep -n "update public.review set rating|constraint review_rating_integer" 0009_reviews_crud.sql
+
+ 86: update public.review set rating = 5 where slug = 'dom-casmurro';
+ 87: update public.review set rating = 4 where slug = 'iracema';
+ 94: update public.review set rating = round(rating)
+100: alter table public.review drop constraint if exists review_rating_integer;
+101: alter table public.review add  constraint review_rating_integer
+```
+
+86 < 87 < 94 < 101 — ordem de design.md §2.2 preservada, sem reordenação.
+
+**E-5 — precondição de nota não-inteira (critério 5).** Coberta pelo item `EXERCITADO em 2026-08-12` da lista acima (4º item marcado), que registra a corrida partindo do `seed.sql` da época com **três linhas em 4,5** (`dom-casmurro`, `iracema`, `memorias-postumas-rascunho`) e a 0009 aplicada por cima, produzindo `UPDATE 1` + `UPDATE 1` + `UPDATE 1` — havia dado não-inteiro a normalizar, logo a ordem foi de fato exercitada, não coincidentemente não-testada. A prova de vermelhidão (inversão simulada em transação com rollback → `ERROR: check constraint "review_rating_integer" ... is violated by some row`) está no mesmo item. Estado após o reset de hoje (já com o seed corrigido, portanto **sem** re-exercitar o bloco — comportamento esperado, ver item seguinte):
+
+```
+            slug            | rating | inteiro
+----------------------------+--------+---------
+ dom-casmurro               |    5.0 | t
+ iracema                    |    4.0 | t
+ memorias-postumas-rascunho |    4.0 | t
+ o-cortico                  |    5.0 | t
+ o-crime-do-padre-amaro     |    4.0 | t
+(5 rows)
+```
+
+**E-6 — ausência de GRANT de escrita a `anon` (critério 6).** O critério mais sensível dos seis, e **verificável localmente** — `db reset` reconstrói o schema a partir das migrações, GRANTs inclusive:
+
+```
+$ psql -c "select grantee, privilege_type from information_schema.role_table_grants
+           where table_schema='public' and table_name='book'
+           order by grantee, privilege_type;"
+
+    grantee    | privilege_type
+---------------+----------------
+ anon          | REFERENCES
+ anon          | SELECT
+ anon          | TRIGGER
+ anon          | TRUNCATE
+ authenticated | DELETE
+ authenticated | INSERT
+ authenticated | REFERENCES
+ authenticated | SELECT
+ authenticated | TRIGGER
+ authenticated | TRUNCATE
+ authenticated | UPDATE
+ postgres      | (todos)
+ service_role  | REFERENCES
+ service_role  | TRIGGER
+ service_role  | TRUNCATE
+(21 rows)
+```
+
+`anon` tem **SELECT** (concedido explicitamente pela 0004, leitura pública da ficha — SEC-13) e **nada de INSERT/UPDATE/DELETE**. `authenticated` tem os três, como a 0009 pretendia. **Critério satisfeito.**
+
+Causa-raiz do que a redação antiga leu errado — o default ACL aplicável a tabelas criadas por `postgres` (que é como as migrações rodam) concede a `anon` apenas `Dxtm`, não `awd`:
+
+```
+$ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
+           from pg_default_acl d join pg_namespace n on n.oid=d.defaclnamespace
+           where defaclobjtype='r';"
+
+  grantor   | schema |                         defaclacl
+------------+--------+------------------------------------------------------------
+ postgres   | public | {postgres=arwdDxtm/postgres, anon=Dxtm/postgres,
+                       authenticated=Dxtm/postgres, service_role=Dxtm/postgres}
+```
+
+`a`=INSERT, `r`=SELECT, `w`=UPDATE, `d`=DELETE, `D`=TRUNCATE, `x`=REFERENCES, `t`=TRIGGER, `m`=MAINTAIN. Para `anon`: só `Dxtm`. A linha `supabase_admin | public | anon=arwdDxtm` existe ao lado, mas **não se aplica** — vale para tabelas criadas por `supabase_admin`, e as nossas são criadas por `postgres`. Confirmado tabela a tabela: nenhuma tabela do `public` dá INSERT/UPDATE/DELETE a `anon`.
+
+```
+   table_name   | grantee |               privs
+----------------+---------+------------------------------------
+ book           | anon    | REFERENCES,SELECT,TRIGGER,TRUNCATE
+ comment        | anon    | REFERENCES,TRIGGER,TRUNCATE
+ editor         | anon    | REFERENCES,TRIGGER,TRUNCATE
+ genre          | anon    | REFERENCES,SELECT,TRIGGER,TRUNCATE
+ recommendation | anon    | REFERENCES,TRIGGER,TRUNCATE
+ review         | anon    | REFERENCES,SELECT,TRIGGER,TRUNCATE
+```
+
+> **ACHADO LATERAL (não é falha deste critério, mas fica registrado):** `anon` **tem `TRUNCATE`** em todas as 6 tabelas do `public` — herdado do default ACL (`D`), **não** concedido por nenhuma migration. Importa porque **TRUNCATE ignora RLS**: se algum dia for alcançável, a policy não protege. Hoje **não é alcançável pelo Data API** — PostgREST só emite SELECT/INSERT/UPDATE/DELETE e chamadas de função, nunca TRUNCATE. Revogar (`revoke truncate on all tables in schema public from anon`) é **decisão de arquitetura**, fora do escopo desta verificação; registrado para avaliação.
+
+**Status de T1: Concluída** — os 9 critérios de "Done when" estão `[x]` com evidência medida.
 
 ---
 
@@ -159,7 +300,7 @@ Status de T1: **Parcial** — não "Concluída" enquanto qualquer item acima seg
 - [ ] Verificação de estado real via `psql`/superuser (não pelo client sob teste — lição da rbac-matrix original)
 - [ ] CI PULA a suíte (`describe.skipIf`); local verde
 - [ ] Gate **integration** + quick
-- [ ] **Residual registrado (achado de 2026-08-12):** o stack local tem `ALTER DEFAULT PRIVILEGES` pré-existente concedendo GRANTs amplos (INSERT/UPDATE/DELETE) a `anon` em toda tabela nova do `public` — não é algo que a 0009 introduz, e não é exclusivo de `book` (`comment`/`editor`/`genre`/`recommendation` têm o mesmo localmente). **Consequência: esta matriz prova a camada de RLS (deny-by-default via policy), mas NÃO prova a ausência de GRANT de tabela** — localmente `anon` tecnicamente TEM o privilégio; é a RLS que nega. A verificação de que `anon` **não recebe GRANT nenhum** em produção (onde não há esse default privilege) é **produção-only**, a conferir **depois do `db push`** contra `information_schema.role_table_grants` (ver checklist "[FORA das tasks]" abaixo — não é T13, que roda pré-merge), não nesta suíte local
+- [ ] ~~**Residual registrado (achado de 2026-08-12):** o stack local tem `ALTER DEFAULT PRIVILEGES` pré-existente concedendo GRANTs amplos (INSERT/UPDATE/DELETE) a `anon` em toda tabela nova do `public` (...) A verificação de que `anon` **não recebe GRANT nenhum** é **produção-only**~~ — **RETIRADO. Alegação REFUTADA por medição em 2026-08-24 (ver T1, evidência E-6).** O default ACL aplicável às tabelas criadas por `postgres` concede a `anon` só `Dxtm` (TRUNCATE/REFERENCES/TRIGGER/MAINTAIN), **não** `awd` (INSERT/UPDATE/DELETE); nenhuma tabela do `public` dá escrita a `anon` no stack local. **Consequência para esta matriz:** a ausência de GRANT de escrita a `anon` **É verificável localmente** e deve ser asserção desta suíte, não item de checklist de produção. A verificação em produção segue valendo como confirmação pós-`db push`, mas não é mais o único lugar onde isso pode ser provado. **Achado lateral herdado de E-6:** `anon` tem `TRUNCATE` em todas as tabelas do `public` (default ACL, não migration) — TRUNCATE ignora RLS, hoje inalcançável pelo Data API; revogar é decisão de arquitetura em aberto
 
 **Tests**: integration · **Gate**: integration (local)
 **Verify**: `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/supabase/__tests__/book-rbac-matrix.integration.test.ts`.
