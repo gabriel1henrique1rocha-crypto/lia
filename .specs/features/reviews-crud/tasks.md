@@ -1,7 +1,7 @@
 # reviews-crud — Tasks
 
 **Design**: [design.md](design.md) (DD-1..18, §1–§13 — **APROVADO com emendas 2026-08-09**) · **Spec**: [spec.md](spec.md) (REV-01..24 + REV-07-schema) · **Context**: [context.md](context.md) (gray areas resolvidas)
-**Status**: Draft — aguardando revisão antes do Execute
+**Status**: Execute em curso — T1 parcial (pt.1 da 0009 commitada). T2 em diante não iniciada.
 
 > **Escopo já reduzido pelo Design (§13, não é corte desta fase):** `further_reading`/`RepeatableLinks`, chips dinâmicos de tags/keywords (→ input único separado por vírgula), `update_review_with_book` exercido pelo app e a rota `/admin/resenhas/[id]/editar` estão **FORA do Execute**. A 0009 continua **ÍNTEGRA** (todas as colunas, o CHECK, os GRANTs, as policies de `book`, **ambos** os RPCs, o helper de slug) — o corte é só na superfície de UI/app. Ver seção **Diferidos** abaixo para o mapeamento requisito→estado.
 > **Calendário real: 3 dias, ~3h/dia, SEM buffer** (13–15/08/2026). Ver seção **Plano de Corte** para o que sai *desta* janela se o tempo apertar — é um plano de contingência de cronograma, distinto do corte já feito pelo Design.
@@ -106,6 +106,17 @@ O gatilho do Corte #1 ("fim do dia 13") é literalmente: **T4 não verde depois 
 **Tests**: integration (matriz completa na T3; aqui: reset + inspeção `pg_policies`/`pg_constraint`) · **Gate**: integration (local)
 **Verify**: `npx supabase db reset` (2×) + `psql` local em `pg_policies`/`pg_constraint` (`review_rating_integer`).
 **Commit**: `feat(db): 0009 pt.1 — colunas + CHECK de nota (A-3) + GRANTs/policies de book (REV-06/07/07-schema, D-01)`
+
+**T1 — PENDÊNCIAS DE FECHAMENTO (2026-08-24):** revisão feita item a item contra o texto já escrito no arquivo e as mensagens de commit `49a47bf`/`6b1edd9` (ambas sem corpo além do assunto — nenhuma evidência adicional ali). Nenhum critério foi marcado sem prova textual própria; os seguintes permanecem `[ ]`:
+
+- `npx supabase db reset` local verde, **duas vezes seguidas** (idempotência via guards `if not exists`/`drop ... if exists`)
+- `pg_policies` local mostra as 3 novas policies de `book`; `book_public_read` (0003) intacta ao lado
+- Cabeçalho do arquivo documenta o contrato anti-recursão do 0007 (self direto + admin via função `security definer`, editor `NO FORCE`) e como `owns_book_via_review` o respeita
+- **Ordem interna da migration verificada (crítico):** dentro do arquivo, os dois UPDATEs de normalização editorial executam **antes** de `alter table ... add constraint review_rating_integer` — exatamente a ordem de design.md §2.2, não uma reordenação nova
+- **Precondição do teste — banco com nota não-inteira antes de aplicar**
+- Nenhum GRANT de escrita de `book` a `anon` **concedido por esta migration**
+
+Status de T1: **Parcial** — não "Concluída" enquanto qualquer item acima seguir `[ ]`.
 
 ---
 
@@ -461,6 +472,10 @@ Tabela explícita (a versão condensada no final da Validação repete o mesmo m
 ## Plano de Corte (contingência de cronograma — distinto do corte do Design)
 
 **Por que existe:** o calendário é real (3 dias, ~3h/dia, sem buffer) — este plano decide **o que sai primeiro** se o tempo não fechar, para não haver escolha de última hora sob pressão.
+
+> **NOTA 2026-08-24 — PLANO DE CORTE SUSPENSO**
+> Motivo: os gatilhos existiam para proteger a janela 13–15/08, que não foi executada e não tem substituta. Escopo integral mantido. Se um prazo externo reaparecer, os cortes voltam com nova âncora antes do reinício — nunca decididos tarefa a tarefa sob pressão.
+> Ressalva: o Corte #2 (T9 → input number) perde objeto se a decisão de remoção da nota for formalizada.
 
 ### Corte #1 — Exibição pública de `reviewer_name`/`highlight_quote`/`publication_city` (T11)
 
