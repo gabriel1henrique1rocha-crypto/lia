@@ -4,8 +4,8 @@
  * A ORDEM do array é a ordem de leitura/tabulação do menu (WCAG 2.4.3): a mesma
  * no DOM e na tela. Consumido por `SiteNav` (render) e pelos testes (contrato).
  *
- * `Resenhas` aponta para `/` porque a listagem de resenhas do M1 É a home
- * (`src/app/page.tsx`, `<h1>Resenhas</h1>`) — não existe rota `/resenhas` no
+ * `Catálogo` aponta para `/` porque a listagem do M1 É a home
+ * (`src/app/page.tsx`, `<h1>Catálogo</h1>`) — não existe rota `/catalogo` no
  * projeto. Preferimos o destino real a um link morto; quando/se a listagem
  * ganhar rota própria, muda-se só este `href`.
  *
@@ -22,7 +22,7 @@ export type Destination = {
 export const DESTINATIONS: readonly Destination[] = [
   { href: '/quem-somos', label: 'Quem somos' },
   { href: '/autores', label: 'Autores com deficiência' },
-  { href: '/', label: 'Resenhas' },
+  { href: '/', label: 'Catálogo' },
   { href: '/filmografia', label: 'Filmografia' },
   { href: '/liacast', label: 'LIACast' },
   { href: '/sugestoes', label: 'Sugestões LIA' },

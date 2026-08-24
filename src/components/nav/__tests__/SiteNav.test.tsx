@@ -35,7 +35,7 @@ describe('SiteNav', () => {
     expect(links.map((a) => a.textContent)).toEqual([
       'Quem somos',
       'Autores com deficiência',
-      'Resenhas',
+      'Catálogo',
       'Filmografia',
       'LIACast',
       'Sugestões LIA',
@@ -72,10 +72,10 @@ describe('SiteNav', () => {
   )
 
   it('a página atual continua sendo um link (não perde a parada de tabulação)', () => {
-    pathname.value = '/liacast'
+    pathname.value = '/'
     render(<SiteNav />)
-    const current = within(nav()).getByRole('link', { name: 'LIACast' })
-    expect(current).toHaveAttribute('href', '/liacast')
+    const current = within(nav()).getByRole('link', { name: 'Catálogo' })
+    expect(current).toHaveAttribute('href', '/')
     expect(current).toHaveAttribute('aria-current', 'page')
   })
 

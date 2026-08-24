@@ -18,7 +18,7 @@ function focusedName(page: Page) {
 const NAV_LABELS = [
   'Quem somos',
   'Autores com deficiência',
-  'Resenhas',
+  'Catálogo',
   'Filmografia',
   'LIACast',
   'Sugestões LIA',
@@ -113,7 +113,7 @@ test('aria-current="page" acompanha a rota, um item por vez', async ({ page }) =
   for (const [path, label] of [
     ['/quem-somos', 'Quem somos'],
     ['/autores', 'Autores com deficiência'],
-    ['/', 'Resenhas'],
+    ['/', 'Catálogo'],
     ['/filmografia', 'Filmografia'],
     ['/liacast', 'LIACast'],
     ['/sugestoes', 'Sugestões LIA'],
