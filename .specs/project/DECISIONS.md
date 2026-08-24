@@ -6,7 +6,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 | ID | Decisão | Status | Resolver em |
 |---|---|---|---|
-| D-01 | Escala da nota | **Aceita** | `reviews-crud` (M3) |
+| D-01 | Escala da nota | ~~Aceita~~ **Superseded por D-11** | `reviews-crud` (M3) |
 | D-02 | Anti-spam de comentários sem login | A decidir | `public-comments` (M3) |
 | D-03 | Modelo de indicação (recomendam vs votação) | A decidir | `recommendations` (M3) |
 | D-04 | Estratégia de busca | **Aceita** | `review-listing-search` (M1) |
@@ -16,6 +16,8 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-08 | Domínio canônico de produção | **Aceita** | `infra-foundation` (M0) |
 | D-09 | Modelo de escrita do painel (autenticado+RLS; service_role exceção) | **Aceita** | `security-foundation` (M2) |
 | D-10 | Sessão server-only + cookies httpOnly | **Aceita** | `security-foundation` (M2) |
+| D-11 | Remoção da nota (rating) do produto | **Aceita** | `reviews-crud` (M3) |
+| D-12 | Taxonomia de deficiência representada | **Aceita** | vertical de deficiência (M4) |
 ---
 
 ## D-05 — Hospedagem: Vercel
@@ -116,7 +118,9 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 ## D-01 — Escala da nota
 
-**Status:** Aceita · **Data:** 2026-08-09 · **Milestone:** M3 (`reviews-crud`)
+**Status:** ~~Aceita~~ **SUPERSEDED por [D-11](#d-11--remoção-da-nota-rating-do-produto)** (2026-08-24) · **Data:** 2026-08-09 · **Milestone:** M3 (`reviews-crud`)
+
+> **Superseded por D-11 em 2026-08-24.** A nota saiu do produto por inteiro, então a pergunta que esta ADR respondia — *qual escala?* — deixou de existir. O texto abaixo permanece **intacto e sem edição**: é o registro de por que a escala inteira foi escolhida enquanto a nota existia, e o contexto que D-11 precisa para ser lida. Não implementar nada a partir daqui.
 
 **Contexto:** a resenha tem uma nota exibida na listagem, na página e usada em filtros/ordenação. A escala precisa ser definida antes do CRUD.
 
@@ -177,3 +181,65 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 **Trade-off (registrado):** `ilike '%termo%'` **não usa índice B-tree** — full scan na tabela. Irrelevante no volume do MVP; **migrar para Postgres full-text (tsvector) ou `pg_trgm` quando o volume justificar** (evolução aditiva, sem quebrar o contrato da query).
 
 **Impacto:** `listPublishedReviews(params)` na camada de query; home lê `searchParams`; controles como form GET + links (progressive enhancement).
+
+---
+
+## D-11 — Remoção da nota (rating) do produto
+
+**Status:** Aceita · **Data:** 2026-08-24 · **Milestone:** M3 (`reviews-crud`)
+**Supersedes:** [D-01](#d-01--escala-da-nota) (escala inteira 0–5)
+
+**Contexto:** o OLDA é um **observatório de literatura e deficiência**. A avaliação numérica de obras não serve ao propósito editorial: o observatório documenta e mapeia representação, não emite veredito de qualidade. O eixo de navegação relevante é a **deficiência representada**, não a nota atribuída. A nota foi herdada do PRD original (site de resenhas) e sobreviveu até aqui por inércia — D-01 decidiu *qual escala usar* sem que a pergunta anterior (*deve existir?*) tivesse sido feita.
+
+**Decisão:** a nota **deixa de ser capturada, exibida e usada como filtro ou ordenação**.
+
+**Razão:** um número de 0 a 5 ao lado de uma obra convida o leitor a ler a página como recomendação de consumo, não como registro de observatório. Some-se a isso que a nota é o único campo do modelo que exprime juízo do resenhista sobre mérito — todos os outros (ficha ABNT, tags, deficiência representada) são descritivos. Retirá-la alinha o produto ao propósito e libera o lugar de destaque na UI para o eixo que importa (D-12).
+
+**Trade-off:** perde-se a ordenação "Melhor nota" da home, hoje uma das três opções de ordenação, e o filtro por nota mínima. Enquanto o filtro por deficiência representada (D-12) não existir, a home fica com **menos** eixos de navegação do que tem hoje — é o custo aceito, e é exatamente por isso que a ORDEM DE REMOÇÃO abaixo é parte da decisão, não detalhe de implementação.
+
+**Consequências:**
+
+- a `0009` perde o `CHECK review_rating_integer` e os UPDATEs de normalização (a migration **ainda não foi aplicada em produção** — o registro para na `0008` —, logo ela é editável sem migration corretiva);
+- **T9** (`RatingInput`) deixa de existir;
+- **T5** (schema Zod), **T8** (formulário), **T11**/**T12** (exibição pública) encolhem;
+- o **M1 já em produção** precisa de regressão: filtro por nota, ordenação "Melhor nota" e exibição da nota na home, no card e na página de resenha;
+- a coluna `review.rating` **NÃO é dropada por esta decisão** (ver ORDEM DE REMOÇÃO).
+
+**ORDEM DE REMOÇÃO** — parte da decisão, não detalhe de implementação:
+
+1. a `0009` para de **constranger** a coluna (CHECK e normalização saem);
+2. a aplicação para de **escrever** nela (M3 — schema, formulário, RPCs);
+3. a aplicação para de **ler / filtrar / ordenar** por ela — **SOMENTE depois que o filtro por deficiência representada existir**, sob pena de deixar a home sem filtro algum;
+4. uma **migração dedicada** dropa a coluna — só quando nada mais a lê.
+
+Entre os passos 2 e 4 a coluna fica **dormente, com os dados intactos**: nada escreve, o que já estava gravado permanece. É o que torna a decisão **reversível** sem recuperação de backup — reverter antes do passo 4 custa reativar código, não restaurar dado. O passo 4 é a única porta de mão única, e por isso é o último e tem migration própria.
+
+**Impacto:** esta ADR executa os passos 1 e 2 no M3. O passo 3 fica bloqueado por D-12 e é registrado como pendência explícita no `tasks.md` de `reviews-crud`. O passo 4 não tem data — depende do passo 3 estar concluído e verificado em produção.
+
+---
+
+## D-12 — Taxonomia de deficiência representada
+
+**Status:** Aceita · **Data:** 2026-08-24 · **Milestone:** M4 (vertical de deficiência)
+
+**Contexto:** com a saída da nota (D-11), o eixo de navegação do observatório passa a ser a **deficiência representada** na obra. Isso exige um modelo de dados que ainda não existe. A escolha estrutural é entre um vocabulário único compartilhado por todas as verticais (livros, filmografia, e o que vier) ou vocabulários independentes por vertical.
+
+**Opções:** (a) vocabulário **único e controlado**, compartilhado, com junções separadas por vertical; (b) tabelas de termos **separadas por vertical** (`review_disability_term`, `film_disability_term`, …); (c) campo de texto livre com tags (rejeitada de saída — sem controle, a nomenclatura diverge no primeiro mês e a consulta transversal nunca funciona).
+
+**Decisão:** **(a) vocabulário ÚNICO e controlado**, compartilhado entre as verticais, com **junções separadas por vertical**:
+
+- **`disability_term`** — lista fechada; **só admin** cria, renomeia e desativa (nunca deleta: desativar preserva o histórico das obras já marcadas);
+- **`review_disability`** — junção N:N com `review`;
+- **`film_disability`** — junção N:N com `film` (vertical futura).
+
+**Razão:** a consulta que dá sentido ao observatório é transversal — *"o que o OLDA tem sobre cegueira?"* deve responder livros **e** filmes numa lista só. Com vocabulários separados essa pergunta exige unir tabelas por string, o que só funciona enquanto ninguém escrever "Cegueira" de um lado e "Deficiência visual" do outro. Um vocabulário único também concentra a curadoria: renomear um termo é um `UPDATE` numa linha, não uma varredura por vertical.
+
+**A reversibilidade é assimétrica, e é o argumento decisivo:** sair de **único → separado** é barato (basta marcar cada termo com a vertical a que pertence e particionar); sair de **separado → único** exige **deduplicação com julgamento humano** — alguém precisa decidir, caso a caso, se dois termos parecidos são o mesmo conceito, e essa decisão não é automatizável nem reversível. Diante de duas opções plausíveis, escolhe-se a que deixa a porta de saída aberta.
+
+**Trade-off:** as junções separadas por vertical significam uma tabela nova por vertical adicionada, em vez de uma única junção polimórfica com `(entity_type, entity_id)`. É deliberado: a junção polimórfica não aceita chave estrangeira real, e perder integridade referencial para economizar uma tabela é troca ruim.
+
+**Escopo:** a **filmografia é contemplada na modelagem** desde já — `film_disability` é desenhada junto —, mas **implementada depois**; o M4 entrega a vertical de livros. Modelar as duas juntas evita que a segunda vertical force a remodelagem da primeira.
+
+**Vocabulário inicial:** **[PREENCHER — decisão editorial pendente]**. A lista de termos é escolha editorial do observatório, não técnica, e bloqueia a migration de seed da tabela `disability_term` (não a modelagem, que pode seguir).
+
+**Impacto:** desbloqueia o passo 3 da ORDEM DE REMOÇÃO de [D-11](#d-11--remoção-da-nota-rating-do-produto) — o filtro por nota só pode sair da home depois que o filtro por deficiência existir. Enquanto D-12 não for implementada, a home mantém o filtro por nota mesmo com a captura já removida.
