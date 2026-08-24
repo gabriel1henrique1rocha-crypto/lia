@@ -114,7 +114,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
   return (
     <div className="lia-home">
-      <h1 className="lia-home__title">Resenhas</h1>
+      <h1 className="lia-home__title">Catálogo</h1>
 
       <FeaturedCarousel reviews={featured} />
 
