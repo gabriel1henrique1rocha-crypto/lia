@@ -380,7 +380,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ---
 
-### T5: `reviewInputSchema` (Zod draft/publish) + `slugify` [P, independente do banco]
+### T5: `reviewInputSchema` (Zod draft/publish) + `slugify` [P, independente do banco] — **CONCLUÍDA (2026-08-25)**
 
 **What**: `src/lib/review/schema.ts` — estende `bookInputSchema` (ficha) com os campos de resenha (design §5.3): `publicationCity`, `reviewTitle` (default = título do livro), `body`, ~~`rating`~~ **(removido — D-11)**, `tagsInput`/`keywordsInput` como **string única separada por vírgula** transformada em `text[]` (`.transform(s => s.split(',').map(t => t.trim()).filter(Boolean))` — corte de escopo, sem chips), `highlightQuote`, `coverUrl` (`http`/`https` só — A-4). Exporta `reviewDraftSchema` (mínimo estrutural) e `reviewPublishSchema` (`.superRefine` exigindo `body`+ficha completa — tabela do design §5.4; **a nota saiu da lista de obrigatórios, D-11**). Exporta também `reviewStatusSchema = z.enum(['draft','published'])` (usado pelo T6 para decidir qual schema aplicar — **não** vive dentro do action). `src/lib/review/slug.ts` — `slugify(title)`: minúsculas, sem acento, hífens (puro, testável).
 **Where**: `src/lib/review/schema.ts` + `src/lib/review/__tests__/schema.test.ts` (novos) · `src/lib/review/slug.ts` + `src/lib/review/__tests__/slug.test.ts` (novos)
@@ -392,13 +392,34 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `reviewDraftSchema`: só ficha (title/author/genre_id) obrigatória, resto opcional — aceita rascunho mínimo
-- [ ] `reviewPublishSchema`: rejeita ausência de `body`; aceita quando completo *(nota removida — D-11)*
-- [ ] Transform de `tagsInput`/`keywordsInput`: `"ficção, clássico"` → `['ficção','clássico']`; string vazia → `[]`
-- [ ] ~~`rating` não-inteiro ou fora de 0–5 → rejeitado por ambos os schemas~~ **REMOVIDO POR D-11** — não há campo de nota
-- [ ] `coverUrl` com `javascript:`/sem esquema → rejeitado (A-4)
-- [ ] `slugify('Dom Casmurro, 50 anos!')` → slug ascii/hífen determinístico; testado com acentos/pontuação
-- [ ] Gate **quick**
+- [x] `reviewDraftSchema`: só a ficha obrigatória (title/author/genreId); o resto opcional — rascunho mínimo aceito
+- [x] `reviewPublishSchema`: rejeita ausência de `body` com erro NO CAMPO; aceita quando completo. É gate de **produto** (o banco tem `body` nullable), por isso vive só no publish
+- [x] Transform de `tagsInput`/`keywordsInput`: `" ficção , clássico ,, "` → `['ficção','clássico']`; string vazia → `[]`, **nunca** `[""]` nem null (colunas são `NOT NULL DEFAULT '{}'`)
+- [x] ~~`rating` não-inteiro ou fora de 0–5~~ **SEM OBJETO** — coluna dropada pela 0010 (D-11)
+- [x] `coverUrl` com `javascript:`/`data:`/`ftp:`/sem esquema → rejeitado (A-4)
+- [x] `slugify('Dom Casmurro, 50 anos!')` → slug ascii/hífen determinístico; acentos cobertos (`Ação e Coração` → `acao-e-coracao`, `ÇÃO` → `cao`)
+- [x] Gate **quick** verde. Suíte: **`281 passed | 52 skipped (333)`** (+50 desta task)
+
+**ESPELHAMENTO BANCO → SCHEMA (um teste por constraint):**
+
+| Constraint (origem) | Espelhado como | Teste |
+| --- | --- | --- |
+| `book.title/author NOT NULL` (0001) | `.min(1)` | rejeita `''` e `'   '` |
+| `book.genre_id NOT NULL` (0002) | `z.uuid()` obrigatório | rejeita ausência e não-uuid |
+| `book_year_sane`: null OR 1..2100 (0002) | opcional, 1..anoAtual | rejeita 0, negativo e ano futuro |
+| `book_pages_positive`: null OR > 0 (0002) | `.positive()` | rejeita 0 e −1 |
+| `book_translation_consistent` (0002) | superRefine herdado | tradutor sem idioma → rejeitado |
+| `review_further_reading_is_array` (0009) | `z.array(...)` | rejeita objeto, string e número |
+| `review.tags/keywords NOT NULL DEFAULT {}` (0009) | `.default([])` | ausente → `[]` |
+| `review.title NOT NULL` (0001) | **derivação** do título do livro | saída nunca vazia |
+| ISBN (sem CHECK — 0002 delega à app) | checksum no Zod | rejeita checksum inválido |
+| `cover_url` (sem CHECK) | http/https (A-4) | rejeita `javascript:`/`data:` |
+
+**MAIS ESTRITO QUE O BANCO, de propósito:** `year` (teto = ano atual; banco aceita até 2100) e `coverUrl`. Estrito demais nunca vira 500 — só recusa antes; o perigo é o inverso.
+
+**FRICÇÃO DE TIPOS RESOLVIDA (sinalizada no T3):** `toCreateReviewRpcArgs()` devolve os args já no tipo que o `.rpc()` exige, então **o T6 não precisa de cast nenhum**. Internamente o objeto é montado e checado como `CreateReviewRpcArgs`, um tipo DERIVADO do gerado que corrige a nullability **apenas** nos parâmetros de coluna nullable (`p_author` e `p_book_title` seguem não-nulos — afrouxá-los trocaria erro de compilação por 500). A única asserção do módulo está nesse ponto, documentada. **Alarme verificado por experimento:** renomeando um parâmetro no objeto montado, o typecheck falha com `'p_slug_base_RENOMEADO' does not exist in type 'CreateReviewRpcArgs'` — divergência de assinatura continua quebrando o build; só a nullability foi silenciada, e apenas onde se provou que ela mente (o RPC aceita NULL — conferido no banco).
+
+**`slugify` — casos de borda (decididos e testados):** título vazio, só espaços e só símbolos devolvem **`''`**, não um fallback. O fallback `'resenha'` já existe no `unique_review_slug` (0011); duplicar a constante criaria dois lugares para mudá-la. Título longo é truncado em `MAX_SLUG_BASE_LENGTH = 80` sem deixar hífen na borda — decisão de **aplicação** (o banco não limita `slug`), para não gerar URL hostil e deixar folga ao sufixo `-2` do banco. Há teste travando que `slugify` **não** inventa fallback.
 
 **Tests**: unit · **Gate**: quick
 **Verify**: `npx vitest run src/lib/review/__tests__/schema.test.ts src/lib/review/__tests__/slug.test.ts`.
