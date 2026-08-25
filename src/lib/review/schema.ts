@@ -19,7 +19,8 @@ import type { Database } from '@/lib/database.types'
  *   publisher        NULL                → opcional
  *   isbn             NULL, sem CHECK     → opcional + checksum na app (0002 diz
  *                                          explicitamente que o checksum é da app)
- *   cover_url        NULL, sem CHECK     → opcional + **http/https só** (A-4)
+ *   cover_url        NULL, sem CHECK     → opcional + **http/https só** (A-4);
+ *                                          o gate é a app — o banco não valida
  *   year             NULL, book_year_sane: null OR 1..2100
  *                                        → opcional, 1..anoAtual (MAIS ESTRITO
  *                                          que o banco; ver nota "estrito" abaixo)
@@ -116,9 +117,12 @@ const listaPorVirgula = z
  * então não dá para enxugar a ficha por aqui (ver nota sobre os campos que o
  * RPC não aceita, mais abaixo).
  *
- * `coverUrl` é REDECLARADO para fechar A-4: o `z.url()` do `bookInputSchema`
- * aceita `javascript:` e `data:` (verificado). Enquanto a ficha for reusada por
- * outra superfície, o buraco continua lá — ver nota no relatório.
+ * `coverUrl` é REDECLARADO com o mesmo refinamento http/https. Desde a correção
+ * de A-4 (`fix(validation)`), o `bookInputSchema` JÁ restringe o esquema na
+ * origem — então este override virou REDUNDANTE, não indispensável. Mantido
+ * como defesa em profundidade: se alguém afrouxar a ficha um dia, o caminho de
+ * resenha (o único que grava `cover_url` hoje) não afrouxa junto. `safeUrl` é a
+ * fonte única do refinamento nos dois lugares.
  */
 const reviewBase = bookInputSchema.safeExtend({
   publicationCity: z.string().trim().optional(),
