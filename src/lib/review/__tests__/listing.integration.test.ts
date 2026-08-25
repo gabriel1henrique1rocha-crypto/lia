@@ -71,20 +71,22 @@ describe.skipIf(!RUN)('listing queries — integration (local-only, TD-02)', () 
     expect((await queries.listPublishedReviews(P({ q: '_' }), anon)).total).toBe(0)
   })
 
-  it('filtros combináveis: gênero, autor, nota mín. (draft nunca entra)', async () => {
+  // Filtro por nota mín. saiu com D-11 (coluna dropada pela 0010).
+  it('filtros combináveis: gênero, autor (draft nunca entra)', async () => {
     expect((await queries.listPublishedReviews(P({ genero: 'realismo' }), anon)).total).toBe(1)
     expect((await queries.listPublishedReviews(P({ autor: 'Machado de Assis' }), anon)).total).toBe(
       1
     )
-    expect((await queries.listPublishedReviews(P({ nota: '5' }), anon)).total).toBe(1) // só O Cortiço (5.0)
-    expect((await queries.listPublishedReviews(P({ nota: '4' }), anon)).total).toBe(4)
   })
 
-  it('ordenação: nota desc e título A–Z', async () => {
-    const porNota = await queries.listPublishedReviews(P({ ordem: 'nota' }), anon)
-    expect(porNota.rows[0].slug).toBe('o-cortico') // 5.0 no topo
+  it('ordenação: título A–Z; `nota` legada cai no default sem erro (D-11)', async () => {
     const porTitulo = await queries.listPublishedReviews(P({ ordem: 'titulo' }), anon)
     expect(porTitulo.rows[0].slug).toBe('dom-casmurro') // "Dom..." vem antes
+
+    // URL antiga `?ordem=nota` NÃO pode virar 500: o valor sai do conjunto
+    // válido, cai em `recentes` e a query roda sem referenciar a coluna morta.
+    const legada = await queries.listPublishedReviews(P({ ordem: 'nota' }), anon)
+    expect(legada.total).toBe(4)
   })
 
   it('paginação: página além do total volta vazia com total intacto', async () => {

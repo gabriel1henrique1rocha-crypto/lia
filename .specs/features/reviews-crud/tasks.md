@@ -2,7 +2,7 @@
 
 **Design**: [design.md](design.md) (DD-1..18, §1–§13 — **APROVADO com emendas 2026-08-09**) · **Spec**: [spec.md](spec.md) (REV-01..24 + REV-07-schema) · **Context**: [context.md](context.md) (gray areas resolvidas)
 > ---
-> **EMENDA 2026-08-24 — [D-11](../../project/DECISIONS.md) REMOVEU A NOTA DO PRODUTO** (supersede D-01). A `0009` já foi emendada (normalização + `review_rating_integer` fora). **T9 está REMOVIDA** — texto preservado, sem renumerar. **T5/T8/T11/T12 encolhem.** **T4 precisa de novo injetor de falha** (dependia do CHECK de nota — ver a task). A coluna `review.rating` **não é dropada**: fica dormente. A regressão do M1 (filtro/ordenação/exibição) **NÃO se executa neste milestone** — depende do filtro por deficiência (D-12); registrada em Diferidos.
+> **EMENDA 2026-08-24 — [D-11](../../project/DECISIONS.md) REMOVEU A NOTA DO PRODUTO** (supersede D-01). A `0009` já foi emendada (normalização + `review_rating_integer` fora). **T9 está REMOVIDA** — texto preservado, sem renumerar. **T5/T8/T11/T12 encolhem.** **T4 precisa de novo injetor de falha** (dependia do CHECK de nota — ver a task). A coluna `review.rating` **não é dropada**: fica dormente. **EMENDA POSTERIOR (mesmo dia): a ORDEM DE REMOÇÃO foi COLAPSADA** — a regressão do M1 **FOI EXECUTADA** nesta leva, junto com o drop da coluna pela **0010**. Ver "PENDÊNCIA DE REGRESSÃO DO M1 — EXECUTADA" em Diferidos. A `0010` aguarda `db push` humano.
 
 **Status**: Execute em curso — **T1 CONCLUÍDA** (pt.1 da 0009 commitada; os 9 "Done when" fechados com evidência medida em 2026-08-24, ver bloco "T1 — EVIDÊNCIAS DE FECHAMENTO"). T2 em diante não iniciada.
 
@@ -585,25 +585,36 @@ Requisitos do spec **conscientemente não cobertos** por nenhuma task acima — 
 
 | **REV-07** (nota inteira 0–5) | **REMOVIDO do produto por [D-11](../../project/DECISIONS.md)** (2026-08-24), não diferido — a nota não volta. T9 removida; T5/T8/T11/T12 encolhidas | **Nunca.** Requisito extinto, não adiado |
 
-### PENDÊNCIA DE REGRESSÃO DO M1 — NÃO EXECUTAR NESTE MILESTONE
+### ~~PENDÊNCIA DE REGRESSÃO DO M1~~ — **EXECUTADA em 2026-08-24**
 
-D-11 remove a nota do produto, mas o **M1 já está em produção lendo `review.rating`**. A limpeza desse código é o **passo 3** da ORDEM DE REMOÇÃO de D-11 e **está bloqueada**: só pode acontecer **depois** que o filtro por deficiência representada (D-12) existir — remover agora deixaria a home **sem filtro algum**.
+> **A ORDEM DE REMOÇÃO de D-11 foi COLAPSADA por decisão do responsável** (emenda registrada em [DECISIONS.md](../../project/DECISIONS.md)). Os passos 2, 3 e 4 executaram **juntos**, nesta leva. Isto deixou de ser pendência futura.
 
-O que fica pendente, com o que ainda lê a coluna hoje:
+**O que foi feito:**
 
-| Onde | O que faz com a nota | Arquivo |
+| Onde | O que saiu | Arquivo |
 | --- | --- | --- |
-| Filtro "nota mínima" da home | `query.gte('rating', params.nota)` | `src/lib/review/queries.ts` |
-| Ordenação "Melhor nota" | `order('rating', …)` + `SORT_ORDERS` | `src/lib/review/queries.ts`, `src/lib/review/listingParams.ts` |
-| Parse/serialização do param `nota` | `parseListingParams` / `buildListingHref` | `src/lib/review/listingParams.ts` |
-| Select do controle de nota | `<select name="nota">` + rótulo "Melhor nota" | `src/components/listing/ListingControls.tsx` |
-| Eco do filtro no estado vazio | `nota mínima N` | `src/components/listing/EmptyState.tsx` |
-| Exibição no card e no carrossel | `<Rating rating={…} />` | `src/components/review/ReviewCard.tsx`, `FeaturedCarousel.tsx` |
-| Exibição na página de resenha | `<Rating rating={…} />` | `src/app/resenha/[slug]/page.tsx` |
-| Componente e formatador | `Rating`, `formatRating` | `src/components/review/Rating.tsx`, `src/lib/review/formatRating.ts` |
-| Tipo da linha lida | `rating: number \| null` no `REVIEW_SELECT` | `src/lib/review/queries.ts` |
+| Filtro "nota mínima" | `query.gte('rating', …)` removido | `src/lib/review/queries.ts` |
+| Ordenação "Melhor nota" | opção `nota` fora de `SortOrder`/`SORT_ORDERS`/`SORT_LABELS` | `queries.ts`, `listingParams.ts`, `ListingControls.tsx` |
+| Param `nota` | parse/clamp/serialização removidos | `src/lib/review/listingParams.ts` |
+| Select de nota | `<select name="nota">` + `MIN_RATINGS` removidos | `src/components/listing/ListingControls.tsx` |
+| Eco no estado vazio | `nota mínima N` removido | `src/components/listing/EmptyState.tsx` |
+| Exibição | `<Rating />` fora de card, carrossel, home e página | `ReviewCard.tsx`, `FeaturedCarousel.tsx`, `page.tsx`, `resenha/[slug]/page.tsx` |
+| Componente e formatador | **arquivos deletados** | `Rating.tsx`, `formatRating.ts` |
+| Testes dos módulos deletados | **arquivos deletados** | `Rating.test.tsx`, `formatRating.test.ts` |
+| Coluna no banco | `alter table public.review drop column if exists rating` | **`0010_drop_review_rating.sql`** (nova) |
+| Seed | `rating` fora do INSERT + comentário falso sobre o CHECK corrigido | `supabase/seed.sql` |
+| Tipos gerados | `rating` some; colunas da 0009 entram (arquivo estava defasado) | `src/lib/database.types.ts` |
 
-**Nada disso foi alterado nesta emenda** — é levantamento, não execução. O passo 4 (drop da coluna) vem só depois que este passo 3 estiver concluído e verificado em produção.
+**Decisões tomadas na execução, para revisão:**
+
+- **Ordenação default NÃO mudou.** O default já era `recentes` (`published_at` desc, nulls last) — nunca foi `nota`. Restam **duas** opções: `recentes` (default) e `titulo`. Não houve necessidade de eleger um novo default.
+- **`ListingControls` continua justificado.** Perdeu um de cinco controles; seguem busca por título, filtro de gênero, filtro de autor e ordenação. **Não** ficou vazio.
+- **URLs legadas degradam sem erro.** `?nota=4` e `?ordem=nota` são ignorados: `parseListingParams` só lê as chaves que conhece e `ordem` fora do conjunto cai no default. Coberto por teste em `listingParams.test.ts` e `listing.integration.test.ts`.
+- **`ReviewCard.test.tsx` e `FeaturedCarousel.test.tsx` NÃO foram deletados**, apenas ajustados — cobrem componentes que sobrevivem; deletá-los seria perda de cobertura, não limpeza.
+
+**Estado conhecido e temporário:** a home perdeu o filtro por nota e a ordenação por nota. **Não** ficou sem filtro — mantém busca, gênero e autor. O filtro por deficiência representada (D-12) segue bloqueado pelo vocabulário inicial `[PREENCHER]`.
+
+**⚠️ A `0010` NÃO foi aplicada em produção.** `db push` é passo humano (A-11).
 
 **Nenhum outro requisito (REV-01..24 + REV-07-schema) fica sem task.** REV-08/REV-09 (tags/keywords) **não** estão diferidos — são T12, cobertos integralmente, inclusive exibição.
 

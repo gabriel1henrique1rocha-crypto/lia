@@ -24,7 +24,6 @@ export function FeaturedCarousel({ reviews }: { reviews: ReviewListItem[] }) {
             slug={review.slug}
             title={review.title}
             author={review.book.author}
-            rating={review.rating}
             excerpt={review.excerpt}
           />
         ))}

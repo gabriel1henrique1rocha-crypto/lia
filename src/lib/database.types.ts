@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -44,6 +44,7 @@ export type Database = {
           isbn: string | null
           original_language: string | null
           pages: number | null
+          publication_city: string | null
           publisher: string | null
           title: string
           translated_from: string | null
@@ -59,6 +60,7 @@ export type Database = {
           isbn?: string | null
           original_language?: string | null
           pages?: number | null
+          publication_city?: string | null
           publisher?: string | null
           title: string
           translated_from?: string | null
@@ -74,6 +76,7 @@ export type Database = {
           isbn?: string | null
           original_language?: string | null
           pages?: number | null
+          publication_city?: string | null
           publisher?: string | null
           title?: string
           translated_from?: string | null
@@ -211,11 +214,15 @@ export type Database = {
           book_id: string
           created_at: string
           editor_id: string | null
+          further_reading: Json
+          highlight_quote: string | null
           id: string
+          keywords: string[]
           published_at: string | null
-          rating: number | null
+          reviewer_name: string | null
           slug: string
           status: Database["public"]["Enums"]["review_status"]
+          tags: string[]
           title: string
           updated_at: string
         }
@@ -224,11 +231,15 @@ export type Database = {
           book_id: string
           created_at?: string
           editor_id?: string | null
+          further_reading?: Json
+          highlight_quote?: string | null
           id?: string
+          keywords?: string[]
           published_at?: string | null
-          rating?: number | null
+          reviewer_name?: string | null
           slug: string
           status?: Database["public"]["Enums"]["review_status"]
+          tags?: string[]
           title: string
           updated_at?: string
         }
@@ -237,11 +248,15 @@ export type Database = {
           book_id?: string
           created_at?: string
           editor_id?: string | null
+          further_reading?: Json
+          highlight_quote?: string | null
           id?: string
+          keywords?: string[]
           published_at?: string | null
-          rating?: number | null
+          reviewer_name?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["review_status"]
+          tags?: string[]
           title?: string
           updated_at?: string
         }
@@ -267,7 +282,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_editor_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["editor_role"]
+      }
+      is_active_editor: { Args: never; Returns: boolean }
+      is_admin: { Args: never; Returns: boolean }
+      owns_book_via_review: { Args: { p_book_id: string }; Returns: boolean }
     }
     Enums: {
       comment_status: "pending" | "approved" | "rejected"

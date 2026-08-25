@@ -214,7 +214,21 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 
 Entre os passos 2 e 4 a coluna fica **dormente, com os dados intactos**: nada escreve, o que já estava gravado permanece. É o que torna a decisão **reversível** sem recuperação de backup — reverter antes do passo 4 custa reativar código, não restaurar dado. O passo 4 é a única porta de mão única, e por isso é o último e tem migration própria.
 
-**Impacto:** esta ADR executa os passos 1 e 2 no M3. O passo 3 fica bloqueado por D-12 e é registrado como pendência explícita no `tasks.md` de `reviews-crud`. O passo 4 não tem data — depende do passo 3 estar concluído e verificado em produção.
+**Impacto:** ~~esta ADR executa os passos 1 e 2 no M3. O passo 3 fica bloqueado por D-12 e é registrado como pendência explícita no `tasks.md` de `reviews-crud`. O passo 4 não tem data — depende do passo 3 estar concluído e verificado em produção.~~ **Substituído pela emenda abaixo.**
+
+### EMENDA 2026-08-24 — ORDEM DE REMOÇÃO COLAPSADA
+
+A **ORDEM DE REMOÇÃO acima foi colapsada por decisão do responsável.** Os passos **2, 3 e 4 executam juntos**: o código de leitura sai e a coluna é dropada na mesma leva (migration **`0010_drop_review_rating.sql`**).
+
+**Consequência aceita explicitamente:** a home fica **sem filtro nem ordenação** até o filtro por deficiência representada ([D-12](#d-12--taxonomia-de-deficiência-representada)) existir — e D-12 está bloqueada pelo vocabulário inicial, ainda `[PREENCHER]`. **Isto não é regressão acidental**: é o custo conhecido, ponderado e aceito de não manter a coluna dormente esperando D-12.
+
+O **texto original da ordem permanece acima**, sem edição, como registro do que foi ponderado — inclusive o argumento de que o passo 4 é "a única porta de mão única". Ele continua verdadeiro: **o drop é irreversível**, e a decisão foi tomada sabendo disso. Depois da `0010` aplicada em produção, os valores de nota das resenhas existentes **só voltam por restauração de backup**.
+
+**O que muda na prática:**
+
+- a `0009` **não é reeditada** — ela já havia sido emendada (`accdc9a`) para não constranger a coluna, e migration aplicada ou não, não se reescreve para acrescentar um drop; o drop vai em arquivo próprio;
+- a `0010` **não é aplicada por esta ADR** — `db push` segue sendo passo humano (A-11);
+- a pendência de regressão do M1 registrada no `tasks.md` deixa de ser futura e passa a **executada**.
 
 ---
 
@@ -242,4 +256,6 @@ Entre os passos 2 e 4 a coluna fica **dormente, com os dados intactos**: nada es
 
 **Vocabulário inicial:** **[PREENCHER — decisão editorial pendente]**. A lista de termos é escolha editorial do observatório, não técnica, e bloqueia a migration de seed da tabela `disability_term` (não a modelagem, que pode seguir).
 
-**Impacto:** desbloqueia o passo 3 da ORDEM DE REMOÇÃO de [D-11](#d-11--remoção-da-nota-rating-do-produto) — o filtro por nota só pode sair da home depois que o filtro por deficiência existir. Enquanto D-12 não for implementada, a home mantém o filtro por nota mesmo com a captura já removida.
+**Impacto:** ~~desbloqueia o passo 3 da ORDEM DE REMOÇÃO de D-11 — o filtro por nota só pode sair da home depois que o filtro por deficiência existir. Enquanto D-12 não for implementada, a home mantém o filtro por nota mesmo com a captura já removida.~~
+
+**REVISTO pela emenda de D-11 (2026-08-24):** a ordem foi colapsada e o filtro por nota **já saiu**, sem esperar por D-12. A relação entre as duas ADRs inverteu-se: D-12 não desbloqueia mais nada — ela **fecha uma lacuna já aberta**. Enquanto o vocabulário inicial seguir `[PREENCHER]`, a home fica **sem filtro nem ordenação**. Isso torna D-12 mais urgente do que era, não menos.

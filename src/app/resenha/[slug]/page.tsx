@@ -4,7 +4,6 @@ import { getPublishedReviewBySlug } from '@/lib/review/queries'
 import { excerpt } from '@/lib/review/excerpt'
 import { BookDetails } from '@/components/book/BookDetails'
 import { BookCover } from '@/components/book/BookCover'
-import { Rating } from '@/components/review/Rating'
 
 type Params = { slug: string }
 
@@ -57,7 +56,6 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
         <p>
           {book.title} — {book.author}
         </p>
-        {review.rating != null && <Rating rating={review.rating} />}
       </header>
 
       <BookCover title={book.title} />

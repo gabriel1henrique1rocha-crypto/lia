@@ -27,7 +27,7 @@ type HomeData = {
   clampedParams: ListingParams
 }
 
-const PARAM_KEYS = ['q', 'genero', 'autor', 'nota', 'ordem', 'pagina'] as const
+const PARAM_KEYS = ['q', 'genero', 'autor', 'ordem', 'pagina'] as const
 
 /** Há busca/filtro/paginação ativos? → decide o noindex (SEO §5). */
 function hasActiveParams(raw: RawSearchParams): boolean {
@@ -137,7 +137,6 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
                   slug={review.slug}
                   title={review.title}
                   author={review.book.author}
-                  rating={review.rating}
                   excerpt={review.excerpt}
                 />
               ))}

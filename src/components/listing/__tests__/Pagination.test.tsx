@@ -8,7 +8,6 @@ const base: ListingParams = {
   q: 'dom',
   genero: '',
   autor: '',
-  nota: null,
   ordem: 'recentes',
   pagina: 2,
 }

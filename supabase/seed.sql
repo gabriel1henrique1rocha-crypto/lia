@@ -34,38 +34,39 @@ begin
   on conflict (id) do nothing;
 
   -- Resenhas (review 1—1 book). 4 publicadas + 1 rascunho no 5º livro.
-  -- rating numeric(2,1) → só 1 casa decimal; editor_id omitido (nullable, sem
-  -- editores no M1); body multi-parágrafo separado por linha em branco (\n\n),
-  -- renderizado como <p> por parágrafo na página. slug único e legível.
+  -- editor_id omitido (nullable, sem editores no M1); body multi-parágrafo
+  -- separado por linha em branco, renderizado como <p> por parágrafo na página.
+  -- slug único e legível.
   --
-  -- NOTA (D-01/0009): rating é INTEIRO desde a 0009 (CHECK review_rating_integer).
-  -- Os valores abaixo espelham o resultado da normalização editorial aplicada em
-  -- produção (0009 §2.2, A-3 — dom-casmurro=5, iracema=4, escolha editorial, NÃO
-  -- arredondamento) — o CHECK torna qualquer meio-ponto aqui um erro de `db reset`,
-  -- não só uma inconsistência com produção. Não reintroduzir `4.5`/`.5`.
-  insert into review (id, book_id, title, slug, rating, body, status, published_at) values
+  -- NOTA (D-11, 2026-08-24): a coluna `rating` NÃO EXISTE MAIS — foi dropada
+  -- pela 0010. A nota saiu do produto por inteiro (D-11 supersede D-01), então
+  -- o seed não a grava. O comentário anterior, que afirmava existir um CHECK
+  -- `review_rating_integer` capaz de reprovar meio-ponto no `db reset`, ficou
+  -- FALSO em duas etapas: primeiro o CHECK saiu da 0009 (`accdc9a`), depois a
+  -- coluna inteira saiu na 0010. Corrigido aqui para não induzir a erro.
+  insert into review (id, book_id, title, slug, body, status, published_at) values
     ('bbbbbbbb-0000-4000-8000-000000000001',
        'aaaaaaaa-0000-4000-8000-000000000001',
        'Dom Casmurro: o ciúme como narrador',
-       'dom-casmurro', 5,
+       'dom-casmurro',
        E'Machado entrega em Bento Santiago um dos narradores mais insidiosos da literatura brasileira. A dúvida sobre Capitu não se resolve — e é justamente aí que mora a genialidade do romance.\n\nMais de um século depois, a pergunta "traiu ou não traiu?" continua dizendo mais sobre quem lê do que sobre a personagem. Uma obra que se relê a cada geração.',
        'published', now()),
     ('bbbbbbbb-0000-4000-8000-000000000002',
        'aaaaaaaa-0000-4000-8000-000000000002',
        'O Crime do Padre Amaro: fé e hipocrisia',
-       'o-crime-do-padre-amaro', 4.0,
+       'o-crime-do-padre-amaro',
        E'Eça de Queirós disseca a moral provinciana com ironia afiada. O padre Amaro é menos vilão do que produto de uma instituição que sufoca o desejo e premia a aparência.\n\nO realismo português ganha aqui um de seus retratos mais corrosivos — e ainda estranhamente atual em sua crítica às fachadas respeitáveis.',
        'published', now()),
     ('bbbbbbbb-0000-4000-8000-000000000003',
        'aaaaaaaa-0000-4000-8000-000000000003',
        'Iracema: a lenda que funda um país',
-       'iracema', 4,
+       'iracema',
        E'Alencar escreve em prosa poética o mito de origem do Ceará. Iracema, a virgem dos lábios de mel, encarna a natureza que se doa e se perde no encontro com o colonizador.\n\nO indianismo romântico mostra aqui sua face mais lírica — e também suas ambiguidades sobre conquista e pertencimento.',
        'published', now()),
     ('bbbbbbbb-0000-4000-8000-000000000004',
        'aaaaaaaa-0000-4000-8000-000000000004',
        'O Cortiço: o organismo da miséria',
-       'o-cortico', 5.0,
+       'o-cortico',
        E'Aluísio Azevedo transforma o cortiço num personagem coletivo, um corpo que respira, transpira e se multiplica. O naturalismo brasileiro atinge aqui sua expressão máxima.\n\nEntre determinismo e denúncia social, a obra segue impressionando pela força com que descreve a vida amontoada e a lógica implacável do lucro.',
        'published', now()),
     -- Rascunho (RVW-18): existe no banco, mas o público NUNCA deve vê-lo.
@@ -73,7 +74,7 @@ begin
     ('bbbbbbbb-0000-4000-8000-000000000005',
        'aaaaaaaa-0000-4000-8000-000000000005',
        'Memórias Póstumas: rascunho',
-       'memorias-postumas-rascunho', 4,
+       'memorias-postumas-rascunho',
        E'Rascunho de teste — não publicado. Não deve aparecer na leitura pública.\n\nUsado para verificar que a policy de RLS filtra status=draft para o cliente anônimo.',
        'draft', null)
   on conflict (id) do nothing;

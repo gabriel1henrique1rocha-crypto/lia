@@ -18,8 +18,7 @@ const params: ListingParams = {
   q: 'dom',
   genero: 'romance',
   autor: '',
-  nota: 4,
-  ordem: 'nota',
+  ordem: 'titulo',
   pagina: 1,
 }
 
@@ -45,8 +44,9 @@ describe('ListingControls', () => {
     expect(screen.getByLabelText('Buscar por título')).toHaveValue('dom')
     expect(screen.getByLabelText('Gênero')).toHaveValue('romance')
     expect(screen.getByLabelText('Autor')).toHaveValue('')
-    expect(screen.getByLabelText('Nota mínima')).toHaveValue('4')
-    expect(screen.getByLabelText('Ordenar por')).toHaveValue('nota')
+    expect(screen.getByLabelText('Ordenar por')).toHaveValue('titulo')
+    // "Nota mínima" saiu com D-11 — o controle não existe mais.
+    expect(screen.queryByLabelText('Nota mínima')).toBeNull()
   })
 
   it('renderiza as opções derivadas do acervo (DD-4)', () => {

@@ -4,13 +4,12 @@
  * vazio. Sem I/O, sem React — testável isolada (DD-1/DD-2).
  */
 
-export type SortOrder = 'recentes' | 'nota' | 'titulo'
+export type SortOrder = 'recentes' | 'titulo'
 
 export type ListingParams = {
   q: string
   genero: string
   autor: string
-  nota: number | null
   ordem: SortOrder
   pagina: number
 }
@@ -19,7 +18,7 @@ export type ListingParams = {
 export const PAGE_SIZE = 12
 
 const MAX_Q = 100
-const SORT_ORDERS: readonly SortOrder[] = ['recentes', 'nota', 'titulo']
+const SORT_ORDERS: readonly SortOrder[] = ['recentes', 'titulo']
 
 /**
  * Formato que `searchParams` assume após `await` no App Router (Next 16):
@@ -33,18 +32,17 @@ function first(value: string | string[] | undefined): string {
 
 /**
  * Valida e normaliza os `searchParams` da home. Valor inválido → default
- * silencioso; NUNCA lança (edge cases do spec: `?nota=abc`, `?ordem=xyz`,
- * `?pagina=999`). `pagina` só garante ≥ 1 aqui; o clamp ao total real acontece
+ * silencioso; NUNCA lança (edge cases do spec: `?ordem=xyz`, `?pagina=999`).
+ * Param DESCONHECIDO é simplesmente ignorado — nada aqui itera as chaves de
+ * entrada, só lê as que conhece. É o que faz URLs antigas com `?nota=4`
+ * (o filtro removido por D-11) degradarem sem erro: o valor é descartado em
+ * silêncio e a página responde 200 normalmente. `pagina` só garante ≥ 1 aqui; o clamp ao total real acontece
  * na página, após o `count`.
  */
 export function parseListingParams(raw: RawSearchParams): ListingParams {
   const q = first(raw.q).trim().slice(0, MAX_Q)
   const genero = first(raw.genero).trim()
   const autor = first(raw.autor).trim()
-
-  const notaParsed = Number.parseInt(first(raw.nota), 10)
-  const nota =
-    Number.isInteger(notaParsed) && notaParsed >= 1 && notaParsed <= 5 ? notaParsed : null
 
   const ordemRaw = first(raw.ordem)
   const ordem: SortOrder = (SORT_ORDERS as readonly string[]).includes(ordemRaw)
@@ -54,7 +52,7 @@ export function parseListingParams(raw: RawSearchParams): ListingParams {
   const paginaParsed = Number.parseInt(first(raw.pagina), 10)
   const pagina = Number.isInteger(paginaParsed) && paginaParsed >= 1 ? paginaParsed : 1
 
-  return { q, genero, autor, nota, ordem, pagina }
+  return { q, genero, autor, ordem, pagina }
 }
 
 /**
@@ -71,7 +69,6 @@ export function buildListingHref(
   if (merged.q) sp.set('q', merged.q)
   if (merged.genero) sp.set('genero', merged.genero)
   if (merged.autor) sp.set('autor', merged.autor)
-  if (merged.nota != null) sp.set('nota', String(merged.nota))
   if (merged.ordem !== 'recentes') sp.set('ordem', merged.ordem)
   if (merged.pagina > 1) sp.set('pagina', String(merged.pagina))
   const qs = sp.toString()
