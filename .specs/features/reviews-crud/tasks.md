@@ -272,10 +272,12 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ---
 
-### T2: Migration `0009` parte B — RPCs `create_review_with_book`/`update_review_with_book` + helper de slug + regen de tipos
+### T2: RPCs `create_review_with_book`/`update_review_with_book` + helper de slug + regen de tipos — **CONCLUÍDA (2026-08-25)**
+
+> **A migration virou `0011_reviews_crud_rpcs.sql`, não "0009 parte B".** Quando esta task foi escrita, a 0009 ainda era editável; ela e a 0010 **já estão aplicadas em produção**, e migration aplicada não se reescreve. Arquivo novo é a consequência correta do cronograma, não desvio de design.
 
 **What**: Completar `0009_reviews_crud.sql` (design §3–§4, **exatamente** como especificado) com **ambos** os RPCs `SECURITY INVOKER` — `create_review_with_book` (exercido pelo app esta sprint) **e** `update_review_with_book` (criado e provisionado, **não** exercido — a 0009 fica íntegra mesmo com a rota de edição cortada) — e o helper `unique_review_slug` (`security definer`, lê todos os slugs, backstop UNIQUE). `search_path = ''` em **todas** as funções da migration (padronizado — nenhuma diverge). Regenerar `database.types.ts` após o `db reset` (DD-16).
-**Where**: `supabase/migrations/0009_reviews_crud.sql` (continuação) · `src/lib/supabase/database.types.ts` (regenerado)
+**Where**: ~~`supabase/migrations/0009_reviews_crud.sql` (continuação)~~ → **`supabase/migrations/0011_reviews_crud_rpcs.sql` (novo)** · `src/lib/database.types.ts` (regenerado)
 **Depends on**: T1 (RPC insere em `book`/`review` sob as policies daquela parte; mesmo arquivo)
 **Reuses**: padrão `SECURITY INVOKER` já justificado no design (D-09 — RLS continua o gate); geração de tipos já usada pós-0006
 **Requirement**: REV-02, REV-03, REV-04, REV-05, REV-23, DD-5, DD-6, DD-7, DD-16
@@ -284,14 +286,23 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `npx supabase db reset` local verde (0001→0009 completa)
-- [ ] `\df public.create_review_with_book`/`update_review_with_book`/`unique_review_slug` mostram `security invoker`/`definer` conforme o design e `search_path=''`
-- [ ] `database.types.ts` regenerado inclui as colunas novas de `book`/`review` (conferido por diff/typecheck)
-- [ ] Gate **quick** (typecheck cobre os tipos novos)
+- [x] `npx supabase db reset` local verde — **2× consecutivos, ambos `EXIT=0`** (0001→0011 completa)
+- [x] `pg_proc` confirma: `create_review_with_book`/`update_review_with_book` com `prosecdef = f` (**INVOKER**), `unique_review_slug` com `prosecdef = t` (**DEFINER**), as três com `proconfig = {search_path=""}` e `proacl = {postgres=X,authenticated=X}` — **`anon` ausente**
+- [x] `database.types.ts` regenerado — inclui as três funções em `Functions` com as assinaturas corretas (sem `p_rating`, D-11); `typecheck` verde
+- [x] Gate **quick** verde (typecheck/lint/format/**231 testes**)
+- [x] **Atomicidade PROVADA** (REV-04): falha injetada no INSERT de `review` **depois** do de `book` → `ERROR: new row for relation "review" violates check constraint "review_further_reading_is_array"` → `ROLLBACK`; contagens 6/6 inalteradas e **zero book órfão** (oráculo superuser).
+- [x] **Isolamento RLS PROVADO**: (a) o RPC usa sempre `auth.uid()` — não há parâmetro de personificação; (b) INSERT direto forjando `editor_id` de outro editor → `new row violates row-level security policy`; (c) editor B editando resenha de A → `42501`, com a resenha de A **intacta** pelo oráculo superuser; (d) `anon` → `permission denied for function`.
+- [x] **Slug** verificado: base já usada → `-2`, `-3`; base vazia → fallback `resenha`.
 
 **Tests**: integration (rollback na T4; aqui: reset + inspeção `pg_proc`) · **Gate**: integration (local) + quick
 **Verify**: `npx supabase db reset`; `npx supabase gen types typescript --local > src/lib/supabase/database.types.ts`; `npm run typecheck`.
-**Commit**: `feat(db): 0009 pt.2 — RPCs create/update_review_with_book + slug único (REV-02/03/04/05/23)`
+**Commit**: `feat(db): 0011 — RPCs atômicos create/update_review_with_book + slug único (REV-02/03/04/05/23)`
+
+> **⚠️ A `0011` NÃO foi aplicada em produção — aguarda `db push` humano (A-11).**
+>
+> **Desvio do design registrado:** `unique_review_slug` é `volatile`, não `stable`, porque toma um lock consultivo de transação — e lock é efeito colateral. Ver cabeçalho da 0011 para a análise de concorrência e seu limite honesto (a garantia vale sob READ COMMITTED; o UNIQUE segue como backstop).
+>
+> **T4 (rollback atômico, A-9) ganhou injetor de falha:** o `p_rating` fora de faixa morreu com D-11; o substituto é `p_further_reading` não-array, violando `review_further_reading_is_array` — exercitado nesta task e pronto para virar suíte.
 
 ---
 
