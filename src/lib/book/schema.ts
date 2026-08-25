@@ -20,7 +20,17 @@ export const bookInputSchema = z
     genreId: z.string().uuid('Gênero inválido'),
     publisher: z.string().trim().optional(),
     isbn: z.string().trim().optional(),
-    coverUrl: z.string().url('URL de capa inválida').optional(),
+    // A-4 — SÓ http/https. `z.string().url()` do Zod 4 NÃO basta: ele aceita
+    // `javascript:`, `data:`, `ftp:` e `vbscript:` como URLs válidas (verificado).
+    // Como `cover_url` é renderizado em `src`/`href`, um `javascript:` gravado
+    // aqui vira XSS na página pública. O banco NÃO tem CHECK nesta coluna — esta
+    // validação É o gate. Espelha o refinamento usado em `review/schema.ts`.
+    coverUrl: z
+      .string()
+      .trim()
+      .url('URL de capa inválida')
+      .refine((u) => /^https?:\/\//i.test(u), 'Use apenas endereços http ou https')
+      .optional(),
     year: z
       .number()
       .int()

@@ -113,6 +113,31 @@ describe('bookInputSchema — opcionais estruturados', () => {
     expect(r.success).toBe(false)
   })
 
+  // A-4 — vetor de XSS: `cover_url` é renderizado em `src`/`href`, e o banco NÃO
+  // tem CHECK nesta coluna, então esta validação É o gate. `z.url()` sozinho
+  // aceita todos os esquemas abaixo; o refinamento http/https é o que barra.
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html,<script>x</script>',
+    'ftp://a.com/c.jpg',
+    'vbscript:msgbox(1)',
+  ])('rejeita coverUrl com esquema perigoso: %s', (perigoso) => {
+    const r = bookInputSchema.safeParse({ ...minimal, coverUrl: perigoso })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      expect(r.error.issues.some((i) => i.path.join('.') === 'coverUrl')).toBe(true)
+    }
+  })
+
+  it('aceita coverUrl http e https', () => {
+    expect(bookInputSchema.safeParse({ ...minimal, coverUrl: 'https://a.com/c.jpg' }).success).toBe(
+      true
+    )
+    expect(bookInputSchema.safeParse({ ...minimal, coverUrl: 'http://a.com/c.jpg' }).success).toBe(
+      true
+    )
+  })
+
   it('aceita uma ficha completa válida', () => {
     const r = bookInputSchema.safeParse({
       ...minimal,
