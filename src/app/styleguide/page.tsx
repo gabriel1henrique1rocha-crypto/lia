@@ -5,6 +5,7 @@ import { Field } from '@/components/ui/Field'
 import { Link } from '@/components/ui/Link'
 import { Card } from '@/components/ui/Card'
 import { BookDetails } from '@/components/book/BookDetails'
+import { ReviewFormDemo } from './ReviewFormDemo'
 import type { BookView } from '@/lib/book/queries'
 
 /**
@@ -279,6 +280,13 @@ export default function StyleguidePage() {
             </Card.Footer>
           </Card>
         </Row>
+      </Section>
+
+      {/* ── Formulário de resenha (T8) ───────────────────────────── */}
+      {/* Montado aqui, e não numa rota nova (isso é T10), para o axe e o teste
+          de teclado rodarem em navegador real contra o componente de verdade. */}
+      <Section id="review-form" title="Formulário de resenha">
+        <ReviewFormDemo />
       </Section>
 
       {/* ── Ficha do Livro (BookDetails) ─────────────────────────── */}

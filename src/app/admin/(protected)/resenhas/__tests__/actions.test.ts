@@ -293,6 +293,64 @@ describe('createReview — validação de campos', () => {
 
 // ── published_at e revalidação ───────────────────────────────────────────────
 
+// ── further_reading: o leitor compartilhado com o formulário (T8) ────────────
+
+describe('further_reading — o que o formulário coleta CHEGA ao RPC', () => {
+  it('itens indexados no FormData viram o array de p_further_reading', async () => {
+    const fd = fichaValida()
+    fd.set('furtherReading.0.label', 'Ensaio sobre Machado')
+    fd.set('furtherReading.0.url', 'https://exemplo.org/ensaio')
+    fd.set('furtherReading.1.label', 'Entrevista')
+    fd.set('furtherReading.1.url', 'https://exemplo.org/entrevista')
+
+    await createReview(IDLE_STATE, fd)
+
+    expect(rpc.mock.calls[0][1].p_further_reading).toEqual([
+      { label: 'Ensaio sobre Machado', url: 'https://exemplo.org/ensaio' },
+      { label: 'Entrevista', url: 'https://exemplo.org/entrevista' },
+    ])
+  })
+
+  it('item EM BRANCO é descartado — não vira erro nem lixo no jsonb', async () => {
+    const fd = fichaValida()
+    fd.set('furtherReading.0.label', '')
+    fd.set('furtherReading.0.url', '')
+
+    const estado = await createReview(IDLE_STATE, fd)
+
+    expect(estado.status).toBe('saved')
+    expect(rpc.mock.calls[0][1].p_further_reading).toEqual([])
+  })
+
+  it('item PELA METADE reprova no campo daquele item (caminho pontilhado)', async () => {
+    const fd = fichaValida()
+    fd.set('furtherReading.0.label', 'Só o rótulo')
+    fd.set('furtherReading.0.url', '')
+
+    const estado = await createReview(IDLE_STATE, fd)
+
+    expect(estado.status).toBe('error')
+    expect(estado.fieldErrors?.['furtherReading.0.url']).toBeTruthy()
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('URL de esquema perigoso num item é barrada como em qualquer outra URL (A-4)', async () => {
+    const fd = fichaValida()
+    fd.set('furtherReading.0.label', 'Armadilha')
+    fd.set('furtherReading.0.url', 'javascript:alert(1)')
+
+    const estado = await createReview(IDLE_STATE, fd)
+
+    expect(estado.fieldErrors?.['furtherReading.0.url']).toBeTruthy()
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('sem nenhum item o RPC recebe array vazio, nunca null (CHECK jsonb_typeof)', async () => {
+    await createReview(IDLE_STATE, fichaValida())
+    expect(rpc.mock.calls[0][1].p_further_reading).toEqual([])
+  })
+})
+
 describe('published_at — carimbo da PRIMEIRA publicação (A-8)', () => {
   const linhaBase = {
     id: 'rev-1',

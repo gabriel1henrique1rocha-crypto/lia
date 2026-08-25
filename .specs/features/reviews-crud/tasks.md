@@ -500,7 +500,9 @@ Criar **rascunho** não invalida nada: não há mudança visível ao público. E
 
 ---
 
-### T8: `ReviewForm` — scaffolding do formulário (client component)
+### T8: `ReviewForm` — formulário de resenha (client component) — **CONCLUÍDA (2026-08-25)**
+
+> **EMENDA DE ESCOPO 2026-08-25 (instrução do responsável, supersede o §13 nesta task):** o formulário passou a ter **DOIS** `<fieldset>` (*Dados do livro* / *A resenha*), não três, e as **leituras adicionais (`further_reading`) VOLTARAM ao escopo** como lista de campos repetíveis com gestão de foco — eram um dos cortes do §13. Tags/keywords seguem como **um input por vírgula** (o corte do §13 nesse ponto permanece). A a11y foi tratada como *Definition of Done* por campo, não como conferência final, e o gate axe desta task é o **ESTRITO** (zero violação de qualquer impacto), não o de "sem críticos".
 
 **What**: `src/app/admin/(protected)/resenhas/ReviewForm.tsx` (`'use client'`, `useActionState`). `<fieldset>` por seção (*Ficha bibliográfica*, *Classificação*, *Conteúdo*) com `<legend>`; campos via `Field` (autor, título, cidade, editora, ano, ISBN, gênero-select, corpo, frase de destaque, capa-URL, **tags/keywords como um único input de texto por vírgula** — sem chips, sem `RepeatableLinks` — §13); **sem** campo de "para saber mais" (cortado). Dois botões (`Salvar rascunho`/`Publicar`) que só **diferem no `status` enviado** — a escolha do schema é 100% do servidor (T6), nunca do cliente (§6.3). Resumo de erros em live region presente desde o 1º render; foco movido ao resumo em falha (WCAG 2.4.3/3.3.1); sucesso anunciado em `role="status"`. ~~Slot para `RatingInput` (T9), consumido como componente à parte.~~ **REMOVIDO POR D-11** — não há campo de nota no formulário; T9 não será construída.
 **Where**: `src/app/admin/(protected)/resenhas/ReviewForm.tsx` + `__tests__/ReviewForm.test.tsx` (novos)
@@ -512,15 +514,35 @@ Criar **rascunho** não invalida nada: não há mudança visível ao público. E
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] Todos os campos com `label` associado (via `Field`); tags/keywords como **um** input de texto, não lista dinâmica
-- [ ] Resumo de erros existe (vazio) no 1º render; recebe foco (`tabIndex={-1}`) quando a submissão falha
-- [ ] Os dois botões enviam `status` diferente e **nada mais** determina o schema no cliente
-- [ ] Erros por campo via `Field.error`/`aria-describedby`/`aria-invalid` (sem depender só de cor — WCAG 1.4.1)
-- [ ] Gate **quick** (a11y de rota fica na T10, onde a página existe)
+- [x] Todos os campos com `label` associado (via `Field`); tags/keywords como **um** input de texto, não lista dinâmica — teste varre TODO `input`/`textarea`/`select` e exige `<label for>` + nome acessível + ausência de `aria-label`
+- [x] Região de status (`role="status"`, `aria-live="polite"`) presente e **vazia** no 1º render; recebe foco (`tabIndex={-1}`) quando a falha **não pertence a campo nenhum**; havendo campo com erro, o foco vai para o **primeiro em ordem de DOM** (é a regra mais forte pedida na emenda)
+- [x] Os dois botões enviam `status` diferente e **nada mais** determina o schema no cliente — teste prova que `[name="status"]` existe SÓ nos dois `<button type="submit">` e que **não há `input[type=hidden]`** no formulário
+- [x] Erros por campo via `Field.error`/`aria-describedby`/`aria-invalid` (sem depender só de cor — WCAG 1.4.1); obrigatórios com `required` **E** `aria-required`, marcador visual em glifo (`*`), não em cor
+- [x] Campos repetíveis (`further_reading`): adicionar, remover e **foco com destino nas duas pontas** (unit + navegador real)
+- [x] Gate **quick** verde **+ `test:a11y` completo** (a11y de ROTA segue na T10; aqui o componente é auditado no `/styleguide`)
 
-**Tests**: unit (Testing Library) · **Gate**: quick
-**Verify**: `npx vitest run "src/app/admin/(protected)/resenhas/__tests__/ReviewForm.test.tsx"`.
-**Commit**: `feat(review): ReviewForm — fieldsets, tags/keywords por vírgula, botões só mudam status (REV-08..14/20-22, DD-11/12)`
+**EVIDÊNCIA — axe, por impacto (axe-core 4.11.4, Chromium, `AxeBuilder().include('.lia-review-form')`)**
+
+| estado auditado | critical | serious | moderate | minor | **incomplete** | regras aprovadas |
+|---|---|---|---|---|---|---|
+| repouso | 0 | 0 | 0 | 0 | **0** | 20 |
+| **erro** (Publicar vazio: obrigatórios + corpo) | 0 | 0 | 0 | 0 | **0** | 20 |
+| **com repetíveis** (2 itens) | 0 | 0 | 0 | 0 | **0** | 22 (`list`/`listitem` entram) |
+
+`incomplete = 0` é cobrado pelo teste junto com `violations = 0`, e não é rigor decorativo: **regra indecidida não é regra aprovada, é regra que não olhou**. O caso real: com o `<legend>` no recorte nativo da borda do `<fieldset>`, o `color-contrast` voltava **incomplete** ("fundo não pôde ser determinado porque está parcialmente encoberto") justamente nos **títulos dos dois grupos** — os textos mais importantes da tela ficavam sem medição, com o gate verde. Corrigido tirando o legend do recorte (`float: left; width: 100%` + `clear` no irmão), o que torna o contraste **medido** (ink-900 sobre paper-0 = **16.9:1**, AAA) sem mudar o que se vê.
+
+**ACHADO — o React 19 RESETA o formulário ao fim de toda action, e isso apagava dado.** Com campos não-controlados, a submissão **reprovada** (o momento em que a digitação é mais cara) voltava com o formulário limpo. Pior no `<select>`: mesmo controlado, o React marca a opção pela **propriedade** `selected` e não pelo atributo, então o reset devolvia o gênero ao placeholder — em silêncio, sem re-render que o corrigisse. O sintoma seria "escolhi o gênero, a tela mostra escolhido, e o sistema diz que falta". Duas medidas, ambas com teste: (1) **todos** os campos controlados; (2) listener nativo em **captura** cancelando o evento `reset` — a prop `onReset` do React chega tarde demais para cancelar a ação padrão (verificado nos dois sentidos).
+
+**ACHADO — `further_reading` era coletado e descartado.** O `lerFormulario` do T6 **não lia** os campos repetíveis, então tudo que o formulário coletasse ali morreria antes do RPC (que **aceita** `p_further_reading`, e o mapeador do T5 já o repassa). Como coletar dado que se perde é exatamente o que a emenda proíbe, o leitor foi extraído para **`src/lib/review/formData.ts`** — módulo puro, importado pelo action **e** pelo formulário — e passou a ler os itens. Ganho colateral que é o principal: cliente e servidor leem os **mesmos nomes de campo** pelo mesmo código, então o erro do servidor cai no mesmo campo em que o do cliente cairia. Nomes com caminho pontilhado (`furtherReading.0.url`) para casar com `issue.path.join('.')` do Zod.
+
+**DECISÃO — "quem assina" é EXIBIDO, não coletado.** `reviewer_name` não tem parâmetro no `create_review_with_book` (0011): o RPC o congela de `editor.name` (DD-6). Um input ali capturaria digitação que o banco ignora — o mesmo defeito que motivou o corte de `pages`/`original_language`/`translator`/`translated_from`. Aparece como texto, com a explicação de que é registrado da conta ao salvar. **Reversível por migration** que estenda o RPC; enquanto não houver, campo não existe.
+
+**ONDE O NAVEGADOR AUDITA:** o componente é montado no `/styleguide` (rota já existente, gated por `ENABLE_STYLEGUIDE`) via `ReviewFormDemo`, com uma action de demonstração. **Nenhuma rota nova** — isso é T10. A action real segue protegida por `requireEditor()` + RLS, intocada.
+
+**Tests**: unit (Testing Library, 33) + browser (Playwright axe/teclado, 10) + 5 novos em `actions.test.ts` (`further_reading` chega ao RPC, item em branco descartado, item pela metade reprova no campo, `javascript:` barrado, array vazio nunca null)
+**Gate**: **quick + full** — `361 passed | 52 skipped (413)` (era `323 | 52`; **+38**) · `npx playwright test` → **30 passed**, `typecheck`/`lint`/`format:check` limpos
+**Verify**: `npx vitest run "src/app/admin/(protected)/resenhas/__tests__/ReviewForm.test.tsx"` · `npm run build && npx playwright test tests/review-form.spec.ts`
+**Commit**: `feat(admin): formulário de resenha (T8)`
 
 ---
 

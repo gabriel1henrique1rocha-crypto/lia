@@ -956,6 +956,167 @@
     border-bottom-color: var(--text-link);
   }
 
+  /* ================= FORMULÁRIO DE RESENHA (reviews-crud, T8) =================
+     Só tokens (@theme + aliases :root) — nenhuma cor nova. O anel de foco vem
+     do :where(...):focus-visible do @layer base; nada aqui o sobrescreve. */
+
+  .lia-review-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+    max-width: var(--container-md);
+    margin-inline: auto;
+    font-family: var(--font-ui);
+  }
+
+  .lia-review-form__required-note {
+    margin: 0;
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-secondary); /* ink-700 sobre paper-50 = 9.3:1 AAA */
+  }
+
+  /* Live region: reserva altura para o texto não empurrar o formulário ao
+     chegar, e o tom vem de FUNDO + COR + peso — nunca só cor (WCAG 1.4.1). */
+  .lia-review-form__status {
+    margin: 0;
+    min-height: var(--spacing-5);
+    font: var(--type-label);
+  }
+  .lia-review-form__status[data-tone='error'] {
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-md);
+    background: var(--feedback-error-bg);
+    color: var(--feedback-error-text); /* red-700 sobre red-50 = 6.5:1 AA */
+    font-weight: var(--font-weight-semibold);
+  }
+  .lia-review-form__status[data-tone='saved'] {
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-md);
+    background: var(--feedback-success-bg);
+    color: var(--feedback-success-text); /* green-700 sobre green-50 = 5.6:1 AA */
+    font-weight: var(--font-weight-semibold);
+  }
+
+  /* fieldset zera a moldura nativa (que varia entre navegadores) e recebe a
+     borda do sistema de design. */
+  .lia-review-form__group {
+    margin: 0;
+    padding: var(--spacing-5);
+    border: var(--border-width) solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--surface-card);
+  }
+  /* `float: left` + `width: 100%` TIRA o legend do recorte da borda do fieldset.
+     Não é preferência estética: no encaixe nativo o filete corre POR TRÁS do
+     texto, e o axe devolve `incomplete` em color-contrast — "o fundo não pôde
+     ser determinado porque está parcialmente encoberto". Incompleto não é
+     aprovado, é ausência de verificação: a regra deixa de olhar exatamente o
+     título de cada grupo. Fora do recorte, o legend vira um bloco comum sobre
+     `--surface-card` e o contraste passa a ser MEDIDO (ink-900 sobre paper-0 =
+     16.9:1, AAA). O `clear` no irmão seguinte impede que o conteúdo suba ao
+     lado do float. */
+  .lia-review-form__legend {
+    float: left;
+    width: 100%;
+    padding: 0;
+    margin-bottom: var(--spacing-4);
+    font: var(--type-heading);
+    font-size: var(--text-lg);
+    color: var(--text-strong);
+  }
+  .lia-review-form__legend + * {
+    clear: left;
+  }
+  .lia-review-form__legend--sub {
+    font-size: var(--text-base);
+    margin-bottom: var(--spacing-2);
+  }
+
+  /* Duas colunas a partir de ~34rem; abaixo disso, uma só. Sem media query: o
+     `auto-fit` já colapsa sozinho, então não há breakpoint a manter. */
+  .lia-review-form__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--spacing-5);
+  }
+  .lia-review-form__span-2 {
+    grid-column: 1 / -1;
+  }
+
+  .lia-review-form__stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+  }
+
+  .lia-review-form__hint {
+    margin: 0 0 var(--spacing-4);
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-muted); /* ink-500 sobre paper-0 = 5.6:1 AA */
+  }
+
+  /* Quem assina: informação, não campo (DD-6). Fica visualmente próximo de um
+     campo (mesma coluna, mesmo ritmo) sem fingir ser editável. */
+  .lia-review-form__byline {
+    padding: var(--spacing-4);
+    border-left: var(--border-width-strong) solid var(--border-default);
+    background: var(--surface-subtle);
+    border-radius: var(--radius-sm);
+  }
+  .lia-review-form__byline-label {
+    margin: 0;
+    font: var(--type-label);
+    color: var(--text-strong);
+  }
+  .lia-review-form__byline-value {
+    margin: var(--spacing-1) 0 0;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    color: var(--text-strong);
+  }
+  .lia-review-form__byline-help {
+    margin: var(--spacing-2) 0 0;
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+
+  .lia-review-form__repeatable {
+    margin: 0;
+    padding: var(--spacing-4);
+    border: var(--border-width) dashed var(--border-default);
+    border-radius: var(--radius-md);
+  }
+  .lia-review-form__leituras {
+    list-style: none;
+    margin: 0 0 var(--spacing-4);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+  .lia-review-form__leitura {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    align-items: end;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4);
+    background: var(--surface-subtle);
+    border-radius: var(--radius-sm);
+  }
+  .lia-review-form__leitura-remover {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .lia-review-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-3);
+  }
+
   /* ---------- Seção declarada e ainda vazia ---------- */
   .lia-placeholder {
     max-width: var(--container-prose);
