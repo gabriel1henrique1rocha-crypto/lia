@@ -306,7 +306,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ---
 
-### T3: Matriz RLS de `book` — INSERT/UPDATE/DELETE por papel [P com T2]
+### T3: Matriz RLS de `book` — INSERT/UPDATE/DELETE por papel [P com T2] — **CONCLUÍDA (2026-08-25)**
 
 **What**: Suíte integration local-only análoga à `rbac-matrix.integration.test.ts` (0007/0008), agora para `book`: **editor ativo** → INSERT ok; UPDATE só do `book` cuja `review` é dele (`owns_book_via_review`), UPDATE de book de outro editor → nega; **admin** → UPDATE de qualquer book; DELETE → **admin-only** (editor não-admin nega mesmo sendo dono); **`authenticated` sem linha `editor`/inativo** → tudo nega (herdado do 0007); **anon** → toda escrita nega (sem GRANT). `book_public_read` (SELECT anon) segue permitindo em paralelo (SEC-13, não regride).
 **Where**: `src/lib/supabase/__tests__/book-rbac-matrix.integration.test.ts` (novo)
@@ -318,14 +318,34 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] Todas as células da matriz batem o esperado, incluindo "editor dono de review A não edita book de review B"
-- [ ] Verificação de estado real via `psql`/superuser (não pelo client sob teste — lição da rbac-matrix original)
-- [ ] CI PULA a suíte (`describe.skipIf`); local verde
-- [ ] Gate **integration** + quick
+- [x] **Todas as 12 células batem o esperado.** Operações via API (PostgREST) com sessões autenticadas reais — o caminho de produção, não `set role`. Saída: `Test Files 1 passed (1) · Tests 12 passed (12)`. Matriz medida:
+
+| Operação | Papel / alvo | Esperado | Observado (oráculo superuser) |
+| --- | --- | --- | --- |
+| INSERT | editor ativo | PERMITIDO | `error = null`; oráculo `count = 1` |
+| INSERT | anon | NEGADO | erro; oráculo `count = 0` |
+| UPDATE | editor A → book da PRÓPRIA review | PERMITIDO | `UPDATE 1`; oráculo `title = 'EDITADO POR A'` |
+| UPDATE | editor A → book da review de B | NEGADO | `UPDATE 0`; oráculo `title = 'ORIGINAL'` (intacto) |
+| UPDATE | editor A → book ÓRFÃO | **NEGADO** | `UPDATE 0`; oráculo `title = 'ORIGINAL'`; `owns_book_via_review = f` |
+| UPDATE | admin → book de qualquer editor | PERMITIDO | oráculo `title = 'RLS book editado por admin'` |
+| UPDATE | anon | NEGADO | `ERROR: permission denied for table book` (GRANT, não policy); oráculo intacto |
+| DELETE | admin | PERMITIDO | `DELETE 1`; oráculo book `0`, review `0` (cascata da FK) |
+| DELETE | editor não-admin, book PRÓPRIO | NEGADO | `DELETE 0`; oráculo book `1`, review `1` |
+| DELETE | anon | NEGADO | negado; oráculo `count = 1` |
+| SELECT | anon | PERMITIDO | `book_public_read` (0003) intacta ao lado das novas |
+| RPC | `create_review_with_book` → autor edita, outro editor não | PERMITIDO / NEGADO | oráculo: `editor_id` = A; autor edita; B → `0 linhas` e título preservado |
+
+- [x] **PROVA DE VERMELHIDÃO — a suíte é load-bearing, não falso-verde.** `book_editor_update` foi trocada por `using (true) with check (true)` **no banco local** (experimento revertido por `db reset`; **nenhuma migração tocada**) e a suíte reprovou **exatamente** nas 3 células que dependem dela: `3 failed | 9 passed (12)` — "A não edita book de B", "A não edita book órfão" e a célula do RPC. Com a policy real de volta: `12 passed`.
+- [x] **Todo estado lido por `psql -U postgres` (superuser)**, nunca pelo papel sob teste. É o que separa "a RLS negou" de "a linha não existe" — sem isso, todo teste de negação passaria por falso-verde. As operações rodam pelo papel real; só a leitura da verdade é privilegiada.
+- [x] **CI PULA** (`describe.skipIf(!RUN)`): a suíte completa sem a flag fecha `30 passed | 6 skipped (36)` / `231 passed | 48 skipped (279)` — as 12 células entram como skipped. **Local verde** com `RUN_RLS_INTEGRATION=1`.
+- [x] **VEREDITO TD-02 — o CI NÃO CONSEGUE rodar esta suíte hoje.** Verificado em `.github/workflows/ci.yml`: o job `test` é `ubuntu-latest` + `npm ci` + `npm test`, **sem `services:`, sem stack Supabase, sem container `supabase_db_lia` e sem `RUN_RLS_INTEGRATION`**. Faltam as três coisas ao mesmo tempo: o banco, o `docker exec` do oráculo e a flag. **Nenhum workaround foi tentado, e nenhum mock de RLS foi escrito** — mock de policy não prova policy, só produz falsa segurança sobre a única camada que separa editores. Habilitar exige subir Supabase no CI e mover a suíte para os required checks: é o gatilho já registrado da TD-02 (**antes da entrada do 2º editor real**), e continua valendo.
+- [x] Gate **integration** (12/12 local) + **quick** verde (typecheck/lint/format/231 testes)
 - [ ] ~~**Residual registrado (achado de 2026-08-12):** o stack local tem `ALTER DEFAULT PRIVILEGES` pré-existente concedendo GRANTs amplos (INSERT/UPDATE/DELETE) a `anon` em toda tabela nova do `public` (...) A verificação de que `anon` **não recebe GRANT nenhum** é **produção-only**~~ — **RETIRADO. Alegação REFUTADA por medição em 2026-08-24 (ver T1, evidência E-6).** O default ACL aplicável às tabelas criadas por `postgres` concede a `anon` só `Dxtm` (TRUNCATE/REFERENCES/TRIGGER/MAINTAIN), **não** `awd` (INSERT/UPDATE/DELETE); nenhuma tabela do `public` dá escrita a `anon` no stack local. **Consequência para esta matriz:** a ausência de GRANT de escrita a `anon` **É verificável localmente** e deve ser asserção desta suíte, não item de checklist de produção. A verificação em produção segue valendo como confirmação pós-`db push`, mas não é mais o único lugar onde isso pode ser provado. **Achado lateral herdado de E-6:** `anon` tem `TRUNCATE` em todas as tabelas do `public` (default ACL, não migration) — TRUNCATE ignora RLS, hoje inalcançável pelo Data API; revogar é decisão de arquitetura em aberto
 
 **Tests**: integration · **Gate**: integration (local)
 **Verify**: `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/supabase/__tests__/book-rbac-matrix.integration.test.ts`.
+
+> **⚠️ DEPENDÊNCIA FRÁGIL A AMARRAR — o injetor de falha do T4.** O teste de rollback atômico (A-9/REV-04) força a `review` a falhar passando `p_further_reading` não-array, violando o CHECK **`review_further_reading_is_array`** (0009). Esse CHECK é hoje a ÚNICA coisa que faz o INSERT de `review` falhar **depois** do de `book` dentro do RPC. **Se ele for removido** — por exemplo se `further_reading` for repensada quando a feature de "para saber mais" voltar (REV-12, diferido) — o teste de atomicidade **passa sem provar nada**: nada falha, o rollback nunca é exercitado, e o verde vira decorativo. O injetor anterior (`p_rating` fora de faixa) já morreu assim, com D-11. **Quem mexer nesse CHECK precisa trocar o injetor no mesmo commit;** candidatos remanescentes: FK de `book.genre_id`, UNIQUE de `review.book_id`, UNIQUE de `review.slug`.
 **Commit**: `test(db): matriz RLS de book — own-or-admin transitivo via review (REV-07-schema)`
 
 ---
