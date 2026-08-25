@@ -470,7 +470,7 @@ Criar **rascunho** não invalida nada: não há mudança visível ao público. E
 
 ---
 
-### T7: `adminQueries.ts` — `listEditorReviews()` [P com T6]
+### T7: `adminQueries.ts` — `listEditorReviews()` [P com T6] — **CONCLUÍDA (2026-08-25)**
 
 **What**: `src/lib/review/adminQueries.ts`: `listEditorReviews()` via `createAuthenticatedClient()` — sob RLS own-or-admin (0008), retorna as resenhas do editor logado (admin vê todas), rascunhos + publicadas, campos mínimos para a lista (título, slug, status, livro). **Não** inclui `getEditorReviewForEdit` (edição diferida — ver Diferidos).
 **Where**: `src/lib/review/adminQueries.ts` + `src/lib/review/__tests__/adminQueries.test.ts` (novos)
@@ -481,14 +481,22 @@ Criar **rascunho** não invalida nada: não há mudança visível ao público. E
 
 **Tools**: MCP: NONE · Skill: NONE
 
+**⚠️ ACHADO — a RLS SOZINHA NÃO BASTA para "só as próprias" (decisão levada ao responsável antes de implementar).** `review` tem duas policies de SELECT que se somam por OR: `review_editor_read_own` (0008 — próprias linhas OU `is_admin()`) e `review_public_read` (0005 — **qualquer** `status='published'`, concedida a `anon` **e também a `authenticated`**). Consequência PROVADA, não hipotética — é o mesmo "confounder" já exercitado em `rbac-matrix.integration.test.ts:192` ("editor A vê review PÚBLICA"): um editor não-admin, sem filtro algum, recebe as próprias resenhas UNIDAS a toda publicada de QUALQUER outro editor. Isso contradiz o Done-when "editor não vê resenha de outro editor". **Decisão do responsável:** filtrar por `editor_id` quando o papel não é admin. Diferente do `.eq('editor_id', uid)` que T6 evita (lá seria redundância "por segurança" sobre uma RLS que já filtra sozinha) — aqui o filtro é NECESSÁRIO, porque a RLS confessadamente une um conjunto maior. Documentado no cabeçalho do arquivo para não virar "correção" acidental numa passada futura de simplificação.
+
 **Done when**:
-- [ ] Unit com client stub: retorna a forma esperada; não vaza campos de outro editor no teste (RLS é responsabilidade do banco — aqui só o contrato)
-- [ ] Efeito de RLS (editor só vê próprias, admin vê todas) coberto por integration — **merge-forward declarado para a matriz de `review` já existente (0008)**, não repetida aqui
-- [ ] Gate **quick**
+- [x] Unit com client stub: retorna a forma esperada; **prova que o `.eq('editor_id', …)` dispara para papel `editor` e NÃO dispara para `admin`** (6 testes, `adminQueries.test.ts`)
+- [x] Efeito de RLS (editor só vê próprias, admin vê todas) coberto por integration — **merge-forward para a matriz de `review` já existente (0008/rbac-matrix.integration.test.ts)**, não repetida aqui; o confounder que motivou o filtro acima já está provado nela (linha 192)
+- [x] Gate **quick** verde: **`287 passed | 52 skipped (339)`** (+6 desta task)
+
+**ORDENAÇÃO:** `updated_at` desc. O trigger `review_set_updated_at` (0001) toca a coluna em toda UPDATE — publish/unpublish inclusive —, então rascunho recém-criado ou recém-editado sobe ao topo, que é o item que o editor mais provavelmente veio ver no painel.
+
+**SEM CAST.** `book(title)` via o join da FK `review_book_id_fkey` (`isOneToOne: true`, `book_id` NOT NULL) infere como objeto único não-nulo, não array — confirmado por experimento (renomear a coluna no select quebra o typecheck com `SelectQueryError`, provando que a inferência é real, não `any` disfarçado). `return data ?? []` sem `as` nenhum.
+
+**Campos:** `id, title, slug, status, published_at, book(title)` — sem `body` (payload desnecessário numa listagem; testado).
 
 **Tests**: unit (+ merge-forward integration existente) · **Gate**: quick
 **Verify**: `npx vitest run src/lib/review/__tests__/adminQueries.test.ts`.
-**Commit**: `feat(review): listEditorReviews — leitura admin sob RLS own-or-admin (REV-24)`
+**Commit**: `feat(admin): listEditorReviews (T7)`
 
 ---
 
