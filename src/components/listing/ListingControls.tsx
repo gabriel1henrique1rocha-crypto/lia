@@ -7,11 +7,8 @@ type FilterOptions = {
 
 const SORT_LABELS: Record<SortOrder, string> = {
   recentes: 'Mais recentes',
-  nota: 'Melhor nota',
   titulo: 'Título (A–Z)',
 }
-
-const MIN_RATINGS = [5, 4, 3, 2, 1] as const
 
 /** Chevron decorativo do select (aria-hidden) — evita depender do Field client. */
 function Chevron() {
@@ -117,28 +114,6 @@ export function ListingControls({
               {options.authors.map((a) => (
                 <option key={a} value={a}>
                   {a}
-                </option>
-              ))}
-            </select>
-            <Chevron />
-          </span>
-        </div>
-
-        <div className="lia-field">
-          <label className="lia-field__label" htmlFor="nota">
-            Nota mínima
-          </label>
-          <span className="lia-field__select-wrap">
-            <select
-              className="lia-field__control"
-              id="nota"
-              name="nota"
-              defaultValue={params.nota != null ? String(params.nota) : ''}
-            >
-              <option value="">Qualquer nota</option>
-              {MIN_RATINGS.map((n) => (
-                <option key={n} value={n}>
-                  {n}+
                 </option>
               ))}
             </select>

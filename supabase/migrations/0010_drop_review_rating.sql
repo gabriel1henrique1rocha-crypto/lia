@@ -1,0 +1,56 @@
+-- 0010_drop_review_rating.sql
+-- Drop da coluna `review.rating` — passo final de D-11 (remoção da nota do
+-- produto), sob a EMENDA de 2026-08-24 que colapsou a ORDEM DE REMOÇÃO.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ⚠️  MIGRATION IRREVERSÍVEL — LEIA ANTES DE APLICAR.
+--
+-- `drop column` DESTRÓI OS DADOS. As notas das resenhas em produção
+-- (dom-casmurro, iracema, o-cortico, o-crime-do-padre-amaro, e o rascunho)
+-- deixam de existir no instante em que esta migration roda. Depois disso elas
+-- só voltam por RESTAURAÇÃO DE BACKUP — não há caminho aditivo de volta.
+--
+-- Isso é DELIBERADO e foi decidido com plena ciência: D-11 registrava
+-- originalmente uma ordem de 4 passos, em que o drop era o último justamente
+-- por ser "a única porta de mão única", ficando a coluna dormente no meio do
+-- caminho. A emenda de 2026-08-24 colapsou os passos 2, 3 e 4 numa leva só.
+-- O texto original da ordem permanece em DECISIONS.md como registro do que
+-- foi ponderado antes de decidir o contrário.
+--
+-- CONSEQUÊNCIA ACEITA: com o filtro por nota e a ordenação "Melhor nota" fora
+-- do ar, e o filtro por deficiência representada (D-12) ainda bloqueado pelo
+-- vocabulário inicial `[PREENCHER]`, a home fica SEM FILTRO NEM ORDENAÇÃO.
+-- Condição conhecida e temporária, não regressão acidental.
+-- ─────────────────────────────────────────────────────────────────────────────
+--
+-- POR QUE UM ARQUIVO NOVO E NÃO UMA EDIÇÃO DA 0009:
+-- a 0009 já havia sido emendada (commit `accdc9a`) para PARAR DE CONSTRANGER a
+-- coluna — saíram de lá a normalização editorial e o CHECK
+-- `review_rating_integer`. Aquilo foi legítimo porque a 0009 nunca chegou a
+-- produção. Acrescentar o DROP lá dentro seria outra coisa: misturaria numa
+-- migration de provisionamento (colunas, GRANTs, policies de `book`) uma
+-- operação destrutiva de tabela diferente, e apagaria do histórico o fato de
+-- que a coluna existiu e foi removida por decisão datada. O drop merece
+-- arquivo próprio, com este cabeçalho.
+--
+-- DEPENDÊNCIAS VERIFICADAS (local, 2026-08-24) — nada exige CASCADE:
+--   · `review_rating_check` (CHECK 0–5 inline da 0001) é constraint DE COLUNA:
+--     cai junto com ela, automaticamente. É a única constraint sobre `rating`.
+--   · nenhum índice sobre `rating` (`pg_index` → 0 linhas);
+--   · nenhuma view no schema `public` (as 3 do banco são de `vault`/`extensions`);
+--   · nenhuma policy de `review` referencia `rating` (as 5 usam status/editor_id/is_admin);
+--   · nenhuma função do `public` cita `rating` (current_editor_role,
+--     is_active_editor, is_admin, owns_book_via_review, set_updated_at).
+--   · PROVA DIRETA: `begin; alter table public.review drop column rating; rollback;`
+--     executou sem erro e SEM `cascade` — se houvesse dependente, teria falhado.
+-- Por isso NÃO se usa `cascade` aqui: um `cascade` preventivo derrubaria em
+-- silêncio qualquer objeto que passasse a depender da coluna no futuro, em vez
+-- de falhar alto e obrigar a revisão.
+--
+-- `if exists` mantém a migration idempotente (padrão 0003→0009): reaplicar em
+-- banco já migrado é no-op, não erro.
+--
+-- STOP A-11: `db push` de produção é passo HUMANO pós-merge. Esta migration NÃO
+-- deve ser aplicada por automação.
+
+alter table public.review drop column if exists rating;

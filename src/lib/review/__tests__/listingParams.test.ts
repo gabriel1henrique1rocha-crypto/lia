@@ -8,7 +8,6 @@ describe('parseListingParams', () => {
       q: '',
       genero: '',
       autor: '',
-      nota: null,
       ordem: 'recentes',
       pagina: 1,
     })
@@ -19,18 +18,18 @@ describe('parseListingParams', () => {
     expect(parseListingParams({ q: 'x'.repeat(150) }).q).toHaveLength(100)
   })
 
-  it('nota: aceita inteiro 1–5, senão null (edge case ?nota=abc / fora de faixa)', () => {
-    expect(parseListingParams({ nota: '4' }).nota).toBe(4)
-    expect(parseListingParams({ nota: '1' }).nota).toBe(1)
-    expect(parseListingParams({ nota: 'abc' }).nota).toBeNull()
-    expect(parseListingParams({ nota: '0' }).nota).toBeNull()
-    expect(parseListingParams({ nota: '6' }).nota).toBeNull()
-    expect(parseListingParams({ nota: '3.9' }).nota).toBe(3) // parseInt trunca; ainda 1–5
+  // D-11 removeu o filtro por nota. URL antiga com `?nota=4` precisa DEGRADAR
+  // sem erro — param desconhecido é ignorado, não quebra a página.
+  it('ignora o param `nota` legado (D-11) sem lançar nem vazar a chave', () => {
+    const parsed = parseListingParams({ nota: '4' })
+    expect(parsed).not.toHaveProperty('nota')
+    expect(parsed).toEqual({ q: '', genero: '', autor: '', ordem: 'recentes', pagina: 1 })
   })
 
   it('ordem: só valores do conjunto, senão default recentes (edge case ?ordem=xyz)', () => {
-    expect(parseListingParams({ ordem: 'nota' }).ordem).toBe('nota')
     expect(parseListingParams({ ordem: 'titulo' }).ordem).toBe('titulo')
+    // `nota` saiu do conjunto com D-11 → cai no default, não é aceita.
+    expect(parseListingParams({ ordem: 'nota' }).ordem).toBe('recentes')
     expect(parseListingParams({ ordem: 'xyz' }).ordem).toBe('recentes')
   })
 
@@ -55,8 +54,7 @@ describe('buildListingHref', () => {
     q: 'dom',
     genero: 'romance',
     autor: 'Machado',
-    nota: 4,
-    ordem: 'nota',
+    ordem: 'titulo',
     pagina: 2,
   }
 
@@ -65,8 +63,7 @@ describe('buildListingHref', () => {
     expect(href).toContain('q=dom')
     expect(href).toContain('genero=romance')
     expect(href).toContain('autor=Machado')
-    expect(href).toContain('nota=4')
-    expect(href).toContain('ordem=nota')
+    expect(href).toContain('ordem=titulo')
     expect(href).toContain('pagina=3')
   })
 
@@ -75,7 +72,6 @@ describe('buildListingHref', () => {
       q: '',
       genero: '',
       autor: '',
-      nota: null,
       ordem: 'recentes',
       pagina: 1,
     })

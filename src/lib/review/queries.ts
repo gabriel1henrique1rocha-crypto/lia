@@ -52,7 +52,6 @@ export type ReviewListItem = {
   id: string
   title: string
   slug: string
-  rating: number | null
   published_at: string | null
   excerpt: string
   book: {
@@ -68,13 +67,12 @@ export type ReviewListItem = {
 // pai. Toda review tem book (FK) e todo book tem genre, então o inner não perde
 // linhas (design §3).
 const LIST_SELECT =
-  'id, title, slug, rating, body, published_at, book!inner(title, author, genre!inner(name, slug))'
+  'id, title, slug, body, published_at, book!inner(title, author, genre!inner(name, slug))'
 
 type RawListRow = {
   id: string
   title: string
   slug: string
-  rating: number | null
   body: string | null
   published_at: string | null
   book: { title: string; author: string; genre: { name: string; slug: string } | null }
@@ -85,7 +83,6 @@ function toListItem(row: RawListRow): ReviewListItem {
     id: row.id,
     title: row.title,
     slug: row.slug,
-    rating: row.rating,
     published_at: row.published_at,
     excerpt: excerpt(row.body),
     book: { title: row.book.title, author: row.book.author, genre: row.book.genre ?? null },
@@ -94,7 +91,7 @@ function toListItem(row: RawListRow): ReviewListItem {
 
 /**
  * Listagem pública paginada: busca (`ilike` no title), filtros combináveis
- * (gênero/autor/nota mín.), ordenação e fatia por `range` — tudo numa ÚNICA
+ * (gênero/autor), ordenação e fatia por `range` — tudo numa ÚNICA
  * viagem (`count:'exact'` + `range`). Leitura via ANON; `status='published'`
  * EXPLÍCITO como defesa em profundidade além da RLS (mesmo racional de
  * getPublishedReviewBySlug; TD-04). Leitura reusa policies/GRANTs 0003–0006 —
@@ -128,7 +125,6 @@ function buildFilteredSelect(
   if (params.q) query = query.ilike('title', `%${escapeLike(params.q)}%`)
   if (params.genero) query = query.eq('book.genre.slug', params.genero)
   if (params.autor) query = query.eq('book.author', params.autor)
-  if (params.nota != null) query = query.gte('rating', params.nota)
   return query
 }
 
@@ -140,14 +136,14 @@ export async function listPublishedReviews(
   const to = from + PAGE_SIZE - 1
 
   const filtered = buildFilteredSelect(client, params)
-  // Mapa de ordenação (design §3): nota/recentes com nulls last (sem nota não
-  // "vence"); título asc pela collation do banco (suficiente no MVP).
+  // Mapa de ordenação (design §3): `recentes` (default) por published_at desc
+  // com nulls last — rascunho sem data não "vence"; `titulo` asc pela collation
+  // do banco (suficiente no MVP). A opção `nota` saiu com D-11 (a coluna foi
+  // dropada pela 0010); o default nunca foi ela, então não houve troca de default.
   const ordered =
-    params.ordem === 'nota'
-      ? filtered.order('rating', { ascending: false, nullsFirst: false })
-      : params.ordem === 'titulo'
-        ? filtered.order('title', { ascending: true })
-        : filtered.order('published_at', { ascending: false, nullsFirst: false })
+    params.ordem === 'titulo'
+      ? filtered.order('title', { ascending: true })
+      : filtered.order('published_at', { ascending: false, nullsFirst: false })
 
   const { data, error, count } = await ordered.range(from, to)
   if (error) {

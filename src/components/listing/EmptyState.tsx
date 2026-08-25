@@ -32,7 +32,6 @@ export function EmptyState(props: EmptyStateProps) {
   if (params.q) bits.push(`título contendo “${params.q}”`)
   if (params.genero) bits.push(`gênero “${params.genero}”`)
   if (params.autor) bits.push(`autor “${params.autor}”`)
-  if (params.nota != null) bits.push(`nota mínima ${params.nota}`)
   const echo = bits.length > 0 ? ` para ${bits.join(', ')}` : ''
 
   return (

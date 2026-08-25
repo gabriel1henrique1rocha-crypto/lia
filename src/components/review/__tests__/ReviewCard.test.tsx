@@ -9,7 +9,6 @@ const props: ReviewCardProps = {
   slug: 'dom-casmurro',
   title: 'Dom Casmurro: o ciúme como narrador',
   author: 'Machado de Assis',
-  rating: 4.5,
   excerpt: 'Machado entrega em Bento Santiago um dos narradores mais insidiosos.',
 }
 
@@ -45,13 +44,8 @@ describe('ReviewCard', () => {
     expect(screen.getByRole('img', { name: `Capa de ${props.title}` })).toBeInTheDocument()
   })
 
-  it('exibe a nota quando presente (sr-only pt-BR)', () => {
+  it('NÃO exibe nota — removida do produto por D-11', () => {
     renderCard()
-    expect(screen.getByText('Nota: 4,5 de 5')).toBeInTheDocument()
-  })
-
-  it('OMITE a nota quando rating é nulo (C-1)', () => {
-    renderCard({ rating: null })
     expect(screen.queryByText(/Nota:/)).toBeNull()
   })
 

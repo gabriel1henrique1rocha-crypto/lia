@@ -23,6 +23,7 @@ function makeBook(overrides: Partial<BookView> = {}): BookView {
     original_language: null,
     translator: null,
     translated_from: null,
+    publication_city: null,
     created_at: '2024-01-01T00:00:00Z',
     genre: { name: 'Romance', slug: 'romance' },
     ...overrides,
@@ -135,6 +136,7 @@ describe('BookDetails', () => {
           isbn: VALID_ISBN13,
           translator: 'Fulano',
           translated_from: 'fr',
+          publication_city: null,
         })}
       />
     )

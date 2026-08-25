@@ -14,11 +14,10 @@
 -- `review_rating_integer`, sob D-01 (escala inteira 0–5). **D-11 supersede D-01
 -- e retira a nota do produto** — a normalização e o CHECK foram REMOVIDOS.
 --
--- A coluna `review.rating` NÃO foi dropada: permanece DORMENTE, com os dados de
--- produção intactos, porque o código do M1 ainda a lê (filtro e ordenação da
--- home, exibição no card e na página). O drop é o passo 4 da ORDEM DE REMOÇÃO
--- de D-11 e terá migration própria, só quando nada mais a ler. Detalhe na
--- seção 2 abaixo.
+-- A coluna `review.rating` não é dropada POR ESTE ARQUIVO — quem a dropa é a
+-- **0010_drop_review_rating.sql**. (Quando esta emenda foi escrita, o plano era
+-- deixá-la dormente indefinidamente; a EMENDA de 2026-08-24 a D-11 colapsou a
+-- ORDEM DE REMOÇÃO e o drop veio logo em seguida, no mesmo dia. Ver seção 2.)
 --
 -- Nenhuma migration corretiva foi necessária: esta 0009 nunca chegou a
 -- produção (o registro de migração de produção para na 0008), então foi
@@ -97,11 +96,14 @@ alter table public.review add  constraint review_further_reading_is_array
 -- aplicada em produção** — o registro de migração de produção para na 0008.
 -- Ela ainda era editável, então foi editada em vez de emendada por uma 0010.
 --
--- A COLUNA `review.rating` PERMANECE — não é dropada aqui, de propósito.
--- Ela existe em produção desde o M1, com dados, e o código do M1 ainda a lê
--- (home: filtro por nota mínima e ordenação "Melhor nota"; card e página de
--- resenha: exibição). D-11 fixa a ORDEM DE REMOÇÃO e esta migration é só o
--- passo 1 dela:
+-- A COLUNA `review.rating` NÃO É DROPADA AQUI — mas JÁ FOI DROPADA pela
+-- **0010_drop_review_rating.sql**, aplicada logo depois desta. O texto abaixo
+-- descreve o plano ORIGINAL de D-11 (4 passos, coluna dormente no meio do
+-- caminho) e é mantido como registro do que foi ponderado; a EMENDA de
+-- 2026-08-24 a D-11 colapsou os passos 2, 3 e 4 numa leva só. Não leia a lista
+-- abaixo como cronograma vigente — ela já foi inteiramente executada.
+--
+-- D-11 fixava a ORDEM DE REMOÇÃO e esta migration era só o passo 1 dela:
 --
 --   1. a migration para de CONSTRANGER a coluna  ← É ESTE ARQUIVO, feito aqui
 --   2. a aplicação para de ESCREVER nela (M3)
@@ -110,12 +112,13 @@ alter table public.review add  constraint review_further_reading_is_array
 --      filtro algum
 --   4. migration DEDICADA dropa a coluna — só quando nada mais a lê
 --
--- Entre os passos 2 e 4 a coluna fica DORMENTE com os dados intactos: nada
--- escreve, o que já estava gravado permanece. É o que mantém a decisão
--- reversível sem restaurar backup. O passo 4 é a única porta de mão única.
+-- Entre os passos 2 e 4 a coluna FICARIA dormente com os dados intactos, o que
+-- manteria a decisão reversível sem restaurar backup. Esse intervalo NÃO chegou
+-- a existir: a emenda colapsou os passos e o drop (0010) veio junto. O passo 4
+-- era, e foi, a única porta de mão única — os dados de nota não voltam.
 --
--- O CHECK 0–5 original da 0001 (`review_rating_check` ou equivalente) NÃO é
--- tocado por esta migration — continua vigente sobre a coluna dormente, e sai
+-- O CHECK 0–5 original da 0001 (`review_rating_check`) NÃO é
+-- tocado por esta migration — seguiu vigente sobre a coluna, e saiu
 -- junto com ela no passo 4.
 --
 -- NOTA PARA AMBIENTE LOCAL: um banco local que tenha aplicado a versão

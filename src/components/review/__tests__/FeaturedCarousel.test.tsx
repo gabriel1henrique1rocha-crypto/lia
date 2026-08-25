@@ -10,7 +10,6 @@ const reviews: ReviewListItem[] = Array.from({ length: 4 }, (_, i) => ({
   id: String(i + 1),
   slug: `resenha-${i + 1}`,
   title: `Título ${i + 1}`,
-  rating: 4,
   published_at: null,
   excerpt: `Trecho ${i + 1}`,
   book: {
