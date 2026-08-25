@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireEditor } from '@/lib/auth/requireEditor'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated'
 import { slugify } from '@/lib/review/slug'
+import { readReviewForm, mapZodIssues, echoValues } from '@/lib/review/formData'
 import {
   reviewStatusSchema,
   reviewDraftSchema,
@@ -105,56 +106,16 @@ function mapearErro(error: PostgrestLikeError): ReviewFormState {
   }
 }
 
-/** Converte issues do Zod em `fieldErrors` (primeira mensagem por campo). */
-function mapearIssuesZod(issues: { path: PropertyKey[]; message: string }[]) {
-  const fieldErrors: Record<string, string> = {}
-  for (const issue of issues) {
-    const campo = issue.path.join('.') || '_'
-    if (!fieldErrors[campo]) fieldErrors[campo] = issue.message
-  }
-  return fieldErrors
-}
-
-/** `FormData` → objeto plano, com números convertidos onde o schema espera. */
-function lerFormulario(formData: FormData) {
-  const texto = (chave: string) => {
-    const valor = formData.get(chave)
-    return typeof valor === 'string' && valor.trim() !== '' ? valor : undefined
-  }
-  const numero = (chave: string) => {
-    const valor = texto(chave)
-    return valor === undefined ? undefined : Number(valor)
-  }
-  return {
-    title: texto('title') ?? '',
-    author: texto('author') ?? '',
-    genreId: texto('genreId') ?? '',
-    publisher: texto('publisher'),
-    isbn: texto('isbn'),
-    coverUrl: texto('coverUrl'),
-    year: numero('year'),
-    publicationCity: texto('publicationCity'),
-    reviewTitle: texto('reviewTitle'),
-    body: texto('body'),
-    tagsInput: texto('tagsInput') ?? '',
-    keywordsInput: texto('keywordsInput') ?? '',
-    highlightQuote: texto('highlightQuote'),
-  }
-}
-
 /**
- * Eco dos valores submetidos, para o formulário repopular sem perder digitação.
- * Type guard em vez de cast: `Object.entries` devolve `string | number |
- * undefined`, e afirmar `as Record<string,string>` esconderia um número que
- * escapasse para o campo de texto.
+ * Os helpers de leitura/eco do `FormData` e o mapeamento de issues vivem em
+ * `@/lib/review/formData` — módulo PURO, importado TAMBÉM pelo formulário (T8).
+ *
+ * Não é fatoração por gosto: o cliente valida para dar retorno imediato e o
+ * servidor revalida porque a validação do cliente nunca é garantia. As duas só
+ * concordam se lerem os MESMOS nomes de campo — com duas cópias, o formulário
+ * aprovaria payload que este action recusa, e o erro voltaria apontando para um
+ * campo que a tela não tem. Ver o cabeçalho daquele módulo.
  */
-function ecoDeValores(bruto: Record<string, string | number | undefined>) {
-  const eco: Record<string, string> = {}
-  for (const [chave, valor] of Object.entries(bruto)) {
-    if (typeof valor === 'string') eco[chave] = valor
-  }
-  return eco
-}
 
 /**
  * Rotas invalidadas por uma transição de visibilidade pública.
@@ -213,14 +174,14 @@ export async function createReview(
   // (2) o schema vem do STATUS VALIDADO, nunca do botão.
   const schema = status === 'published' ? reviewPublishSchema : reviewDraftSchema
 
-  const bruto = lerFormulario(formData)
+  const bruto = readReviewForm(formData)
   const parsed = schema.safeParse(bruto)
   if (!parsed.success) {
     return {
       status: 'error',
       message: 'Confira os campos destacados.',
-      fieldErrors: mapearIssuesZod(parsed.error.issues),
-      values: ecoDeValores(bruto),
+      fieldErrors: mapZodIssues(parsed.error.issues),
+      values: echoValues(bruto),
     }
   }
 
@@ -282,7 +243,7 @@ export async function publishReview(id: string): Promise<ReviewFormState> {
     return {
       status: 'error',
       message: 'Complete a resenha antes de publicar.',
-      fieldErrors: mapearIssuesZod(gate.error.issues),
+      fieldErrors: mapZodIssues(gate.error.issues),
     }
   }
 
