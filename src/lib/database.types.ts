@@ -282,6 +282,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_review_with_book: {
+        Args: {
+          p_author: string
+          p_body: string
+          p_book_title: string
+          p_cover_url: string
+          p_further_reading: Json
+          p_genre_id: string
+          p_highlight_quote: string
+          p_isbn: string
+          p_keywords: string[]
+          p_publication_city: string
+          p_publisher: string
+          p_review_title: string
+          p_slug_base: string
+          p_status: Database["public"]["Enums"]["review_status"]
+          p_tags: string[]
+          p_year: number
+        }
+        Returns: {
+          body: string | null
+          book_id: string
+          created_at: string
+          editor_id: string | null
+          further_reading: Json
+          highlight_quote: string | null
+          id: string
+          keywords: string[]
+          published_at: string | null
+          reviewer_name: string | null
+          slug: string
+          status: Database["public"]["Enums"]["review_status"]
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "review"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_editor_role: {
         Args: never
         Returns: Database["public"]["Enums"]["editor_role"]
@@ -289,6 +332,50 @@ export type Database = {
       is_active_editor: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       owns_book_via_review: { Args: { p_book_id: string }; Returns: boolean }
+      unique_review_slug: { Args: { p_base: string }; Returns: string }
+      update_review_with_book: {
+        Args: {
+          p_author: string
+          p_body: string
+          p_book_title: string
+          p_cover_url: string
+          p_further_reading: Json
+          p_genre_id: string
+          p_highlight_quote: string
+          p_isbn: string
+          p_keywords: string[]
+          p_publication_city: string
+          p_publisher: string
+          p_review_id: string
+          p_review_title: string
+          p_status: Database["public"]["Enums"]["review_status"]
+          p_tags: string[]
+          p_year: number
+        }
+        Returns: {
+          body: string | null
+          book_id: string
+          created_at: string
+          editor_id: string | null
+          further_reading: Json
+          highlight_quote: string | null
+          id: string
+          keywords: string[]
+          published_at: string | null
+          reviewer_name: string | null
+          slug: string
+          status: Database["public"]["Enums"]["review_status"]
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "review"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       comment_status: "pending" | "approved" | "rejected"
