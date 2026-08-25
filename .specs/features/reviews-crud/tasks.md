@@ -427,7 +427,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ---
 
-### T6: `actions.ts` — `createReview`, `publishReview`, `unpublishReview` (gate de publicação)
+### T6: `actions.ts` — `createReview`, `publishReview`, `unpublishReview` (gate de publicação) — **CONCLUÍDA (2026-08-25)**
 
 **What**: `src/app/admin/(protected)/resenhas/actions.ts` (`'use server'`). Cada action chama `requireEditor()` **antes** de qualquer escrita (SEC-08). `createReview`: parseia `status` do `FormData` com `reviewStatusSchema` **primeiro** (falha → erro genérico, nada persistido); **deriva** o schema (`reviewDraftSchema` × `reviewPublishSchema`) do status **validado**, nunca do botão (§5.2 — a emenda A-1); em sucesso, chama `createAuthenticatedClient().rpc('create_review_with_book', …)` com o **mesmo** status validado como `p_status`; `redirect` para `/admin/resenhas`. `publishReview`/`unpublishReview`: carregam a review, validam (`reviewPublishSchema` no publish), `update` só de `review.status`/`published_at` (`coalesce`, nunca reescreve — E-3); `revalidatePath` das rotas públicas **nas duas direções** (publicar **e** despublicar — E-4, sem isso a despublicação fica cacheada como se seguisse no ar). Erros mapeados por cenário (§9): 42501 → mensagem amigável; 23505 (slug) → "tente novamente"; Zod → `fieldErrors`.
 **Where**: `src/app/admin/(protected)/resenhas/actions.ts` + `src/app/admin/(protected)/resenhas/__tests__/actions.test.ts` (novos)
@@ -439,12 +439,30 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] **Teste obrigatório da emenda A-1:** `FormData` com `status=published` e `body` ausente → cai em `reviewPublishSchema`, é **rejeitado**, nada é persistido (não em `reviewDraftSchema`, mesmo request "parecendo" um create qualquer)
-- [ ] `status` ausente/forjado fora do enum → erro **antes** de tocar o RPC
-- [ ] `publishReview`/`unpublishReview`: `published_at` só carimba na 1ª publicação (`coalesce`); `unpublish` → `revalidatePath` disparado (asserção de chamada, não só o status)
-- [ ] Sem `requireEditor()` ok → nenhuma escrita ocorre (unit com client/gate stub)
-- [ ] Erros 42501/23505 mapeados para mensagem amigável (sem stack) nos testes
-- [ ] Gate **quick**
+- [x] **Teste obrigatório da emenda A-1 — PROVADO POR VERMELHIDÃO.** `FormData` com `status=published` e `body` vazio cai em `reviewPublishSchema`, é **rejeitado**, e o RPC **não é chamado**. Substituindo a derivação por `schema = botao === 'publicar' ? ... : ...` (a versão vulnerável, aplicada localmente e revertida), o teste reprova com `expected 'saved' to be 'error'` — ou seja, o payload forjado **teria publicado**. Contraprova no mesmo bloco: o MESMO payload com `status=draft` passa, isolando o status como a única variável.
+- [x] `status` ausente ou forjado fora do enum (`publicado`, `PUBLISHED`, `admin`, `''`) → `'Ação inválida.'` **antes** de tocar o RPC
+- [x] `published_at` só carimba na 1ª publicação: com `published_at: null` o patch inclui o campo; com carimbo existente, **não** inclui (asserção sobre o patch enviado, não sobre o status). `unpublish` **não** limpa o campo — o patch é exatamente `{ status: 'draft' }`
+- [x] `revalidatePath` disparado nas DUAS direções (E-4), com asserção de chamada: publicar e despublicar invalidam `/` e `/resenha/<slug>`
+- [x] Sem `requireEditor()` ok → nenhuma escrita nas três actions (nem `rpc`, nem `from`)
+- [x] **42501 / 23505 / 23514 mapeados**, sem stack e sem detalhe do banco. `23505` vira erro **no campo** `reviewTitle` (é dele que o slug deriva), não erro solto. `23514` é logado como divergência de espelhamento schema↔banco — não deveria chegar se o T5 espelhou certo
+- [x] **42501 NÃO vaza existência:** os três caminhos — linha invisível, 0 linhas afetadas, e 42501 do banco — produzem estado **idêntico** (`toEqual`), com `fieldErrors` ausente nos três. Teste extra garante que a mensagem não casa `/existe|encontrad|outro editor|rascunho/i`
+- [x] Gate **quick** verde: **`317 passed | 52 skipped (369)`** (+31 desta task, +5 da correção A-4)
+
+**ZERO CASTS DE TIPO.** A garantia do T5 se confirmou: `toCreateReviewRpcArgs()` alimenta `.rpc()` sem cast. Dois casts que escrevi por reflexo foram removidos após verificar que eram desnecessários — o join `book(...)` já é tipado como objeto único pela FK, e o eco de valores virou type guard.
+
+**ROTAS REVALIDADAS — escolha deliberada, não "tudo por precaução":**
+
+| Rota | Invalidada? | Por quê |
+| --- | --- | --- |
+| `/` | **sim** | a home É a listagem: a resenha entra ou sai dela |
+| `/resenha/<slug>` | **sim** | a página da resenha muda de visibilidade |
+| `/admin/*` | **não** | são `ƒ` (dinâmicas) por lerem `cookies()` via `createAuthenticatedClient` — confirmado no `next build`; invalidar seria ruído sem efeito |
+
+Criar **rascunho** não invalida nada: não há mudança visível ao público. Erro também não invalida — nada mudou. Ambos com teste.
+
+*Nota:* `/` e `/resenha/[slug]` também são `ƒ`, então o `revalidatePath` não é o único mecanismo de frescor — mas continua necessário, porque limpa o **Router Cache do cliente**, que serviria o payload RSC antigo a quem navegasse de volta.
+
+**Correção A-4 em COMMIT SEPARADO** (`fix(validation)`), antes desta task, como pedido.
 
 **Tests**: unit (client/gate stub, padrão `requireEditor.test.ts`) · **Gate**: quick
 **Verify**: `npx vitest run src/app/admin/\(protected\)/resenhas/__tests__/actions.test.ts`.
