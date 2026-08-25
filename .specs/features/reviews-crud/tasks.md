@@ -350,7 +350,7 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 
 ---
 
-### T4: Rollback/atomicidade do RPC `create_review_with_book` (A-9) — task própria
+### T4: Rollback/atomicidade dos RPCs (A-9) — task própria — **CONCLUÍDA (2026-08-25)**
 
 **What**: Suíte integration local-only, **exclusivamente** sobre a garantia de atomicidade (REV-04): (a) confirmar que `.rpc()` sob JWT `authenticated` propaga `auth.uid()` dentro da função INVOKER (não fabricar — provar); (b) forçar a `review` a falhar **dentro** da transação → **nenhuma linha em `book`** deve persistir (rollback completo); **⚠️ o injetor de falha original (`p_rating` fora de 0–5, violando o CHECK da T1) DEIXOU DE EXISTIR com D-11** — o CHECK saiu da 0009 e `p_rating` saiu do contrato do RPC. **É preciso escolher outro injetor antes de implementar esta task**; candidatos dentro da mesma transação: violar o CHECK `review_further_reading_is_array` (passando `p_further_reading` que não seja array), violar a FK `book.genre_id`, ou violar o UNIQUE de `review.book_id`. A escolha é decisão de design, não mecânica — **não presumir**; (c) sucesso → `book` **e** `review` presentes, ligados por `book_id`, na mesma consulta pós-commit. **Este é o teste que decide o gatilho do Plano de Corte** (ver seção própria) — não pode ser dobrado com T3 nem com nenhuma outra suíte.
 **Where**: `src/lib/supabase/__tests__/create-review-rollback.integration.test.ts` (novo)
@@ -362,15 +362,21 @@ $ psql -c "select defaclrole::regrole as grantor, nspname as schema, defaclacl
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] Caso de sucesso: `book`+`review` persistidos atomicamente, ligados
-- [ ] Caso de falha (**injetor a definir — o CHECK de rating não existe mais, D-11**): **zero** linhas em `book` após o rollback — consulta via superuser/psql
-- [ ] `auth.uid()` dentro do RPC resolve o editor chamador (não nulo, não outro editor)
-- [ ] Gate **integration** + quick
-- [ ] **Resultado registrado explicitamente** (verde/vermelho) — alimenta o gatilho do Plano de Corte
+- [x] **Caso de sucesso (create):** `book` e `review` persistidos e ligados. Oráculo: `count(book where id=<novo>) = 1`; `select book_id from review where id=<nova>` = o book criado; delta da marca `+1 book / +1 review`, `orfaos = 0`.
+- [x] **Caso de sucesso (update):** as duas tabelas mudam juntas — oráculo confirma título novo em `book` E em `review`, `status = published` e `published_at is not null` (carimbo da 1ª publicação, coalesce da 0011).
+- [x] **Caso de falha (create) — injetor DEFINIDO: `p_further_reading` não-array, violando o CHECK `review_further_reading_is_array`** (dispara no INSERT de `review`, depois do de `book` — exatamente a janela do órfão). Resultado: a chamada **falha** (`new row for relation "review" violates check constraint "review_further_reading_is_array"` → `ROLLBACK`), **zero** book com o título da tentativa, **zero** review da marca, e **zero órfão**. Oráculo `psql` superuser.
+- [x] **Caso de falha (update):** snapshot **campo a campo** antes e depois — `title|author|publisher|publication_city|year` do `book` e `title|body|status|published_at` da `review` **idênticos**. Contagem não bastaria: o risco do update não é linha a mais, é a ficha do livro ficar alterada com a resenha intacta (o RPC atualiza `book` PRIMEIRO). Confirmado ainda que `status` continua `draft` e `published_at` continua nulo — o carimbo de publicação não vazou.
+- [x] **PROVA DE VERMELHIDÃO** (mesmo padrão do T3): os dois RPCs foram substituídos **no banco local** por versões NÃO-ATÔMICAS — o erro do INSERT/UPDATE de `review` engolido num subbloco `exception when others then return null`, de modo que a escrita em `book`, fora do bloco, sobrevive e a transação externa commita. Experimento revertido por `db reset`; **a 0011 não foi tocada**. Resultado: `2 failed | 2 passed (4)` — os casos NEGATIVOS reprovaram, os POSITIVOS seguiram verdes (a versão quebrada funciona no caminho feliz, que é justamente o que torna o teste discriminante). Demonstração direta do órfão pelo oráculo: `orfaos 0 → 1`, com `ORFAO DA PROVA DE VERMELHIDAO` persistido e o RPC devolvendo `null` **sem erro**. Com a 0011 real de volta, a mesma chamada dá `ROLLBACK` e `orfaos = 0`.
+- [x] **`auth.uid()` dentro do RPC resolve o editor chamador:** oráculo lê `review.editor_id` = o uid da sessão de teste e `reviewer_name` = `'Atomicity A'` (denormalizado da self-read). Se falhasse, ou a sessão não estaria propagando ou a função teria virado DEFINER — e o dono da resenha deixaria de ser quem a escreveu.
+- [x] Gate **integration** (4/4 local) + **quick** verde. Suíte completa sem a flag: **`231 passed | 52 skipped (283)`** — as 4 células entram como skipped (eram 48 após o T3).
+- [x] **CI: mesma restrição do T3 (TD-02).** O job `test` não tem stack Supabase, container do oráculo nem `RUN_RLS_INTEGRATION`. **Nenhum mock de transação foi escrito** — mock de transação prova ainda menos que mock de policy: a atomicidade É a transação, então simulá-la é afirmar a conclusão.
+- [x] **Resultado: VERDE** (4/4). *(O gatilho do Plano de Corte que este resultado alimentaria está **suspenso** desde 2026-08-24 — ver nota no Plano de Corte; registrado mesmo assim.)*
 
 **Tests**: integration · **Gate**: integration (local)
 **Verify**: `$env:RUN_RLS_INTEGRATION='1'; npx vitest run src/lib/supabase/__tests__/create-review-rollback.integration.test.ts`.
-**Commit**: `test(db): rollback atômico de create_review_with_book — sem book órfão (REV-04, A-9)`
+**Commit**: `test(db): atomicidade de create/update_review_with_book (T4)`
+
+> **⚠️ O AVISO SOBRE O INJETOR VIVE NO PRÓPRIO ARQUIVO DE TESTE**, no cabeçalho, não só aqui — quem for mexer no CHECK `review_further_reading_is_array` precisa ver o problema onde está mexendo. Se o CHECK sair, esta suíte passa sem provar nada: nada falha, o rollback nunca é exercitado, o verde vira decorativo. Já aconteceu uma vez (o injetor anterior era `p_rating` contra `review_rating_integer`; D-11 matou os dois).
 
 ---
 
