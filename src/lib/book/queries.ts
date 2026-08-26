@@ -27,3 +27,26 @@ export async function listBooks(): Promise<BookView[]> {
   if (error) throw error
   return (data as BookView[] | null) ?? []
 }
+
+/** Opção de gênero para o `select` do formulário de resenha (T8/T10). */
+export type GenreOption = { id: string; name: string }
+
+/**
+ * Lista os gêneros para o `select` da ficha (`book.genre_id` é NOT NULL).
+ *
+ * CLIENT PÚBLICO, e não o autenticado, embora o consumidor seja uma rota do
+ * painel: `genre` é dado de REFERÊNCIA público — GRANT a `anon`+`authenticated`
+ * (0004) e policy `genre_public_read ... using (true)` (0006). Ler pelo caminho
+ * anon deixa explícito que a lista não é escopada por editor e não depende da
+ * sessão; é a mesma escolha das outras leituras deste arquivo.
+ *
+ * Ordenado por nome (pt-BR no banco) para o `select` ter ordem estável — uma
+ * lista de opções que muda de ordem entre visitas é hostil a quem escolhe por
+ * posição.
+ */
+export async function listGenres(): Promise<GenreOption[]> {
+  const supabase = createPublicClient()
+  const { data, error } = await supabase.from('genre').select('id, name').order('name')
+  if (error) throw error
+  return data ?? []
+}

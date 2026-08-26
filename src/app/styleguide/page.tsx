@@ -6,6 +6,11 @@ import { Link } from '@/components/ui/Link'
 import { Card } from '@/components/ui/Card'
 import { BookDetails } from '@/components/book/BookDetails'
 import { ReviewFormDemo } from './ReviewFormDemo'
+import {
+  EditorReviewsTable,
+  EmptyReviews,
+} from '@/app/admin/(protected)/resenhas/EditorReviewsTable'
+import type { EditorReviewListItem } from '@/lib/review/adminQueries'
 import type { BookView } from '@/lib/book/queries'
 
 /**
@@ -121,6 +126,31 @@ const fichaTraducao: BookView = {
 }
 
 const fichaCardStyle = { width: '26rem', maxWidth: '100%', gap: 'var(--spacing-4)' }
+
+/* ── mocks da lista do painel (T10) ─────────────────────────────────── */
+
+// Datas FIXAS: a tabela formata com fuso fixo, então a saída é determinística —
+// o axe audita sempre exatamente o mesmo texto.
+const resenhasDoEditor: EditorReviewListItem[] = [
+  {
+    id: '30000000-0000-4000-8000-000000000001',
+    title: 'A biblioteca como labirinto',
+    slug: 'a-biblioteca-como-labirinto',
+    status: 'draft',
+    published_at: null,
+    updated_at: '2026-08-24T18:30:00Z',
+    book: { title: 'O Nome da Rosa' },
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000002',
+    title: 'Iracema, entre a lenda e a língua',
+    slug: 'iracema-entre-a-lenda-e-a-lingua',
+    status: 'published',
+    published_at: '2026-08-20T12:00:00Z',
+    updated_at: '2026-08-20T12:00:00Z',
+    book: { title: 'Iracema' },
+  },
+]
 
 /* ── página ────────────────────────────────────────────────────────── */
 
@@ -279,6 +309,24 @@ export default function StyleguidePage() {
               </span>
             </Card.Footer>
           </Card>
+        </Row>
+      </Section>
+
+      {/* ── Lista do painel (T10) ────────────────────────────────── */}
+      {/* Montada aqui pelo mesmo motivo do formulário: a rota real vive sob
+          `(protected)` e exige sessão, que o CI não tem como abrir (TD-02).
+          O componente é o mesmo — só os dados são de mentira. */}
+      <Section id="admin-reviews" title="Painel — lista de resenhas">
+        <Row label="Com resenhas (rascunho + publicada)">
+          <div style={{ width: '100%' }}>
+            <EditorReviewsTable reviews={resenhasDoEditor} />
+          </div>
+        </Row>
+
+        <Row label="Editor sem nenhuma resenha — convite, não tabela vazia">
+          <div style={{ width: '100%' }}>
+            <EmptyReviews />
+          </div>
         </Row>
       </Section>
 

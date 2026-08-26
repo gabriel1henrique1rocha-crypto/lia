@@ -26,6 +26,18 @@ import {
  * de 0008/0009 reavaliam cada statement. Defesa em profundidade, não redundância.
  */
 
+/**
+ * O TIPO fica AQUI (declaração de tipo é apagada na compilação e não vira
+ * endpoint); o VALOR neutro `IDLE_STATE` mora em `@/lib/review/formState`,
+ * porque módulo `'use server'` só pode exportar função assíncrona. Ver o
+ * cabeçalho daquele arquivo — foi um defeito latente do T6 que só acendeu
+ * quando a T10 importou este módulo a partir de outro `'use server'`.
+ *
+ * Reexportar o tipo daqui (`export type { … }`) NÃO funciona: o registrador de
+ * actions do Next lê o statement de reexport antes do apagamento de tipos e
+ * tenta criar um endpoint para ele — `Export ReviewFormState doesn't exist in
+ * target module`. Declaração, sim; reexport, não. Verificado nos dois sentidos.
+ */
 export type ReviewFormState = {
   status: 'idle' | 'saved' | 'error'
   message: string
@@ -34,8 +46,6 @@ export type ReviewFormState = {
   /** Eco dos valores submetidos, para repopular sem perder digitação. */
   values?: Record<string, string>
 }
-
-export const IDLE_STATE: ReviewFormState = { status: 'idle', message: '' }
 
 /**
  * Mensagem ÚNICA para toda negação de acesso.

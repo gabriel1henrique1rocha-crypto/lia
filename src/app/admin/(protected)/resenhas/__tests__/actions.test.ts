@@ -18,13 +18,10 @@ vi.mock('@/lib/supabase/authenticated', () => ({
 const revalidatePath = vi.fn()
 vi.mock('next/cache', () => ({ revalidatePath: (p: string) => revalidatePath(p) }))
 
-import {
-  createReview,
-  publishReview,
-  unpublishReview,
-  IDLE_STATE,
-  type ReviewFormState,
-} from '../actions'
+import { createReview, publishReview, unpublishReview, type ReviewFormState } from '../actions'
+// `IDLE_STATE` desceu para um módulo puro: `'use server'` não pode exportar
+// valor (ver o cabeçalho de `formState.ts`). O tipo segue vindo do action.
+import { IDLE_STATE } from '@/lib/review/formState'
 
 const GENRE = '11111111-1111-4111-8111-111111111111'
 const SEM_PERMISSAO = 'Você não tem permissão para esta operação.'

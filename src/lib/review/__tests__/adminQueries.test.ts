@@ -127,6 +127,21 @@ describe('listEditorReviews', () => {
     await expect(listEditorReviews()).rejects.toBeTruthy()
   })
 
+  it('`updated_at` VEM no payload — é a coluna que explica a ordem da lista', async () => {
+    // A query já ordenava por `updated_at` sem trazê-lo, então a tela ordenava
+    // por um critério invisível (T10). Ordenar por algo que não se mostra faz a
+    // lista parecer embaralhada.
+    getAuthenticatedEditorMock.mockResolvedValue({ id: 'ed-1', role: 'editor' })
+    const camposSelecionados: string[] = []
+    from.mockReturnValue(
+      mockQueryChain({ data: [], error: null }, { capturarSelect: camposSelecionados })
+    )
+
+    await listEditorReviews()
+
+    expect(camposSelecionados[0]).toMatch(/\bupdated_at\b/)
+  })
+
   it('o corpo da resenha (body) NÃO vem no payload da lista', async () => {
     getAuthenticatedEditorMock.mockResolvedValue({ id: 'ed-1', role: 'editor' })
     const camposSelecionados: string[] = []
