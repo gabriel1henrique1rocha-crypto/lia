@@ -76,7 +76,7 @@ jobs:
         with:
           version: 2.116.0
 
-      # PRÉ-VOO — quem já está com as portas do Supabase (54320-54324).
+      # PORTAS DO SUPABASE (54320-54324) — reserva + diagnóstico (TD-11).
       #
       # Observado em 2026-08-26: `supabase start` falhou com
       # `failed to bind host port for 0.0.0.0:54322: address already in use`
@@ -86,10 +86,22 @@ jobs:
       # `docker pull` — pode ocupá-las como porta de origem por alguns segundos
       # e derrubar o bind do Docker.
       #
-      # Isto NÃO corrige: registra. Sem o registro, a falha volta como "o CI
-      # falhou sozinho", que é o começo de alguém desabilitar o gate. A correção
-      # proposta (reservar as portas com `net.ipv4.ip_local_reserved_ports`)
-      # está na TD-11 do STATE.md, deliberadamente não aplicada aqui.
+      # CORRIGIDO (TD-11): reserva 54320-54329 ANTES de qualquer coisa que abra
+      # conexão de saída. `ip_local_reserved_ports` instrui o kernel a nunca
+      # entregar essas portas como porta EFÊMERA (origem) — o bind do Docker como
+      # porta de DESTINO não é afetado, é outro mecanismo. O teto vai a 54329, não
+      # 54324, com folga para versões futuras do Supabase que usem mais portas
+      # nessa faixa. NÃO mudamos as portas do `config.toml`: mudar o range do
+      # kernel é neutro para todo mundo; mudar as portas locais quebraria o
+      # ambiente de desenvolvimento por um problema que é só do runner.
+      #
+      # NÃO É RETRY: uma falha de bind depois desta reserva seria uma causa
+      # NOVA, e o job ainda deve morrer nela — retry esconderia isso.
+      - name: reservar as portas do Supabase fora do range efêmero (TD-11)
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
+
+      # Dump ANTES era só diagnóstico; agora também é EVIDÊNCIA de que a reserva
+      # pegou — a linha "portas reservadas" deve mostrar 54320-54329.
       - name: pré-voo — portas do Supabase livres? (diagnóstico)
         run: |
           echo "range efêmero do kernel: $(cat /proc/sys/net/ipv4/ip_local_port_range)"
