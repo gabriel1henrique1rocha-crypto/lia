@@ -76,6 +76,26 @@ jobs:
         with:
           version: 2.116.0
 
+      # PRÉ-VOO — quem já está com as portas do Supabase (54320-54324).
+      #
+      # Observado em 2026-08-26: `supabase start` falhou com
+      # `failed to bind host port for 0.0.0.0:54322: address already in use`
+      # numa execução em sete. As portas do config.toml caem DENTRO do range
+      # efêmero do kernel (`net.ipv4.ip_local_port_range`, por padrão
+      # 32768-60999), então qualquer conexão de SAÍDA do runner — `npm ci`,
+      # `docker pull` — pode ocupá-las como porta de origem por alguns segundos
+      # e derrubar o bind do Docker.
+      #
+      # Isto NÃO corrige: registra. Sem o registro, a falha volta como "o CI
+      # falhou sozinho", que é o começo de alguém desabilitar o gate. A correção
+      # proposta (reservar as portas com `net.ipv4.ip_local_reserved_ports`)
+      # está na TD-11 do STATE.md, deliberadamente não aplicada aqui.
+      - name: pré-voo — portas do Supabase livres? (diagnóstico)
+        run: |
+          echo "range efêmero do kernel: $(cat /proc/sys/net/ipv4/ip_local_port_range)"
+          echo "portas reservadas:       $(cat /proc/sys/net/ipv4/ip_local_reserved_ports || echo '(nenhuma)')"
+          ss -tulpn 2>/dev/null | awk 'NR==1 || $5 ~ /:543[0-9][0-9]$/' || true
+
       # Só os serviços que as suítes tocam: postgres (sempre), kong (gateway em
       # :54321), postgrest (Data API) e gotrue (sessões autenticadas reais e a
       # admin API que cria os usuários de teste). Tudo o mais fica de fora —
