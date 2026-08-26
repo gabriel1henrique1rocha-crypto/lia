@@ -127,6 +127,15 @@ jobs:
             echo "SUPABASE_LOCAL_ANON_KEY=$PUBLISHABLE_KEY"
             echo "SUPABASE_LOCAL_SECRET_KEY=$SECRET_KEY"
             echo "SUPABASE_LOCAL_DB_CONTAINER=$DB_CONTAINER"
+            # A env PÚBLICA também aponta ao stack efêmero. `env.ts` valida
+            # process.env NO LOAD do módulo, e `listing.integration` importa
+            # `review/queries` (→ supabase/public → env.ts) dentro do beforeAll:
+            # sem estas duas a suíte morre com ZodError antes da primeira
+            # asserção. No desenvolvimento local elas vêm do `.env.local`, onde
+            # apontam para o projeto REMOTO — aqui apontam para o efêmero, o que
+            # é ESTRITAMENTE mais seguro (ver o achado registrado na TD-02).
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
           } >> "$GITHUB_ENV"
 
           echo "Postgres: $DB_CONTAINER · API: $API_URL"
@@ -150,6 +159,27 @@ jobs:
             echo "::error::As suites de RLS dependem dos IDs e contagens de supabase/seed.sql."
             exit 1
           fi
+
+      # DIAGNÓSTICO PERMANENTE — os GRANTs de TABELA dos papéis da Data API.
+      #
+      # Metade das asserções de negação depende deles: sem GRANT, o Postgres
+      # devolve 42501 ANTES de olhar a policy; COM GRANT, quem nega é a RLS — e
+      # aí um UPDATE que não casa linha nenhuma volta SEM ERRO, com 0 linhas.
+      # São dois caminhos de negação diferentes, e um teste que espera 42501
+      # falha no segundo mesmo com a segurança intacta.
+      #
+      # Imprimir isto a cada run torna a divergência entre ambientes visível no
+      # log, em vez de virar uma asserção enigmática. Nunca reprova sozinho.
+      - name: privilégios de tabela dos papéis da Data API (diagnóstico)
+        run: |
+          docker exec -i "$SUPABASE_LOCAL_DB_CONTAINER" psql -U postgres -d postgres -q -c "
+            select table_name, grantee,
+                   string_agg(privilege_type, ',' order by privilege_type) as privilegios
+              from information_schema.role_table_grants
+             where table_schema = 'public'
+               and grantee in ('anon', 'authenticated', 'service_role')
+             group by table_name, grantee
+             order by table_name, grantee;"
 
       # Filtro por SUBSTRING do caminho (é assim que o vitest trata argumentos
       # posicionais — não é glob). Pega as sete `*.integration.test.ts` de hoje e
