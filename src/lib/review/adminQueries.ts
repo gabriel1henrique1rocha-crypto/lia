@@ -33,13 +33,19 @@ export type EditorReviewListItem = {
   slug: string
   status: Database['public']['Enums']['review_status']
   published_at: string | null
+  updated_at: string
   book: { title: string }
 }
 
-// Campos mínimos da lista (título, slug, status, data, título do livro via
+// Campos mínimos da lista (título, slug, status, datas, título do livro via
 // join) — sem `body`: a listagem não precisa do corpo da resenha (payload
 // desnecessário numa tela que só lista).
-const LIST_SELECT = 'id, title, slug, status, published_at, book(title)'
+//
+// `updated_at` entrou na T10 (acréscimo, não redesenho): a função JÁ ORDENAVA
+// por ele, mas não o trazia, então a tela não tinha como mostrar "atualizado em"
+// — a coluna que EXPLICA a ordem em que as linhas aparecem. Uma lista ordenada
+// por um critério invisível parece desordenada.
+const LIST_SELECT = 'id, title, slug, status, published_at, updated_at, book(title)'
 
 /**
  * `listEditorReviews()`: resenhas visíveis ao editor autenticado (admin vê

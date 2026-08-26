@@ -956,6 +956,141 @@
     border-bottom-color: var(--text-link);
   }
 
+  /* ================= PAINEL DO EDITOR (reviews-crud, T10) =================
+     Só tokens (@theme + aliases :root) — nenhuma cor nova. Anel de foco herdado
+     do @layer base. */
+
+  .lia-admin {
+    max-width: var(--container-md);
+    margin-inline: auto;
+    padding: var(--spacing-6) var(--spacing-5) var(--spacing-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+  }
+  .lia-admin__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-4);
+  }
+  .lia-admin__title {
+    margin: 0;
+    font: var(--type-heading);
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line-height);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-strong); /* ink-900 sobre paper-50 = 15.9:1 AAA */
+  }
+  .lia-admin__back {
+    margin: 0;
+  }
+
+  /* Confirmação pós-criação. Recebe foco (tabIndex=-1) — o anel de foco do
+     @layer base cobre [tabindex], então ela fica visível ao aterrissar. */
+  .lia-admin-notice {
+    margin: 0;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-md);
+    background: var(--feedback-success-bg);
+    color: var(--feedback-success-text); /* green-700 sobre green-50 = 5.6:1 AA */
+    font: var(--type-label);
+  }
+
+  /* Rola só quando não cabe; é `region` focalizável para o teclado alcançar a
+     rolagem (não há link dentro das linhas nesta sprint). */
+  .lia-admin-table__scroll {
+    overflow-x: auto;
+  }
+  .lia-admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    background: var(--surface-card);
+    border: var(--border-width) solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+  }
+  .lia-admin-table__caption {
+    caption-side: top;
+    text-align: start;
+    padding: 0 0 var(--spacing-3);
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    color: var(--text-secondary); /* ink-700 sobre paper-50 = 9.3:1 AAA */
+  }
+  .lia-admin-table th,
+  .lia-admin-table td {
+    padding: var(--spacing-3) var(--spacing-4);
+    text-align: start;
+    vertical-align: top;
+    border-bottom: var(--border-width) solid var(--border-subtle);
+  }
+  .lia-admin-table tbody tr:last-child th,
+  .lia-admin-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .lia-admin-table thead th {
+    background: var(--surface-subtle);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-strong);
+    white-space: nowrap;
+  }
+  .lia-admin-table__row-header {
+    font-weight: var(--font-weight-medium);
+    color: var(--text-strong);
+  }
+  .lia-admin-table td {
+    color: var(--text-body-color); /* ink-800 sobre paper-0 = 14.0:1 AAA */
+  }
+
+  /* Situação: o TEXTO carrega o significado. A borda muda de ESTILO (sólida ×
+     tracejada) além da cor, então a distinção sobrevive em monocromático e a
+     quem não distingue as duas cores (WCAG 1.4.1). */
+  .lia-status {
+    display: inline-block;
+    padding: var(--spacing-1) var(--spacing-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+  }
+  .lia-status[data-status='draft'] {
+    border: var(--border-width-strong) dashed var(--border-strong);
+    background: var(--surface-subtle);
+    color: var(--text-secondary); /* ink-700 sobre paper-100 = 8.6:1 AAA */
+  }
+  .lia-status[data-status='published'] {
+    border: var(--border-width-strong) solid var(--feedback-success-text);
+    background: var(--feedback-success-bg);
+    color: var(--feedback-success-text); /* green-700 sobre green-50 = 5.6:1 AA */
+  }
+
+  /* Editor sem nenhuma resenha: convite, não tabela vazia. */
+  .lia-admin-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+    padding: var(--spacing-7) var(--spacing-5);
+    background: var(--surface-subtle);
+    border-radius: var(--radius-lg);
+  }
+  .lia-admin-empty__title {
+    margin: 0;
+    font: var(--type-heading);
+    font-size: var(--text-lg);
+    color: var(--text-strong);
+  }
+  .lia-admin-empty__text {
+    margin: 0;
+    max-width: var(--container-prose);
+    font: var(--type-prose);
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+  }
+
   /* ================= FORMULÁRIO DE RESENHA (reviews-crud, T8) =================
      Só tokens (@theme + aliases :root) — nenhuma cor nova. O anel de foco vem
      do :where(...):focus-visible do @layer base; nada aqui o sobrescreve. */

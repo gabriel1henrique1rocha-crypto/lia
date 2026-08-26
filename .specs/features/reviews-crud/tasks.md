@@ -486,7 +486,7 @@ Criar **rascunho** não invalida nada: não há mudança visível ao público. E
 **Done when**:
 - [x] Unit com client stub: retorna a forma esperada; **prova que o `.eq('editor_id', …)` dispara para papel `editor` e NÃO dispara para `admin`** (6 testes, `adminQueries.test.ts`)
 - [x] Efeito de RLS (editor só vê próprias, admin vê todas) coberto por integration — **merge-forward para a matriz de `review` já existente (0008/rbac-matrix.integration.test.ts)**, não repetida aqui; o confounder que motivou o filtro acima já está provado nela (linha 192)
-- [x] Gate **quick** verde: **`287 passed | 52 skipped (339)`** (+6 desta task)
+- [x] Gate **quick** verde: **`323 passed | 52 skipped (375)`** (+6 desta task) — *anotação corrigida na T10: o número registrado originalmente aqui era `287 passed | 52 skipped (339)`, e estava errado. A T8 mediu a baseline de verdade neste commit rodando a suíte sem os arquivos que ela tocava (`292 passed`) e somando os 31 de `actions.test.ts` de então. O `52 skipped` conferia; o total de aprovados estava 36 abaixo do real.*
 
 **ORDENAÇÃO:** `updated_at` desc. O trigger `review_set_updated_at` (0001) toca a coluna em toda UPDATE — publish/unpublish inclusive —, então rascunho recém-criado ou recém-editado sobe ao topo, que é o item que o editor mais provavelmente veio ver no painel.
 
@@ -578,7 +578,7 @@ Criar **rascunho** não invalida nada: não há mudança visível ao público. E
 
 ---
 
-### T10: Rotas `/admin/resenhas` (lista) + `/admin/resenhas/nova` (criar)
+### T10: Rotas `/admin/resenhas` (lista) + `/admin/resenhas/nova` (criar) — **CONCLUÍDA (2026-08-26)**
 
 **What**: `resenhas/page.tsx` — lista mínima via `listEditorReviews()` (T7): título/status/link para despublicar (**sem** link de editar funcional — a rota de edição está cortada; se a UI expuser um link, ele **não** deve existir esta sprint, para não apontar a 404/rota inexistente). `resenhas/nova/page.tsx` — renderiza `ReviewForm` (T8+T9) ligado a `createReview` (T6). Ambas sob `(protected)` — herdam o gate autoritativo (`requireEditor()`), satisfazendo REV-01 **por reuso**, sem lógica de gate nova aqui. `metadata.robots: noindex`.
 **Where**: `src/app/admin/(protected)/resenhas/page.tsx` + `src/app/admin/(protected)/resenhas/nova/page.tsx` (novos) · specs axe das 2 rotas
@@ -590,15 +590,50 @@ Criar **rascunho** não invalida nada: não há mudança visível ao público. E
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `/admin/resenhas` sem sessão → redirect ao login (herdado do layout, conferência rápida); lista renderiza para editor com sessão
-- [ ] `/admin/resenhas/nova` completa o fluxo: preencher, "Salvar rascunho" → aparece na lista como draft; "Publicar" completo → status published
-- [ ] Nenhum link para `/admin/resenhas/[id]/editar` na lista (rota não existe esta sprint)
-- [ ] Axe das 2 rotas sem violações críticas
-- [ ] Gate **full**
+- [x] `/admin/resenhas` **e** `/admin/resenhas/nova` sem sessão → terminam em `/admin/login`, e o HTML da resposta **não contém** nada da lista (nem "Suas resenhas", nem o cabeçalho "Atualizada em"): o redirect acontece antes de a página montar. Fixado em navegador real (`admin-reviews.spec.ts`), não por leitura de código
+- [x] Nenhum guard local: as duas páginas herdam o `requireEditor()` do `(protected)/layout.tsx`. As actions do T6 mantêm o gate próprio — endpoint é outro ponto de entrada, não redundância
+- [x] `nova` renderiza o `ReviewForm` (T8) com `action={createReviewAndGoToList}` e os gêneros carregados (`select` com um `<option>` por gênero, `value` = UUID)
+- [x] Nenhum link para `/admin/resenhas/[id]/editar` (fixado por teste que varre os `href` da lista e da página)
+- [x] Axe das duas superfícies auditáveis **sem NENHUMA violação e sem NENHUM `incomplete`** (gate estrito do T8, ver tabela)
+- [x] `<h1>` único e descritivo em cada página ("Suas resenhas" / "Nova resenha")
+- [x] Gate **full** verde
+- [ ] **NÃO VERIFICADO: o fluxo end-to-end** (preencher → "Salvar rascunho" → aparecer na lista como draft → "Publicar"). Exige sessão de editor, ou seja Supabase + Mailpit locais — é a **TD-02**, e nem o CI nem esta execução têm como abrir sessão. O que está provado é cada elo em isolamento (gate, wiring da action, redirect, leitura da lista); a junção precisa da conferência manual local descrita em **Verify**
 
-**Tests**: unit (wiring) + a11y de rota · **Gate**: full
-**Verify**: `npm run test:a11y` (rotas novas); fluxo manual local (criar rascunho → publicar → ver na lista).
-**Commit**: `feat(review): rotas /admin/resenhas (lista) e /nova (criar) — REV-01/24, DD-13`
+**EVIDÊNCIA — gate das rotas (Chromium, sem sessão)**
+
+| rota | resposta | URL final |
+|---|---|---|
+| `/admin/resenhas` | 200 | `/admin/login` |
+| `/admin/resenhas/nova` | 200 | `/admin/login` |
+
+**EVIDÊNCIA — axe, por impacto (axe-core 4.11.4, Chromium)**
+
+| escopo auditado | critical | serious | moderate | minor | **incomplete** | regras aprovadas |
+|---|---|---|---|---|---|---|
+| lista do painel (tabela + estado vazio) | 0 | 0 | 0 | 0 | **0** | 22 |
+| tabela isolada | 0 | 0 | 0 | 0 | **0** | 7 |
+| estado vazio isolado | 0 | 0 | 0 | 0 | **0** | 2 |
+
+Entre as 22 aprovadas da lista: `th-has-data-cells`, `td-headers-attr`, `scope-attr-valid`, `empty-table-header`, `table-duplicate-name`, `heading-order`, `landmark-unique`, `color-contrast`.
+
+**ONDE O AXE RODA, E POR QUÊ NÃO NA ROTA.** A rota autenticada não é auditável sem sessão (TD-02), então a árvore da lista é auditada no `/styleguide`, com os MESMOS componentes (`EditorReviewsTable`/`EmptyReviews`), o mesmo CSS e o mesmo motor. Foi para isso que a apresentação ficou separada da página. O que a rota acrescenta por cima — `<h1>`, link de criar, aviso de confirmação — é coberto por unit. Dizer "axe das 2 rotas ✅" seria afirmar mais do que se mediu.
+
+**DECISÃO — `<table>`, não lista semântica.** O dado é tabular: quatro atributos do mesmo tipo repetidos linha a linha, que se comparam na vertical ("quais estão em rascunho?", "qual mexi por último?"). Numa `<ul>` cada item vira bloco de texto solto e some a associação célula↔cabeçalho. Com `<th scope="col">` + `<th scope="row">` (o título da resenha É o cabeçalho da linha), o leitor de tela anuncia "Situação: Rascunho" para a resenha certa e permite percorrer coluna por coluna. `<caption>` em vez de `<h2>` solto porque o nome pertence à tabela — entra no anúncio de entrada junto com a contagem de linhas e colunas. Lista semântica seria certa se cada item fosse uma unidade de leitura (como os cards da home); não é o caso.
+
+**DECISÃO — depois de criar, o editor vai para a lista** (`/admin/resenhas?criada=rascunho|publicada`). Não é preferência de fluxo: ficar no formulário seria uma **armadilha**, porque a rota de EDIÇÃO está cortada (§13) e o formulário só sabe CRIAR — um segundo "Salvar rascunho" criaria uma SEGUNDA resenha em vez de atualizar a primeira, sem nada na tela avisando. A lista ainda é a prova visível de que gravou.
+
+**ORDEM `revalidatePath` → `redirect`, verificada.** O `createReview` (T6) chama `revalidarRotasPublicas()` **antes de retornar**; o `redirect` mora no envoltório de rota (`nova/actions.ts`) e só roda **depois** daquele `await` resolver. Ordem provada por teste com registro de sequência (`['createReview', 'redirect']`) — invalidar depois de navegar chegaria tarde e a home seguiria servindo a versão sem a resenha nova.
+
+**O `redirect` NÃO É ENGOLIDO.** `redirect()` sinaliza por exceção de controle (`NEXT_REDIRECT`); um `try/catch` no caminho a viraria "erro" e a navegação simplesmente não aconteceria — falha silenciosa. Caminho inteiro conferido e livre de captura: (1) `createReview` não tem `try/catch` (trata erro do Postgres pelo VALOR de retorno) e de todo modo já retornou; (2) o envoltório não captura; (3) o `validarEEnviar` do `ReviewForm` faz `return action(...)`, sem `try/catch` nem `.catch()`. **Fixado por teste com o `redirect` mockado LANÇANDO** (um mock que só registrasse a chamada passaria mesmo com um `try/catch` no meio — não distinguiria "propagou" de "engoliu").
+
+**ACHADO — o T6 exportava um VALOR de um módulo `'use server'`, e isso quebrou o build.** `actions.ts` exportava `IDLE_STATE` (objeto). Módulo `'use server'` só pode exportar função assíncrona — cada export vira endpoint. Era inválido desde o primeiro dia, mas SILENCIOSO: nada no grafo do build importava valores daquele módulo (o T8 declara o próprio estado inicial e importa só o tipo, que é apagado). Assim que `nova/actions.ts` importou `createReview`, o Next passou a validar os exports e o build parou com `"use server" file can only export async functions, found object`. Corrigido movendo só o VALOR para `src/lib/review/formState.ts`; o TIPO continua **declarado** em `actions.ts`, então o `import type` do T8 segue intacto. **Reexportar o tipo (`export type { … }`) não serve** — o registrador de actions lê o statement de reexport e tenta criar endpoint para ele (`Export ReviewFormState doesn't exist in target module`). Declaração sim, reexport não; verificado nos dois sentidos.
+
+**ACRÉSCIMO EM `listEditorReviews` — `updated_at` no `select`.** A função já ORDENAVA por `updated_at` sem trazê-lo, então a tela não tinha como mostrar "atualizado em" — a coluna que EXPLICA a ordem das linhas. Uma lista ordenada por critério invisível parece embaralhada. É **acréscimo, não redesenho**: nada da lógica do T7 mudou (nem o `.eq('editor_id')` que compensa o confounder de `review_public_read`, nem a ordenação, nem o `body` fora do payload). Teste novo fixa a presença do campo.
+
+**Tests**: unit — `EditorReviewsTable` (13, inclui axe em jsdom), `page` da lista (11), `page` de `nova` (7), envoltório de action (8), `listGenres` (5), `updated_at` no select (1) · browser — `admin-reviews.spec.ts` (10: gate das 2 rotas, vazamento de HTML, 2 axe estritos, cor/estrutura, teclado, TD-07)
+**Gate**: **full** — `403 passed | 52 skipped (455)` (era `361 | 52`; **+42**) · `npx playwright test` → **40 passed** (era 30; **+10**) · `typecheck`/`lint`/`format:check`/`build` limpos
+**Verify**: `npx vitest run "src/app/admin/(protected)/resenhas"` · `npm run build && npx playwright test tests/admin-reviews.spec.ts` · **pendente de conferência manual com Supabase local**: criar rascunho → ver na lista como *Rascunho* → publicar → ver como *Publicada*
+**Commit**: `feat(admin): rotas /admin/resenhas e /nova (T10)`
 
 ---
 
