@@ -234,6 +234,89 @@ describe('campos novos AUSENTES — degradação sem sobra', () => {
   })
 })
 
+/* ── 2b. Estrutura visual (polish de UI) ─────────────────────────────────── */
+
+/**
+ * O "BLOCO VINHO" e a LARGURA DO TEXTO eram o MESMO defeito com dois sintomas:
+ * a classe `lia-review` estava no `<article>` desde o M1 mas nenhuma regra CSS
+ * a selecionava. Sem container, o artigo herdava a largura do `<main>` (1280px)
+ * — e com ele a capa, cuja `aspect-ratio: 3/2` convertia essa largura em 853px
+ * de oxblood-700 sólido antes de qualquer conteúdo.
+ *
+ * A altura em pixel é asserção de NAVEGADOR (`tests/review-public.spec.ts`); o
+ * jsdom não faz layout. O que se prende AQUI é o que o jsdom sabe conferir: que
+ * os ganchos de CSS que dão medida a esses blocos existem e estão nos elementos
+ * certos. Sem eles, a regra volta a não ter em quem pegar.
+ */
+describe('estrutura de layout — os ganchos que dão MEDIDA à página', () => {
+  it('a capa vem dentro do container que limita a largura dela', async () => {
+    const { container } = await renderizar(SEM_CAMPOS_NOVOS)
+
+    const wrapper = container.querySelector('.lia-review__cover')
+    expect(wrapper).not.toBeNull()
+    // A capa é FILHA do wrapper — não irmã. Solta, volta a esticar.
+    expect(wrapper!.querySelector('.lia-card__media')).not.toBeNull()
+  })
+
+  it('o TEXTO CORRIDO é o bloco marcado com a medida de leitura', async () => {
+    const { container } = await renderizar(SEM_CAMPOS_NOVOS)
+
+    const prosa = container.querySelector('.lia-review__prose')
+    expect(prosa).not.toBeNull()
+    // É a seção do corpo — não a ficha técnica, que é grade de pares e tem
+    // largura própria (a medida de leitura a deixaria apertada sem ganho).
+    expect(prosa).toHaveAttribute('aria-labelledby', 'resenha-texto')
+    expect(container.querySelector('section[aria-labelledby="ficha"]')).not.toHaveClass(
+      'lia-review__prose'
+    )
+  })
+
+  it('os parágrafos do corpo estão DENTRO do bloco de medida', async () => {
+    const { container } = await renderizar(SEM_CAMPOS_NOVOS)
+
+    const prosa = container.querySelector('.lia-review__prose')!
+    const paragrafos = [...prosa.querySelectorAll(':scope > p')]
+    expect(paragrafos.map((p) => p.textContent)).toEqual([
+      'Primeiro parágrafo da resenha.',
+      'Segundo parágrafo.',
+    ])
+  })
+})
+
+describe('capa — as duas variantes na rota', () => {
+  it('SEM cover_url (o caso de TODA resenha em produção): fallback tipográfico', async () => {
+    const { container } = await renderizar(SEM_CAMPOS_NOVOS)
+
+    expect(container.querySelector('.lia-review__cover img')).toBeNull()
+    expect(container.querySelector('.lia-review__cover .lia-card__media--type')).not.toBeNull()
+    expect(screen.getByRole('img', { name: 'Capa de O Nome da Rosa' })).toBeInTheDocument()
+  })
+
+  it('COM cover_url: a imagem de verdade, no mesmo container', async () => {
+    const comCapa = {
+      ...SEM_CAMPOS_NOVOS,
+      book: { ...SEM_CAMPOS_NOVOS.book, cover_url: 'https://exemplo.test/capa.jpg' },
+    } as unknown as ReviewView
+    const { container } = await renderizar(comCapa)
+
+    const img = container.querySelector('.lia-review__cover img')
+    expect(img).toHaveAttribute('src', 'https://exemplo.test/capa.jpg')
+    expect(img).toHaveAttribute('alt', 'Capa de O Nome da Rosa')
+    expect(container.querySelector('.lia-card__media--type')).toBeNull()
+  })
+
+  it('axe: a rota COM capa também fica sem violação', async () => {
+    const comCapa = {
+      ...COM_CAMPOS_NOVOS,
+      book: { ...COM_CAMPOS_NOVOS.book, cover_url: 'https://exemplo.test/capa.jpg' },
+    } as unknown as ReviewView
+    const { container } = await renderizar(comCapa)
+
+    const { violations } = await axe.run(container)
+    expect(violations).toEqual([])
+  })
+})
+
 /* ── 3. Metadados ────────────────────────────────────────────────────────── */
 
 describe('generateMetadata — palavras-chave', () => {

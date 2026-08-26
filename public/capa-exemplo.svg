@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" role="presentation">
+  <rect width="400" height="600" fill="#f5f0e6"/>
+  <rect x="24" y="24" width="352" height="552" fill="none" stroke="#c9bea8" stroke-width="2"/>
+  <text x="200" y="300" text-anchor="middle" font-family="Georgia, serif" font-size="34" fill="#4b4239">capa</text>
+  <text x="200" y="344" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#756a5e">de exemplo</text>
+</svg>

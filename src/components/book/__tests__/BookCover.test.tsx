@@ -1,9 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { render, screen } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import axe from 'axe-core'
 import { BookCover } from '../BookCover'
+
+beforeEach(cleanup)
 
 describe('BookCover', () => {
   it('é um Server Component (sem diretiva use client)', () => {
@@ -34,5 +36,61 @@ describe('BookCover', () => {
     const results = await axe.run(container)
     const critical = results.violations.filter((v) => v.impact === 'critical')
     expect(critical).toEqual([])
+  })
+
+  // Sem container, `.lia-card__media` (width:100% + aspect-ratio) não tem
+  // medida — foi assim que a capa virou 853px de vinho na rota. O componente
+  // continua SEM largura própria de propósito: quem a define é o contexto.
+  it('não impõe largura nem altura próprias — o tamanho é do contexto', () => {
+    const { container } = render(<BookCover title="Iracema" />)
+    const cover = container.firstElementChild as HTMLElement
+    expect(cover.getAttribute('style')).toBeNull()
+    expect(cover.className).not.toMatch(/w-|h-|width|height/)
+  })
+})
+
+describe('BookCover — COM cover_url', () => {
+  const URL_CAPA = 'https://exemplo.test/capas/dom-casmurro.jpg'
+
+  it('renderiza a imagem de verdade quando há URL', () => {
+    const { container } = render(<BookCover title="Dom Casmurro" coverUrl={URL_CAPA} />)
+    const img = container.querySelector('img')
+
+    expect(img).not.toBeNull()
+    expect(img).toHaveAttribute('src', URL_CAPA)
+    // Sem o fallback tipográfico junto: uma capa, não duas.
+    expect(container.querySelector('.lia-card__media--type')).toBeNull()
+  })
+
+  it('expõe a MESMA alternativa textual das duas variantes', () => {
+    const comCapa = render(<BookCover title="Dom Casmurro" coverUrl={URL_CAPA} />)
+    expect(screen.getByRole('img', { name: 'Capa de Dom Casmurro' })).toBeInTheDocument()
+    comCapa.unmount()
+
+    render(<BookCover title="Dom Casmurro" />)
+    expect(screen.getByRole('img', { name: 'Capa de Dom Casmurro' })).toBeInTheDocument()
+  })
+
+  it('herda a mesma classe de mídia — as duas variantes ocupam a MESMA caixa', () => {
+    const { container } = render(<BookCover title="Dom Casmurro" coverUrl={URL_CAPA} />)
+    expect(container.querySelector('img')!.classList.contains('lia-card__media')).toBe(true)
+  })
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['string vazia', ''],
+    ['só espaço', '   '],
+  ])('%s → cai no fallback tipográfico, sem <img> quebrada', (_rotulo, valor) => {
+    const { container } = render(<BookCover title="Iracema" coverUrl={valor} />)
+
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.querySelector('.lia-card__media--type')).not.toBeNull()
+  })
+
+  it('axe: a variante com imagem não tem violação (alt presente)', async () => {
+    const { container } = render(<BookCover title="Dom Casmurro" coverUrl={URL_CAPA} />)
+    const { violations } = await axe.run(container)
+    expect(violations).toEqual([])
   })
 })

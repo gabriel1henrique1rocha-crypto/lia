@@ -5,6 +5,7 @@ import { Field } from '@/components/ui/Field'
 import { Link } from '@/components/ui/Link'
 import { Card } from '@/components/ui/Card'
 import { BookDetails } from '@/components/book/BookDetails'
+import { BookCover } from '@/components/book/BookCover'
 import { HighlightQuote } from '@/components/review/HighlightQuote'
 import { ReviewTags } from '@/components/review/ReviewTags'
 import { ReviewFormDemo } from './ReviewFormDemo'
@@ -68,6 +69,15 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </div>
   )
 }
+
+/* Parágrafo longo o bastante para a linha QUEBRAR — sem quebra não há medida
+   a conferir, e a asserção de 45–75 caracteres/linha passaria em falso. */
+const PARAGRAFO_MEDIDA =
+  'A biblioteca é um labirinto que se lê com os pés, e o leitor que entra nela ' +
+  'sem um fio de linha aprende depressa que cada corredor repete o anterior com ' +
+  'uma diferença mínima, suficiente para perder quem confia na memória. ' +
+  'Eco escreve o mosteiro como quem desenha uma planta baixa que se recusa a ' +
+  'fechar, e a resenha só consegue acompanhá-lo se aceitar andar em círculos.'
 
 /* ── mocks da Ficha (dados ilustrativos; não dependem do banco) ──────── */
 
@@ -338,6 +348,34 @@ export default function StyleguidePage() {
           componentes são os mesmos; a estrutura da página inteira é auditada
           em jsdom, no teste de unidade da rota. */}
       <Section id="review-public" title="Resenha pública — campos novos">
+        {/* A capa nas DUAS variantes, dentro do container real da página
+            (`.lia-review__cover`). Auditadas aqui porque `color-contrast` só é
+            calculável em navegador — e porque o "bloco vinho" era exatamente
+            uma capa sem container. */}
+        <Row label="Capa SEM cover_url (o estado de TODA resenha em produção) — miniatura em proporção de livro">
+          <div className="lia-review" id="capa-sem-url" style={{ padding: 0, width: '100%' }}>
+            <div className="lia-review__cover">
+              <BookCover title="O Nome da Rosa" />
+            </div>
+          </div>
+        </Row>
+
+        <Row label="Capa COM cover_url — imagem real, mesma caixa, mesma alternativa textual">
+          <div className="lia-review" id="capa-com-url" style={{ padding: 0, width: '100%' }}>
+            <div className="lia-review__cover">
+              <BookCover title="O Nome da Rosa" coverUrl="/capa-exemplo.svg" />
+            </div>
+          </div>
+        </Row>
+
+        <Row label="Texto corrido — medida de leitura (--container-prose), 45–75 caracteres por linha">
+          <div className="lia-review" id="corpo-prosa" style={{ padding: 0, width: '100%' }}>
+            <div className="lia-review__section lia-review__prose">
+              <p>{PARAGRAFO_MEDIDA}</p>
+            </div>
+          </div>
+        </Row>
+
         <Row label="Frase de destaque — figure + blockquote + figcaption">
           <div style={{ width: '100%', maxWidth: 'var(--container-prose)' }}>
             <HighlightQuote quote="A biblioteca é um labirinto que se lê com os pés." />
