@@ -5,6 +5,8 @@ import { Field } from '@/components/ui/Field'
 import { Link } from '@/components/ui/Link'
 import { Card } from '@/components/ui/Card'
 import { BookDetails } from '@/components/book/BookDetails'
+import { HighlightQuote } from '@/components/review/HighlightQuote'
+import { ReviewTags } from '@/components/review/ReviewTags'
 import { ReviewFormDemo } from './ReviewFormDemo'
 import {
   EditorReviewsTable,
@@ -84,7 +86,7 @@ const fichaCompleta: BookView = {
   original_language: 'it',
   translator: null,
   translated_from: null,
-  publication_city: null,
+  publication_city: 'Rio de Janeiro',
   created_at: '2024-01-01T00:00:00Z',
   genre: { name: 'Romance', slug: 'romance' },
 }
@@ -326,6 +328,34 @@ export default function StyleguidePage() {
         <Row label="Editor sem nenhuma resenha — convite, não tabela vazia">
           <div style={{ width: '100%' }}>
             <EmptyReviews />
+          </div>
+        </Row>
+      </Section>
+
+      {/* ── Exibição pública da resenha (T11/T12) ────────────────── */}
+      {/* Montados aqui porque a rota `/resenha/[slug]` depende de uma resenha
+          PUBLICADA no banco, e o axe do CI roda sem Supabase (TD-02). Os
+          componentes são os mesmos; a estrutura da página inteira é auditada
+          em jsdom, no teste de unidade da rota. */}
+      <Section id="review-public" title="Resenha pública — campos novos">
+        <Row label="Frase de destaque — figure + blockquote + figcaption">
+          <div style={{ width: '100%', maxWidth: 'var(--container-prose)' }}>
+            <HighlightQuote quote="A biblioteca é um labirinto que se lê com os pés." />
+          </div>
+        </Row>
+
+        <Row label="Tags — lista, SEM link (o filtro não existe: TAGS=c / D-12)">
+          <div style={{ width: '100%' }}>
+            <ReviewTags tags={['romance histórico', 'medievo', 'metaficção']} />
+          </div>
+        </Row>
+
+        <Row label="Assinatura de quem resenha — rótulo explícito, não é o autor do livro">
+          <div style={{ width: '100%' }}>
+            <p className="lia-review__subject">
+              Sobre O Nome da Rosa, de Umberto Eco
+            </p>
+            <p className="lia-review__byline">Resenha por Ana Ribeiro</p>
           </div>
         </Row>
       </Section>

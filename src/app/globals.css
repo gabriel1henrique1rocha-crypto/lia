@@ -902,6 +902,83 @@
     border-radius: var(--radius-md);
   }
 
+  /* ================= EXIBIÇÃO PÚBLICA DA RESENHA (reviews-crud, T11/T12) ====
+     Só tokens (@theme + aliases :root) — nenhuma cor nova. */
+
+  .lia-review__subject {
+    color: var(--text-secondary); /* ink-700 sobre paper-50 = 9.3:1 AAA */
+  }
+  .lia-review__subject cite {
+    font-style: italic;
+    color: var(--text-strong);
+  }
+  /* Assinatura: peso e cor distintos da linha da obra, para as duas não se
+     lerem como o mesmo tipo de informacao. */
+  .lia-review__byline {
+    font: var(--type-label);
+    color: var(--text-strong); /* ink-900 sobre paper-50 = 15.9:1 AAA */
+  }
+
+  /* ---------- Frase de destaque (figure + blockquote + figcaption) ---------- */
+  .lia-highlight {
+    margin: var(--spacing-5) 0;
+    padding: var(--spacing-4) var(--spacing-5);
+    border-left: var(--border-width-strong) solid var(--text-link);
+    background: var(--surface-accent);
+    border-radius: var(--radius-sm);
+  }
+  .lia-highlight__quote {
+    margin: 0;
+  }
+  .lia-highlight__quote p {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    color: var(--text-strong); /* ink-900 sobre oxblood-50 = 14.6:1 AAA */
+    text-wrap: balance;
+  }
+  /* A legenda é o que desfaz a ambiguidade "citação de quê?" — discreta na
+     tela, mas presente na árvore de acessibilidade (nome da figure). */
+  .lia-highlight__caption {
+    margin-top: var(--spacing-2);
+    font: var(--type-meta);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--text-link); /* oxblood-700 sobre oxblood-50 = 8.0:1 AAA */
+  }
+
+  /* ---------- Tags (lista, sem nada que insinue link) ---------- */
+  .lia-review-tags {
+    margin-top: var(--spacing-6);
+  }
+  .lia-review-tags__title {
+    margin: 0 0 var(--spacing-3);
+    font: var(--type-meta);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--text-secondary);
+  }
+  .lia-review-tags__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+  /* Sem cursor de mão, sem sublinhado, sem cor de link: a aparência não pode
+     prometer um filtro que não existe (TAGS=c / D-12). */
+  .lia-review-tags__item {
+    padding: var(--spacing-1) var(--spacing-3);
+    border: var(--border-width) solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    background: var(--surface-subtle);
+    font-size: var(--text-sm);
+    color: var(--text-body-color); /* ink-800 sobre paper-100 = 12.4:1 AAA */
+  }
+
   /* ================= HEADER / NAVEGAÇÃO PÚBLICA (public-navigation) =================
      Só tokens (@theme + aliases :root) — nenhuma cor nova. O anel de foco vem do
      :where(a, ...):focus-visible do @layer base (especificidade 0: as regras

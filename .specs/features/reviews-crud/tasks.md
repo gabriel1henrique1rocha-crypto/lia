@@ -637,7 +637,7 @@ Entre as 22 aprovadas da lista: `th-has-data-cells`, `td-headers-attr`, `scope-a
 
 ---
 
-### T11: Exibição pública A — resenhista, frase de destaque, cidade de publicação — **CORTÁVEL #1**
+### T11: Exibição pública A — resenhista, frase de destaque, cidade de publicação — **CONCLUÍDA (2026-08-26)** *(o gatilho do Plano de Corte não disparou)*
 
 **What**: Estender `/resenha/[slug]/page.tsx` (design §7): byline `review.reviewer_name` no `<header>`; `<blockquote>` com `review.highlight_quote` (novo `HighlightQuote`, omitido se vazio — REV-11); linha `publication_city` em `BookDetails`. **Este é o 1º item do Plano de Corte** — se o gatilho disparar (ver seção própria), esta task **não entra** nesta sprint: os dados **já estão gravados** (T1/T2/T6 não mudam), só o render público espera um follow-up.
 **Where**: `src/app/resenha/[slug]/page.tsx` · `src/components/book/BookDetails.tsx` · `src/components/review/HighlightQuote.tsx` (novo, se não cortado)
@@ -649,19 +649,26 @@ Entre as 22 aprovadas da lista: `th-has-data-cells`, `td-headers-attr`, `scope-a
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] Byline exibe `reviewer_name` quando presente
-- [ ] `highlight_quote` renderiza com realce quando preenchido; **omitido** (sem placeholder) quando vazio
-- [ ] `publication_city` aparece em `BookDetails` quando presente
-- [ ] Axe da rota `/resenha/[slug]` sem violações críticas (regressão + campos novos)
-- [ ] Gate **full**
+- [x] Byline exibe `reviewer_name` quando presente, com rótulo **"Resenha por"** — explícito porque a linha vizinha já traz um nome de pessoa (o autor da obra); um byline solto abaixo de "de Umberto Eco" seria lido como mais um autor
+- [x] `highlight_quote` renderiza com realce quando preenchido; **omitido por inteiro** quando vazio/nulo/só espaço (sem moldura, sem legenda órfã) — 4 casos cobertos
+- [x] `publication_city` aparece em `BookDetails` quando presente, **antes da editora** (ordem ABNT da imprenta: local, editora, ano); ausente, não deixa `<dt>` órfão
+- [x] Axe **sem NENHUMA violação** (gate estrito do T8), com e sem os campos — ver tabela em T12
+- [x] Gate **full** verde
 
-**Tests**: unit (render condicional) + a11y de rota · **Gate**: full
-**Verify**: `npm run test:a11y` na rota; conferência visual com uma resenha publicada via T10.
-**Commit**: `feat(review): exibição pública de reviewer_name/highlight_quote/publication_city (REV-11/14)`
+**DECISÃO DE MARCAÇÃO — `<figure>` + `<blockquote>` + `<figcaption>`, não `<blockquote>` sozinho.**
+O design pede "`<blockquote>` com realce". `<blockquote>` sozinho, porém, não responde a pergunta que o leitor de tela faz ao chegar nele: **citação de quê?** Um bloco citado sem contexto, no início de uma resenha sobre um livro, é lido com naturalidade como passagem **do livro** — e nada no dado autoriza isso. O que o schema permite afirmar: `highlight_quote` é coluna de `review`, no grupo "Conteúdo" da spec ao lado de `title`/`body`, e **não existe coluna de fonte, autor ou página**. Sem campo de atribuição, citação de obra externa não pode ser atribuída — e citação sem atribuição, num produto modelado em ABNT, seria o defeito. `figcaption` dá **nome acessível** à `figure`, então o leitor anuncia "figura, Trecho em destaque" **antes** da frase e a ambiguidade morre sem inventar autoria. Legenda propositalmente **"Trecho em destaque"**, não "Citação do livro" nem "Destaque da resenha": as duas últimas AFIRMAM uma origem; esta é verdadeira sob qualquer leitura. **Sem `<cite>`** (marca título de obra, não quem falou). **Sem `aria-hidden`**: a prática comum para *pull quote* é escondê-lo quando ecoa o corpo, mas aqui o campo é texto livre e pode ser conteúdo único — esconder economizaria uma repetição ao custo de **apagar conteúdo**, que é o erro mais caro dos dois.
+
+**POSIÇÃO:** o destaque abre a **seção "Resenha"**, não a página. Editorialmente ele abre o texto; estruturalmente, pô-lo entre o `<h1>` e a ficha técnica deixaria um bloco citado flutuando exatamente onde seria lido como passagem do livro.
+
+**LIMITE DO jsdom (verificado nos dois sentidos):** o `dom-accessibility-api` que o jest-dom usa **não implementa `figcaption` como fonte de nome** e devolve string vazia — reprovaria uma marcação correta. O **Chromium implementa**: `getByRole('figure', { name: 'Trecho em destaque' })` encontra o elemento. Por isso a asserção de nome acessível mora no teste de navegador, e o unit confere a estrutura.
+
+**Tests**: `HighlightQuote` (11) + `page` da rota (parte dos 18) + browser (`review-public.spec.ts`)
+**Verify**: `npx vitest run src/components/review/__tests__/HighlightQuote.test.tsx "src/app/resenha"` · `npm run build && npx playwright test tests/review-public.spec.ts`
+**Commit**: `feat(public): exibição de campos novos na resenha (T11/T12)` *(único, junto com T12 — mesma superfície)*
 
 ---
 
-### T12: Exibição pública B — tags e palavras-chave [P com T11]
+### T12: Exibição pública B — tags e palavras-chave [P com T11] — **CONCLUÍDA (2026-08-26)**
 
 **What**: Estender `/resenha/[slug]/page.tsx`: lista de tags exibida (REV-08, **sem** filtro/link — TAGS=c, adiado); `keywords` entram em `generateMetadata` como `keywords` (SEO, REV-09), **não** como filtro nem UI visível. **Não é cortável** — ao contrário da T11, o Plano de Corte não toca aqui (tags/keywords não estão na lista de campos cortáveis).
 **Where**: `src/app/resenha/[slug]/page.tsx` (mesma extensão da T11, seção distinta)
@@ -673,10 +680,38 @@ Entre as 22 aprovadas da lista: `th-has-data-cells`, `td-headers-attr`, `scope-a
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] Tags exibidas como lista simples (sem link/filtro clicável — TAGS=c)
-- [ ] `keywords` presentes em `generateMetadata` da rota (conferível no `<head>` renderizado), ausentes da UI visível
-- [ ] Axe da rota sem violações críticas
-- [ ] Gate **full**
+- [x] Tags exibidas como `<ul>`/`<li>` (o leitor anuncia "lista de N itens" — com `<span>` viraria borrão colado ao texto vizinho), **sem link, sem botão, sem `role` interativo e sem aparência de clicável** (cursor e `text-decoration` conferidos no navegador)
+- [x] `keywords` em `generateMetadata`; lista vazia → `undefined`, **não** um `<meta name="keywords" content="">`; entradas em branco descartadas; 404 não emite nenhuma
+- [x] Nenhuma palavra-chave na UI visível
+- [x] Axe **sem NENHUMA violação** (gate estrito do T8), com e sem os campos — tabela abaixo
+- [x] Gate **full** verde
+
+**TAGS × PALAVRAS-CHAVE — não é distinção de RÓTULO, é de SUPERFÍCIE.**
+A pergunta "como o leitor distingue as duas?" não tem resposta em forma de rótulo, e não precisa ter: **o leitor nunca vê as palavras-chave**. Tags vão para a tela (REV-08); `keywords` vão só para o `<head>` (REV-09, design §7). Se as duas aparecessem juntas, o leitor teria duas listas de palavras lado a lado sem nada que explicasse por que são duas — e nenhum rótulo honesto resolveria, porque a diferença que existe hoje é de destino, não de significado. Mantê-las em superfícies diferentes é o que torna a distinção auto-evidente.
+
+**TAXONOMIA FUTURA (D-12) — a UI não promete o que não existe.** A filtragem por tag está adiada por completo (TAGS=c) e a taxonomia de deficiência representada virá como entidade própria, com filtro. Por isso: sem `<a>` (link que não leva a lugar nenhum é promessa quebrada, e apareceria na lista de links do leitor de tela), sem página de termo, sem `?tag=`, e sem estilo que insinue clique. Quando a D-12 chegar, o que muda é a marcação virar `<a>` — deliberadamente, e não pelo descobrimento de que a UI já prometia isso. Fixado por teste nos dois níveis.
+
+**HEADING:** `<h2>Tags</h2>` numa `<section aria-labelledby>` — irmão de "Ficha técnica"/"Resenha"/"Comentários". A ordem h1 → h2 (→ h3 da ficha) fica intacta, com e sem os campos; há teste varrendo os níveis e proibindo salto.
+
+**EVIDÊNCIA — axe, por impacto (axe-core 4.11.4)**
+
+| escopo | onde | critical | serious | moderate | minor | **incomplete** | regras aprovadas |
+|---|---|---|---|---|---|---|---|
+| campos novos (destaque + tags + assinatura) | Chromium, `/styleguide` | 0 | 0 | 0 | 0 | **0** | 13 |
+| ficha com **e** sem `publication_city` | Chromium, `/styleguide` | 0 | 0 | 0 | 0 | **0** | 13 |
+| **página inteira COM os campos** | jsdom, sobre a árvore da rota | 0 | 0 | 0 | 0 | 1 (`color-contrast`) | 24 |
+| **página inteira SEM os campos** (produção) | jsdom, sobre a árvore da rota | 0 | 0 | 0 | 0 | 1 (`color-contrast`) | 22 |
+
+Entre as aprovadas na página: `heading-order`, `definition-list`, `dlitem`, `list`, `listitem`, `landmark-unique`, `empty-heading`, `duplicate-id-aria`.
+
+**A DIVISÃO ENTRE OS DOIS AXE, E POR QUE ELA EXISTE.** A rota `/resenha/[slug]` depende de uma resenha PUBLICADA no banco, e o servidor do gate sobe com credenciais de placeholder (TD-02) — ir à rota daria 404, não a página. Então os COMPONENTES são auditados em Chromium no `/styleguide` (único lugar onde `color-contrast` é calculável: `incomplete = 0` lá), e a PÁGINA INTEIRA — ordem de headings, listas, landmarks, degradação com e sem campos — é auditada em jsdom sobre a árvore que a rota produz. O `incomplete: color-contrast` do jsdom é estrutural (não há layout nem CSS aplicado), e é exatamente a lacuna que o gate de navegador cobre. Nenhum dos dois sozinho cobre tudo; juntos cobrem, e a divisão está dita em vez de disfarçada.
+
+**ACHADO — a página NÃO tem schema.org, ao contrário do que se supunha.** Procurado em `src/` inteiro: não há `application/ld+json`, nem JSON-LD, nem `Book`/`Review` estruturados; `generateMetadata` emite apenas `title`/`description`/Open Graph (e agora `keywords`). Não é lacuna desta task — **as três specs adiam explicitamente o structured data para `seo-core`** (`review-page/spec.md`: "schema.org Book/Review fica em `seo-core`"), que está PLANNED e não iniciada. **Nada de JSON-LD foi acrescentado aqui**, porque seria construir feature de outro milestone (Book + Review + validação de Rich Results) por dentro de uma task de exibição. **Handoff para `seo-core`:** `reviewer_name` mapeia para `Review.author` (`Person.name`), `tags`/`keywords` para `keywords`, `publication_city` para `Book.publisher`/`locationCreated`, e o `highlight_quote` **não** tem mapeamento óbvio — não é `reviewBody` nem `citation`, e forçá-lo seria pior que omiti-lo.
+
+**CONTEÚDO VINDO DE EDITOR — padrão conferido e seguido.** Não há `dangerouslySetInnerHTML` em `src/` inteiro; todo campo digitado (`body`, e agora `highlight_quote`, `tags`, `reviewer_name`, `publication_city`) é renderizado como **filho de texto** do JSX, que o React escapa por construção. **Uma divergência encontrada, e ela é correta:** `cover_url` não é texto, é URL — e URL vira `href`/`src`, onde escapar não basta (`javascript:` é URL válida e executável). Por isso ela tem gate próprio na validação (só `http`/`https`, A-4) e hoje sequer é renderizada como imagem. Nenhum campo desta task é URL, então nenhum precisa do tratamento extra. Há teste injetando `<script>`/`<img onerror>`/`<b>` em cada campo novo e exigindo que cheguem como texto.
+
+**Tests**: `ReviewTags` (12) + `page` da rota (18, inclui axe em jsdom com e sem campos + `generateMetadata`) + browser `review-public.spec.ts` (9)
+**Gate**: **full** — `402 passed | 52 skipped (454)` (era `361 | 52`; **+41**) · `npx playwright test` → **39 passed** (era 30; **+9**) · `typecheck`/`lint`/`format:check`/`build` limpos
 
 **Tests**: unit (render + metadata) + a11y de rota · **Gate**: full
 **Verify**: `npm run test:a11y`; inspeção do `<head>` gerado (`generateMetadata`).
