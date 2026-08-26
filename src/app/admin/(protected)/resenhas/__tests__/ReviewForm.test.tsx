@@ -160,6 +160,64 @@ describe('estrutura: dois fieldsets e todo campo com label explícito', () => {
   })
 })
 
+/* ── 1b. Textos de ajuda: a convenção precisa estar NA TELA ──────────────── */
+
+/**
+ * O DEFEITO QUE ESTES TESTES IMPEDEM DE VOLTAR
+ *
+ * A primeira resenha real publicada teve as tags separadas por `;`, e o parser
+ * de então só aceitava `,` — a linha inteira virou UMA tag. A causa raiz não
+ * foi só o parser estreito: foi que **a tela não dizia o que ela aceitava** de
+ * um jeito que cobrisse o que o editor faria. Corrigir o parser sem corrigir o
+ * texto deixaria a metade adivinhatória do defeito de pé.
+ *
+ * O `helpText` é lido pelo leitor de tela via `aria-describedby` (ver
+ * `Field.test.tsx`), então isto não é decoração: é a instrução chegando a quem
+ * não vê o campo.
+ */
+describe('textos de ajuda: o editor não precisa adivinhar a convenção', () => {
+  const ajudaDe = (rotulo: RegExp) => {
+    const controle = texto(rotulo)
+    const ids = (controle.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
+    return ids
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' ')
+      .trim()
+  }
+
+  it.each([[/^Tags/], [/^Palavras-chave/]])(
+    'o campo %s diz que aceita vírgula E ponto e vírgula',
+    (rotulo) => {
+      montar()
+      const ajuda = ajudaDe(rotulo)
+
+      expect(ajuda).toMatch(/vírgula/i)
+      expect(ajuda, 'sem isto o editor adivinha — foi assim que as tags coladas nasceram').toMatch(
+        /ponto e vírgula/i
+      )
+    }
+  )
+
+  it('a ajuda chega por aria-describedby, não só visualmente', () => {
+    montar()
+    expect(texto(/^Tags/)).toHaveAttribute('aria-describedby')
+    expect(texto(/^Palavras-chave/)).toHaveAttribute('aria-describedby')
+  })
+
+  /**
+   * `highlight_source` é PROPOSTA de M4, não coluna. Enquanto não existir, a
+   * única forma de o editor atribuir a citação é escrevê-la no próprio texto —
+   * e ele precisa saber disso ANTES de digitar, não depois de publicar.
+   */
+  it('a citação em destaque avisa que NÃO existe campo de fonte', () => {
+    montar()
+    const ajuda = ajudaDe(/^Citação em destaque/)
+
+    expect(ajuda).toMatch(/não há campo de fonte/i)
+    expect(ajuda).toMatch(/no próprio texto/i)
+  })
+})
+
 /* ── 2. Região de status (aria-live) ─────────────────────────────────────── */
 
 describe('região de status: polida, presente desde o 1º render', () => {

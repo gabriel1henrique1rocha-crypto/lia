@@ -75,21 +75,30 @@ describe('ReviewTags — presente', () => {
 })
 
 /**
- * ONDE A CULPA NÃO ESTÁ (polish de UI, 2026-08-26).
+ * ONDE A CULPA NÃO ESTAVA — e por que estes testes CONTINUAM aqui depois de a
+ * causa real ter sido corrigida.
  *
- * Em produção as tags de `/resenha/o-projeto-rosie` aparecem como UMA pílula
- * só, com ponto e vírgula dentro: "neurodiversidade; autismo; amor; …".
- * O reflexo é culpar este componente. Ele NÃO é o culpado, e estes testes
- * prendem essa conclusão para que a correção seja feita no lugar certo:
+ * Histórico: em produção as tags de `/resenha/o-projeto-rosie` apareciam como
+ * UMA pílula só, com ponto e vírgula dentro. O reflexo foi culpar este
+ * componente. A causa era o parser da validação (`split(',')`, só vírgula):
+ * um `tagsInput` separado por `;` saía como array de UM elemento, e o banco
+ * guardava literalmente uma tag chamada "neurodiversidade; autismo; amor; …".
  *
- *   `listaPorVirgula` (src/lib/review/schema.ts) faz `split(',')` — só vírgula.
- *   Um `tagsInput` com ponto e vírgula sai da validação como array de UM
- *   elemento, e o banco guarda literalmente uma tag chamada
- *   "neurodiversidade; autismo; amor; saúde mental".
+ * Corrigido em `fix(validation)` (2026-08-26): `listaDeTermos` aceita `,` e `;`
+ * (`SEPARADOR_DE_TERMOS` em src/lib/review/schema.ts), e o dado de
+ * `o-projeto-rosie` foi regravado por SQL.
  *
- * Renderizar uma pílula por elemento do array é, portanto, o comportamento
- * CORRETO — quebrar a string aqui esconderia o defeito de gravação e estragaria
- * qualquer tag que legitimamente contenha ponto e vírgula.
+ * Com a causa fechada, o que estes testes prendem é a TENTAÇÃO: o atalho
+ * óbvio para "consertar" o sintoma era dar um `split` aqui. Ele continua
+ * errado por dois motivos que a correção do parser não revoga —
+ *
+ *   1. mascararia qualquer defeito FUTURO de gravação (um separador novo, uma
+ *      importação em lote), fazendo a tela mentir sobre o que está no banco;
+ *   2. quebraria uma tag que legitimamente contenha `;`.
+ *
+ * Renderizar uma pílula por elemento do array é o contrato deste componente.
+ * O segundo teste abaixo NÃO descreve mais o estado de produção — descreve o
+ * comportamento exigido se um array desses voltar a chegar.
  */
 describe('ReviewTags — um item por elemento do array (o separador NÃO é problema daqui)', () => {
   it('N tags → N itens, cada um na sua caixa', () => {
@@ -105,10 +114,9 @@ describe('ReviewTags — um item por elemento do array (o separador NÃO é prob
     ])
   })
 
-  it('array de UM elemento com ponto e vírgula → UMA pílula (o sintoma de produção)', () => {
-    // Reproduz o dado tal como está gravado hoje. Se este teste um dia falhar
-    // com 4 itens, alguém pôs um split no componente: o dado errado passou a
-    // ser MASCARADO em vez de corrigido na gravação.
+  it('array de UM elemento com ponto e vírgula → UMA pílula, sempre', () => {
+    // Se este teste um dia falhar com 4 itens, alguém pôs um split aqui: dado
+    // errado passou a ser MASCARADO na tela em vez de corrigido na gravação.
     render(<ReviewTags tags={['neurodiversidade; autismo; amor; saúde mental']} />)
 
     const itens = screen.getAllByRole('listitem')

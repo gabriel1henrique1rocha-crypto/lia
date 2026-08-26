@@ -68,6 +68,117 @@ describe('reviewDraftSchema — caminho feliz', () => {
   })
 })
 
+/**
+ * SEPARADOR DE TERMOS — vírgula OU ponto e vírgula.
+ *
+ * A regressão que originou esta suíte: `o-projeto-rosie`, a primeira resenha
+ * real publicada, teve as tags separadas por `;`. O `split(',')` de então não
+ * achou separador nenhum e gravou a linha inteira como UMA tag. O texto de
+ * ajuda dizia "separe por vírgula" — mas texto de ajuda não é contrato.
+ */
+describe('separador de termos — vírgula E ponto e vírgula', () => {
+  const tags = (entrada: string) =>
+    reviewDraftSchema.parse(fichaMinima({ tagsInput: entrada })).tagsInput
+  const keywords = (entrada: string) =>
+    reviewDraftSchema.parse(fichaMinima({ keywordsInput: entrada })).keywordsInput
+
+  it('vírgula continua separando (nada regrediu)', () => {
+    expect(tags('ficção, clássico, brasileiro')).toEqual(['ficção', 'clássico', 'brasileiro'])
+  })
+
+  it('ponto e vírgula separa — o caso que faltava', () => {
+    expect(tags('ficção; clássico; brasileiro')).toEqual(['ficção', 'clássico', 'brasileiro'])
+  })
+
+  it('mistura dos dois na MESMA linha', () => {
+    // O editor que troca de convenção no meio da lista não devia ser punido
+    // por isso: os dois caracteres são separadores sob qualquer leitura.
+    expect(tags('ficção; clássico, brasileiro; romance')).toEqual([
+      'ficção',
+      'clássico',
+      'brasileiro',
+      'romance',
+    ])
+  })
+
+  it('separadores CONSECUTIVOS não geram elementos vazios', () => {
+    expect(tags('ficção;; clássico')).toEqual(['ficção', 'clássico'])
+    expect(tags('ficção,, clássico')).toEqual(['ficção', 'clássico'])
+    expect(tags('ficção;,; clássico')).toEqual(['ficção', 'clássico'])
+    expect(tags(' ; , ; ')).toEqual([])
+  })
+
+  it('separador solto na ponta não vira termo vazio', () => {
+    expect(tags(';ficção; clássico;')).toEqual(['ficção', 'clássico'])
+    expect(tags(',ficção, clássico,')).toEqual(['ficção', 'clássico'])
+  })
+
+  it('espaço em volta de cada termo é aparado — inclusive tabulação', () => {
+    expect(tags('  ficção  ;	 clássico	 ;   brasileiro ')).toEqual([
+      'ficção',
+      'clássico',
+      'brasileiro',
+    ])
+  })
+
+  it('espaço DENTRO do termo é preservado (não é separador)', () => {
+    expect(tags('comédia romântica; saúde mental')).toEqual(['comédia romântica', 'saúde mental'])
+  })
+
+  it('palavras-chave seguem a MESMA regra — é o mesmo parser', () => {
+    expect(keywords('umberto eco; semiótica, medievo')).toEqual([
+      'umberto eco',
+      'semiótica',
+      'medievo',
+    ])
+  })
+
+  it('O CASO REAL, a string inteira de o-projeto-rosie', () => {
+    // Exatamente como o editor digitou, ponto final incluído. Antes desta
+    // correção o resultado era UM elemento com a linha toda dentro.
+    const digitado =
+      'neurodiversidade; autismo; amor; saúde mental; comédia romântica; vínculos humanos.'
+
+    expect(tags(digitado)).toEqual([
+      'neurodiversidade',
+      'autismo',
+      'amor',
+      'saúde mental',
+      'comédia romântica',
+      'vínculos humanos.',
+    ])
+  })
+
+  /**
+   * PONTUAÇÃO NÃO É APARADA — decisão registrada, não descuido.
+   *
+   * Aceitar `;` REMOVE um palpite (as duas pontuações são separadoras de lista
+   * sob qualquer leitura). Aparar o ponto final ACRESCENTARIA um: o parser
+   * decidiria que o editor não quis um caractere que digitou, e erraria em
+   * `etc.`, `S.A.`, `vol.`. O ponto sobrando é visível e corrigível pelo
+   * editor; um caractere comido por regra invisível, não.
+   */
+  it('ponto final NÃO é aparado — o parser não decide o que o editor quis dizer', () => {
+    expect(tags('vínculos humanos.')).toEqual(['vínculos humanos.'])
+    expect(tags('etc.; S.A.; vol.')).toEqual(['etc.', 'S.A.', 'vol.'])
+    // Ponto INTERNO nunca esteve em risco, mas prende o contrato.
+    expect(tags('séc. XIX; J. R. R. Tolkien')).toEqual(['séc. XIX', 'J. R. R. Tolkien'])
+  })
+
+  /**
+   * DUPLICATAS — comportamento HERDADO, preservado de propósito.
+   *
+   * Este teste não endossa o comportamento: prende-o, para que uma mudança
+   * futura seja deliberada. Deduplicar exige decidir antes o que conta como
+   * repetida (maiúsculas? acentos?), que é decisão de produto. Consequência já
+   * observável e registrada no STATE.md: `ReviewTags` usa `key={tag}`, então
+   * duas tags iguais produzem chave duplicada de React.
+   */
+  it('duplicatas passam inteiras — sem dedup, e sensível a maiúsculas', () => {
+    expect(tags('amor; amor; Amor')).toEqual(['amor', 'amor', 'Amor'])
+  })
+})
+
 describe('DERIVAÇÃO do título da resenha (review.title é NOT NULL)', () => {
   it('reviewTitle vazio → assume o título do livro, nunca sai indefinido', () => {
     expect(reviewDraftSchema.parse(fichaMinima()).reviewTitle).toBe('Dom Casmurro')
@@ -290,6 +401,22 @@ describe('toCreateReviewRpcArgs — ponte para a assinatura do RPC', () => {
     expect(args.p_keywords).toEqual(['machado'])
     expect(args.p_status).toBe('draft')
     expect(args.p_slug_base).toBe('dom-casmurro')
+  })
+
+  it('o ponto e vírgula chega SEPARADO ao parâmetro do RPC — é o que se grava', () => {
+    // O parser isolado já está coberto acima; esta asserção fecha o caminho até
+    // `p_tags`, que é o valor que de fato vira `review.tags` no banco. Sem ela,
+    // um mapeamento futuro poderia reagrupar a lista sem nenhum teste reclamar.
+    const comPontoEVirgula = reviewDraftSchema.parse(
+      fichaMinima({
+        tagsInput: 'neurodiversidade; autismo; amor',
+        keywordsInput: 'simsion; rosie',
+      })
+    )
+    const args = toCreateReviewRpcArgs(comPontoEVirgula, 'o-projeto-rosie', 'published')
+
+    expect(args.p_tags).toEqual(['neurodiversidade', 'autismo', 'amor'])
+    expect(args.p_keywords).toEqual(['simsion', 'rosie'])
   })
 
   it('campo opcional ausente vira NULL, NUNCA string vazia', () => {

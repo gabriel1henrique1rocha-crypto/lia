@@ -423,21 +423,21 @@ export function ReviewForm({ action, genres, signedBy }: ReviewFormProps) {
             {...campoProps('highlightQuote')}
             rows={3}
             showOptional
-            helpText="Um trecho curto para abrir a página da resenha."
+            helpText="Um trecho curto para abrir a página. Não há campo de fonte: para atribuir, escreva a fonte no próprio texto."
           />
 
           <Field
             label="Tags"
             {...campoProps('tagsInput')}
             showOptional
-            helpText="Separe por vírgula. Ex.: clássico, romance"
+            helpText="Separe por vírgula ou ponto e vírgula. Ex.: clássico, romance"
           />
 
           <Field
             label="Palavras-chave"
             {...campoProps('keywordsInput')}
             showOptional
-            helpText="Separe por vírgula. Usadas em metadados de busca."
+            helpText="Separe por vírgula ou ponto e vírgula. Usadas em metadados de busca."
           />
 
           {/* Fieldset ANINHADO: cada item repetível é um par de campos que só

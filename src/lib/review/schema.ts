@@ -92,14 +92,67 @@ const furtherReadingItem = z.object({
   url: safeUrl,
 })
 
-/** `"ficção, clássico"` → `['ficção','clássico']`. Vazio → `[]`, nunca null. */
-const listaPorVirgula = z
+/**
+ * Separadores de lista aceitos: vírgula **ou** ponto e vírgula.
+ *
+ * O ponto e vírgula entrou depois do fato. A primeira resenha real publicada
+ * (`o-projeto-rosie`) teve as tags separadas por `;`, o `split(',')` de então
+ * não achou separador nenhum, e a linha inteira virou UMA tag chamada
+ * "neurodiversidade; autismo; amor; saúde mental; …". Só o `helpText` do
+ * formulário dizia "separe por vírgula" — e texto de ajuda não é contrato: o
+ * editor não deve ter de adivinhar a convenção do parser.
+ *
+ * Aceitar os dois separadores REMOVE um palpite — as duas pontuações são
+ * inequivocamente separadoras de lista. É o oposto de aparar pontuação no fim
+ * do termo, que ACRESCENTARIA um; ver a nota em `listaDeTermos`.
+ *
+ * NÃO inclui quebra de linha: uma lista colada uma-por-linha recai no mesmo
+ * defeito. Fora do escopo desta correção — se aparecer no uso, o lugar é aqui.
+ */
+const SEPARADOR_DE_TERMOS = /[,;]/
+
+/**
+ * `"ficção, clássico"` ou `"ficção; clássico"` → `['ficção','clássico']`.
+ * Vazio → `[]`, nunca null (a coluna é NOT NULL DEFAULT `{}`).
+ *
+ * O nome NÃO cita mais os separadores, de propósito: o anterior citava e virou
+ * mentira no dia em que a regra mudou. Nome que descreve a REGRA precisa ser
+ * renomeado sempre que a regra evolui — e o `SEPARADOR_DE_TERMOS` acima já é o
+ * lugar, greppável, onde a regra está dita.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * NÃO APARA PONTUAÇÃO — só espaço em branco
+ *
+ * O caso real trouxe `"… vínculos humanos."`, com ponto final: o editor
+ * terminou a lista como se termina uma frase. Aparar o ponto deixaria a tag
+ * limpa — e ainda assim não é o que este parser faz.
+ *
+ * A razão é a mesma que trouxe o defeito até aqui. Aceitar `;` além de `,`
+ * REMOVE um palpite: sob qualquer leitura, as duas são separadoras de lista.
+ * Remover o ponto final ACRESCENTA um — o parser passaria a decidir que o
+ * editor "não quis" um caractere que ele digitou, e erraria em `etc.`, `S.A.`,
+ * `vol.`, `Jr.`. É o princípio já registrado no `formData.ts` (dado perdido é
+ * pior que dado não perguntado), agravado por ser perda SILENCIOSA.
+ *
+ * Assimetria que decide o caso: o ponto sobrando é VISÍVEL na tela e o editor
+ * pode corrigi-lo; um caractere comido por regra invisível, não. O lugar de
+ * pegar isso é a UI — um eco das tags já separadas ao lado do campo —, não uma
+ * heurística de pontuação enterrada na validação.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * NÃO DEDUPLICA, e isso é comportamento HERDADO, não decisão desta correção:
+ * `"amor, amor"` chega ao banco como `['amor','amor']`. Registrado no STATE.md
+ * junto com a consequência já observável (chave duplicada de React no
+ * `ReviewTags`). Mudar exige decidir antes o que conta como repetida —
+ * maiúsculas? acentos? —, o que é decisão de produto, não linha de parser.
+ */
+const listaDeTermos = z
   .string()
   .trim()
   .default('')
   .transform((s) =>
     s
-      .split(',')
+      .split(SEPARADOR_DE_TERMOS)
       .map((t) => t.trim())
       .filter(Boolean)
   )
@@ -129,8 +182,8 @@ const reviewBase = bookInputSchema.safeExtend({
   coverUrl: safeUrl.optional(),
   reviewTitle: z.string().trim().optional(),
   body: z.string().trim().optional(),
-  tagsInput: listaPorVirgula,
-  keywordsInput: listaPorVirgula,
+  tagsInput: listaDeTermos,
+  keywordsInput: listaDeTermos,
   highlightQuote: z.string().trim().optional(),
   furtherReading: z.array(furtherReadingItem).default([]),
 })
