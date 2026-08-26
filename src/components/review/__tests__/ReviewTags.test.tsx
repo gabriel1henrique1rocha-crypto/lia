@@ -74,6 +74,49 @@ describe('ReviewTags — presente', () => {
   })
 })
 
+/**
+ * ONDE A CULPA NÃO ESTÁ (polish de UI, 2026-08-26).
+ *
+ * Em produção as tags de `/resenha/o-projeto-rosie` aparecem como UMA pílula
+ * só, com ponto e vírgula dentro: "neurodiversidade; autismo; amor; …".
+ * O reflexo é culpar este componente. Ele NÃO é o culpado, e estes testes
+ * prendem essa conclusão para que a correção seja feita no lugar certo:
+ *
+ *   `listaPorVirgula` (src/lib/review/schema.ts) faz `split(',')` — só vírgula.
+ *   Um `tagsInput` com ponto e vírgula sai da validação como array de UM
+ *   elemento, e o banco guarda literalmente uma tag chamada
+ *   "neurodiversidade; autismo; amor; saúde mental".
+ *
+ * Renderizar uma pílula por elemento do array é, portanto, o comportamento
+ * CORRETO — quebrar a string aqui esconderia o defeito de gravação e estragaria
+ * qualquer tag que legitimamente contenha ponto e vírgula.
+ */
+describe('ReviewTags — um item por elemento do array (o separador NÃO é problema daqui)', () => {
+  it('N tags → N itens, cada um na sua caixa', () => {
+    render(<ReviewTags tags={['neurodiversidade', 'autismo', 'amor', 'saúde mental']} />)
+
+    const itens = screen.getAllByRole('listitem')
+    expect(itens).toHaveLength(4)
+    expect(itens.map((i) => i.textContent)).toEqual([
+      'neurodiversidade',
+      'autismo',
+      'amor',
+      'saúde mental',
+    ])
+  })
+
+  it('array de UM elemento com ponto e vírgula → UMA pílula (o sintoma de produção)', () => {
+    // Reproduz o dado tal como está gravado hoje. Se este teste um dia falhar
+    // com 4 itens, alguém pôs um split no componente: o dado errado passou a
+    // ser MASCARADO em vez de corrigido na gravação.
+    render(<ReviewTags tags={['neurodiversidade; autismo; amor; saúde mental']} />)
+
+    const itens = screen.getAllByRole('listitem')
+    expect(itens).toHaveLength(1)
+    expect(itens[0].textContent).toBe('neurodiversidade; autismo; amor; saúde mental')
+  })
+})
+
 describe('ReviewTags — ausente: nada na tela', () => {
   it.each([
     ['array vazio (o DEFAULT da coluna)', []],

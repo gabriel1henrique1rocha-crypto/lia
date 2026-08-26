@@ -120,14 +120,23 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
         {assinatura && <p className="lia-review__byline">Resenha por {assinatura}</p>}
       </header>
 
-      <BookCover title={book.title} />
+      {/* A capa ILUSTRA a resenha; não a abre. O wrapper é o que lhe dá
+          medida — sem ele, `.lia-card__media` herda a largura do `<article>` e
+          a `aspect-ratio` a converte em altura (o bloco vinho de 853px). */}
+      <div className="lia-review__cover">
+        <BookCover title={book.title} coverUrl={book.cover_url} />
+      </div>
 
-      <section aria-labelledby="ficha">
+      <section className="lia-review__section" aria-labelledby="ficha">
         <h2 id="ficha">Ficha técnica</h2>
         <BookDetails book={book} headingLevel={3} />
       </section>
 
-      <section aria-labelledby="resenha-texto">
+      {/* `--prose` marca o TEXTO CORRIDO — é o único bloco que precisa da medida
+          de leitura (45–75 caracteres). A ficha é uma grade de pares e a tabela
+          de tags é uma lista: ambas têm largura própria e ficariam apertadas
+          espremidas na mesma coluna. */}
+      <section className="lia-review__section lia-review__prose" aria-labelledby="resenha-texto">
         <h2 id="resenha-texto">Resenha</h2>
 
         {/* O destaque abre a SEÇÃO da resenha, não a página.
@@ -144,12 +153,12 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
 
       <ReviewTags tags={review.tags} />
 
-      <section aria-labelledby="comentarios">
+      <section className="lia-review__section" aria-labelledby="comentarios">
         <h2 id="comentarios">Comentários</h2>
         <p>Os comentários chegam em breve.</p>
       </section>
 
-      <footer>
+      <footer className="lia-review__footer">
         <button
           type="button"
           className="lia-btn lia-btn--secondary lia-btn--md"
