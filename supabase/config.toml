@@ -21,7 +21,24 @@ max_rows = 1000
 # without explicit GRANTs. Leave unset today to preserve local behaviour. The implicit default
 # flips to `false` on 2026-05-30 to match the new cloud default, and the field is removed in
 # 2026-10-30 once the always-revoked behaviour is permanent. Set to `false` to opt in early.
-# auto_expose_new_tables = false
+#
+# LIGADO EXPLICITAMENTE em 2026-08-26, ao subir o stack no CI (TD-02).
+# Deixar o campo IMPLÍCITO fazia o banco efêmero do CI nascer com `anon`,
+# `authenticated` e `service_role` recebendo DML COMPLETO nas seis tabelas do
+# `public` — inclusive `editor`, `comment` e `recommendation`, que pelo design
+# (A-2) não devem ter GRANT nenhum para `anon`, e inclusive `service_role`, cuja
+# DORMÊNCIA (C-2 / D-09) é premissa de segurança do M2.
+#
+# O banco LOCAL já não tinha esses grants implícitos, então as suítes passavam
+# aqui e falhavam lá: um UPDATE anônimo em `review` que deveria morrer em 42501
+# (falta de GRANT) passava a ser barrado só pela RLS — e RLS que não casa linha
+# nenhuma devolve SUCESSO com 0 linhas, não erro. A asserção estava certa; o
+# ambiente é que não era fiel.
+#
+# Com `false`, o efêmero do CI nasce igual ao local: só os GRANTs EXPLÍCITOS das
+# migrations 0004/0005/0007/0008/0009 valem, que é o que todo comentário de
+# migration já assumia ao dizer "pós-2026-05-30 o Supabase não auto-concede".
+auto_expose_new_tables = false
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.
