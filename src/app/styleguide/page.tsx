@@ -352,7 +352,9 @@ export default function StyleguidePage() {
 
         <Row label="Assinatura de quem resenha — rótulo explícito, não é o autor do livro">
           <div style={{ width: '100%' }}>
-            <p className="lia-review__subject">Sobre O Nome da Rosa, de Umberto Eco</p>
+            <p className="lia-review__subject">
+              Sobre <cite>O Nome da Rosa</cite>, de Umberto Eco
+            </p>
             <p className="lia-review__byline">Resenha por Ana Ribeiro</p>
           </div>
         </Row>
