@@ -129,3 +129,5 @@ Em **Settings → Branches → Branch protection rules → `main` → Edit**:
 4. **Save changes** no fim da página — a seleção não é gravada sozinha.
 
 > Se `rls (supabase local)` não aparecer na busca, é porque o GitHub só oferece checks já vistos naquele repositório. Basta um run do workflow em qualquer branch (ou o merge desta) para ele passar a aparecer.
+
+> ⚠️ **`rls (supabase local)` ainda NÃO deve entrar na lista de required.** Em 2026-08-26 o `supabase start` falhou por disputa de porta (`54322: address already in use`) em uma de sete execuções — as portas do `config.toml` caem dentro do range efêmero do kernel. É a **TD-11** no STATE.md, com a correção proposta e ainda não aplicada. Enquanto isso o job roda e reporta normalmente; só não bloqueia merge. Um required check que falha sem culpa do PR é pior que uma suíte que não roda, porque a reação natural é desabilitá-lo.
