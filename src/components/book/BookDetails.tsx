@@ -29,6 +29,11 @@ interface DetailRow {
 export function BookDetails({ book, headingLevel = 3 }: BookDetailsProps) {
   const fields: DetailRow[] = [{ label: 'Autor', value: book.author }]
   if (book.genre?.name) fields.push({ label: 'Gênero', value: book.genre.name })
+  // Ordem ABNT da imprenta: LOCAL, editora, ano ("São Paulo: Companhia das
+  // Letras, 2020"). Por isso a cidade vem ANTES da editora, e não no fim da
+  // ficha — a ficha é lida como uma referência, não como um monte de campos.
+  if (book.publication_city)
+    fields.push({ label: 'Cidade de publicação', value: book.publication_city })
   if (book.publisher) fields.push({ label: 'Editora', value: book.publisher })
   if (book.year != null) fields.push({ label: 'Ano', value: String(book.year) })
   if (book.pages != null) fields.push({ label: 'Páginas', value: String(book.pages) })
