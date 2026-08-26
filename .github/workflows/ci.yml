@@ -35,6 +35,142 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # GATE DE RLS — TD-02.
+  #
+  # As sete suítes `*.integration.test.ts` provam COMPORTAMENTO de RLS contra um
+  # Postgres real: fronteira entre editores (A×B), WITH CHECK de reatribuição de
+  # ownership, posse transitiva de `book`, atomicidade dos RPCs, e a prova de que
+  # o caminho público NÃO vira bypass mesmo com a service_role no ambiente.
+  #
+  # Até 2026-08-26 elas PULAVAM no CI (`describe.skipIf` sem RUN_RLS_INTEGRATION)
+  # porque o pipeline não subia banco nenhum. O gatilho da TD-02 era explícito e
+  # foi disparado: existe um SEGUNDO admin real em produção, então a RLS-por-papel
+  # passou a proteger dados de mais de uma pessoa. Prova que só roda na máquina de
+  # quem lembrar de rodar não protege ninguém.
+  #
+  # Independente de `test` de propósito: uma falha de unidade não pode ESCONDER
+  # uma regressão de RLS. Os dois sinais chegam separados.
+  # ─────────────────────────────────────────────────────────────────────────────
+  rls:
+    name: rls (supabase local)
+    runs-on: ubuntu-latest
+    # Teto contra travamento: as suítes levam ~1 min de relógio numa máquina
+    # folgada. 20 min é margem larga para o runner de 2 vCPU e ainda falha rápido
+    # se algum container ficar pendurado, em vez de queimar as 6 h do default.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      # Versão PINADA. O mapeamento de credenciais abaixo depende dos nomes que
+      # `supabase status -o env` emite (PUBLISHABLE_KEY/SECRET_KEY, que
+      # substituíram ANON_KEY/SERVICE_ROLE_KEY no formato novo). Um `latest` que
+      # renomeasse campos quebraria o gate com um erro obscuro; a versão é a
+      # mesma usada no desenvolvimento local.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0
+
+      # Só os serviços que as suítes tocam: postgres (sempre), kong (gateway em
+      # :54321), postgrest (Data API) e gotrue (sessões autenticadas reais e a
+      # admin API que cria os usuários de teste). Tudo o mais fica de fora —
+      # studio, storage, realtime, mailpit, analytics e afins somariam sete
+      # containers ociosos disputando 2 vCPU, que é a contenção descrita na TD-10.
+      - name: supabase start (só os serviços que as suítes usam)
+        run: |
+          supabase start \
+            -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      # As suítes leem credenciais SÓ de env (nunca hardcoded) — o mesmo contrato
+      # do .env.local no desenvolvimento. Aqui os valores vêm do stack efêmero que
+      # acabou de subir, então nada é commitado nem guardado em secret.
+      - name: exportar credenciais do stack efêmero
+        run: |
+          set -euo pipefail
+          # `status -o env` também escreve avisos; só as linhas CHAVE="valor" são
+          # sourceadas, para um WARN novo não virar erro de shell.
+          supabase status -o env | grep -E '^(API_URL|PUBLISHABLE_KEY|SECRET_KEY)=' > env.status.ci
+          # shellcheck disable=SC1091
+          . ./env.status.ci
+          rm -f env.status.ci
+
+          if [ -z "${PUBLISHABLE_KEY:-}" ] || [ -z "${SECRET_KEY:-}" ]; then
+            echo "::error::supabase status nao emitiu PUBLISHABLE_KEY/SECRET_KEY."
+            echo "::error::A CLI provavelmente mudou o formato — conferir a versao pinada acima."
+            exit 1
+          fi
+
+          # Efêmeras, mas mascaradas: chave em log de CI vira hábito ruim.
+          echo "::add-mask::$PUBLISHABLE_KEY"
+          echo "::add-mask::$SECRET_KEY"
+
+          # O ORÁCULO das suítes lê o estado real por `docker exec … psql -U postgres`
+          # (Lesson Learned do M2: nunca ler pelo papel sob teste). O nome do
+          # container é derivado do `project_id` do config.toml — `supabase_db_lia`
+          # —, que é o default das suítes. Descobrir em vez de repetir a constante
+          # mantém o CI verde se a CLI mudar o padrão de nome, sem tocar em nada do
+          # lado local: lá o `?? 'supabase_db_lia'` das suítes segue valendo.
+          DB_CONTAINER="$(docker ps --filter 'name=supabase_db_' --format '{{.Names}}' | head -n1)"
+          if [ -z "$DB_CONTAINER" ]; then
+            echo "::error::container do Postgres nao encontrado — o oraculo psql nao teria onde rodar."
+            docker ps -a
+            exit 1
+          fi
+
+          {
+            echo "SUPABASE_LOCAL_URL=$API_URL"
+            echo "SUPABASE_LOCAL_ANON_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_LOCAL_SECRET_KEY=$SECRET_KEY"
+            echo "SUPABASE_LOCAL_DB_CONTAINER=$DB_CONTAINER"
+          } >> "$GITHUB_ENV"
+
+          echo "Postgres: $DB_CONTAINER · API: $API_URL"
+
+      # As suítes dependem de IDs, slugs e CONTAGENS fixas do seed (4 published +
+      # 1 draft). Sem esta conferência, um seed que não rodasse apareceria como
+      # quinze asserções vermelhas espalhadas, e a causa levaria meia hora para ser
+      # encontrada. Aqui falha em uma linha, dizendo o que faltou.
+      - name: conferir que o seed entrou
+        run: |
+          set -euo pipefail
+          conta() {
+            docker exec -i "$SUPABASE_LOCAL_DB_CONTAINER" \
+              psql -U postgres -d postgres -tA -q -c "$1" | tr -d '[:space:]'
+          }
+          PUB="$(conta "select count(*) from review where status = 'published'")"
+          DRAFT="$(conta "select count(*) from review where status = 'draft'")"
+          echo "seed: $PUB published · $DRAFT draft"
+          if [ "$PUB" != "4" ] || [ "$DRAFT" != "1" ]; then
+            echo "::error::seed ausente ou divergente (esperado 4 published + 1 draft)."
+            echo "::error::As suites de RLS dependem dos IDs e contagens de supabase/seed.sql."
+            exit 1
+          fi
+
+      # Filtro por SUBSTRING do caminho (é assim que o vitest trata argumentos
+      # posicionais — não é glob). Pega as sete `*.integration.test.ts` de hoje e
+      # qualquer futura pela convenção de nome, sem lista para manter em dia.
+      - name: suítes de RLS (RUN_RLS_INTEGRATION=1)
+        env:
+          RUN_RLS_INTEGRATION: '1'
+        run: npx vitest run integration.test
+
+      # Diagnóstico só quando algo quebra: sem isto, uma falha de contenção
+      # (TD-10) chega como timeout sem nada para olhar depois que o runner morre.
+      - name: diagnóstico (só em falha)
+        if: failure()
+        run: |
+          docker ps -a
+          supabase status || true
+          for c in $(docker ps -aq --filter 'name=supabase_'); do
+            echo "===== $(docker inspect --format '{{.Name}}' "$c") ====="
+            docker logs --tail 80 "$c" 2>&1 || true
+          done
+
   a11y:
     name: axe + lighthouse
     runs-on: ubuntu-latest
