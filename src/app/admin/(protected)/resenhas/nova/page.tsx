@@ -51,7 +51,7 @@ export default async function NovaResenhaPage() {
         </Link>
       </p>
 
-      <ReviewForm action={createReviewAndGoToList} genres={genres} />
+      <ReviewForm mode="create" action={createReviewAndGoToList} genres={genres} />
     </section>
   )
 }

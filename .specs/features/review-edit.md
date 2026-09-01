@@ -1,6 +1,6 @@
 # REV-19 — `review-edit`
 
-**Status:** SPECIFY — aguardando aprovação humana das propostas P-1, P-2 e P-3.
+**Status:** SPECIFY — P-1, P-2 e P-3 aprovados em 2026-08-31.
 **Marco:** unidade independente, anterior a M4. Não desbloqueia nem depende de D-12.
 **Ramo:** `feat/review-edit` (single-track — nenhum outro ramo aberto).
 
