@@ -33,22 +33,47 @@ const CONFIRMACOES = {
   publicada: 'Resenha publicada. Ela já aparece no catálogo público.',
 } as const
 
-type SearchParams = Promise<{ criada?: string | string[] }>
+/**
+ * Confirmações do retorno da EDIÇÃO (T5) — mapa À PARTE de `CONFIRMACOES`, não
+ * o mesmo reaproveitado. `criada=publicada` faz sentido para quem acabou de
+ * criar; para quem editou uma resenha publicada há meses, "Resenha publicada"
+ * soaria como se a publicação tivesse acabado de acontecer agora. O texto aqui
+ * descreve o que de fato ocorreu: uma edição foi salva.
+ */
+const CONFIRMACOES_EDICAO = {
+  rascunho: 'Alterações salvas como rascunho. Continua invisível para o público.',
+  publicada: 'Alterações salvas. A resenha está publicada.',
+} as const
+
+type SearchParams = Promise<{ criada?: string | string[]; editada?: string | string[] }>
+
+function primeiro(bruto: string | string[] | undefined): string | undefined {
+  return Array.isArray(bruto) ? bruto[0] : bruto
+}
 
 /**
  * O valor do parâmetro é usado só para ESCOLHER uma mensagem fixa, nunca
- * renderizado. Um `?criada=<qualquer coisa>` cai fora do mapa e não exibe nada —
- * a URL não consegue pôr texto na tela.
+ * renderizado. Um `?criada=<qualquer coisa>` (ou `?editada=`) cai fora dos
+ * mapas e não exibe nada — a URL não consegue pôr texto na tela.
+ *
+ * `criada` tem precedência sobre `editada` só porque nenhum redirect real
+ * envia os dois ao mesmo tempo (`createReviewAndGoToList` e
+ * `updateReviewAndGoToList` nunca disparam juntos) — a ordem aqui não decide
+ * nada que aconteça de fato.
  */
-function confirmacaoDe(bruto: string | string[] | undefined): string | null {
-  const chave = Array.isArray(bruto) ? bruto[0] : bruto
-  if (chave === 'rascunho' || chave === 'publicada') return CONFIRMACOES[chave]
+function confirmacaoDe(params: { criada?: string | string[]; editada?: string | string[] }) {
+  const criada = primeiro(params.criada)
+  if (criada === 'rascunho' || criada === 'publicada') return CONFIRMACOES[criada]
+
+  const editada = primeiro(params.editada)
+  if (editada === 'rascunho' || editada === 'publicada') return CONFIRMACOES_EDICAO[editada]
+
   return null
 }
 
 export default async function EditorReviewsPage({ searchParams }: { searchParams: SearchParams }) {
-  const { criada } = await searchParams
-  const confirmacao = confirmacaoDe(criada)
+  const params = await searchParams
+  const confirmacao = confirmacaoDe(params)
   const reviews = await listEditorReviews()
 
   return (

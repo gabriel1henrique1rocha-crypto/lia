@@ -46,6 +46,7 @@ describe('EditorReviewsTable — tabela de verdade, não div com cara de tabela'
       'Livro',
       'Situação',
       'Atualizada em',
+      'Ações',
     ])
     for (const cabecalho of cabecalhos) expect(cabecalho).toHaveAttribute('scope', 'col')
   })
@@ -86,17 +87,31 @@ describe('EditorReviewsTable — tabela de verdade, não div com cara de tabela'
     expect(screen.getByText('Publicada')).toBeInTheDocument()
   })
 
-  it('NÃO oferece link de editar — a rota não existe nesta sprint', () => {
-    const { container } = render(<EditorReviewsTable reviews={LINHAS} />)
-    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'))
-    expect(hrefs.some((href) => href?.includes('/editar'))).toBe(false)
+  it('oferece um link de editar por linha, com aria-label que distingue cada resenha (T5)', () => {
+    render(<EditorReviewsTable reviews={LINHAS} />)
+
+    // O texto visível ("Editar") é IGUAL em toda linha — quem distingue uma da
+    // outra para quem navega por leitor de tela é o `aria-label` composto com
+    // o título. Se ele não existisse, `getByRole` abaixo encontraria dois
+    // links com o MESMO nome acessível e lançaria por ambiguidade.
+    const editarA = screen.getByRole('link', {
+      name: 'Editar resenha: A biblioteca como labirinto',
+    })
+    expect(editarA).toHaveAttribute('href', '/admin/resenhas/r1/editar')
+
+    const editarB = screen.getByRole('link', {
+      name: 'Editar resenha: Iracema, entre a lenda e a língua',
+    })
+    expect(editarB).toHaveAttribute('href', '/admin/resenhas/r2/editar')
   })
 
   it('o contêiner rolável é alcançável por teclado e tem nome', () => {
     const { container } = render(<EditorReviewsTable reviews={LINHAS} />)
     const regiao = container.querySelector('[role="region"]')
     // Sem `tabindex`, quem navega só por teclado não rola a tabela em tela
-    // estreita — não há link nenhum dentro das linhas para servir de âncora.
+    // estreita: tabular até o link de editar (T5) move o foco para o LINK, não
+    // rola o CONTÊINER — o wrapper precisa do seu próprio alvo de foco de
+    // qualquer forma.
     expect(regiao).toHaveAttribute('tabindex', '0')
     expect(regiao).toHaveAccessibleName(/Suas resenhas/)
   })
