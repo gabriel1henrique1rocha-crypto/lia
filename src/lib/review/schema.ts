@@ -347,3 +347,75 @@ export function toCreateReviewRpcArgs(
   }
   return args as GeneratedCreateArgs
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * PONTE PARA O RPC DE UPDATE (T4, REV-19) — MESMA FRICÇÃO, TIPO IRMÃO
+ *
+ * `update_review_with_book` (0012) tem a MESMA fricção de nullability do RPC
+ * de create — mesmo racional, não repetido aqui. A única diferença estrutural
+ * é `p_slug_base`: em CREATE ele é OBRIGATÓRIO (a resenha nasce com uma base
+ * sempre — `toCreateReviewRpcArgs` recebe `string`); em UPDATE ele é OPCIONAL
+ * E NULÁVEL (P-2 — só faz sentido enviar em rascunho nunca publicado, e só
+ * quando o campo mudou; `null` = "não mexer no slug", e o RPC decide sozinho
+ * se a mudança se aplica). Por isso entra em `UpdateParamsNullable`, que
+ * ESTENDE `ParamsNullable` em vez de duplicá-la.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+type GeneratedUpdateArgs = Database['public']['Functions']['update_review_with_book']['Args']
+
+type UpdateParamsNullable = ParamsNullable | 'p_slug_base'
+
+export type UpdateReviewRpcArgs = Omit<GeneratedUpdateArgs, UpdateParamsNullable> & {
+  [K in UpdateParamsNullable]: GeneratedUpdateArgs[K] | null
+}
+
+/**
+ * Converte a entrada validada nos argumentos do RPC de atualização.
+ *
+ * `reviewId` e `expectedUpdatedAt` NÃO vêm de `ReviewInput` — não são campos de
+ * ficha nem de resenha, são o ALVO e o CARIMBO DE VERSÃO da operação. Por isso
+ * entram como parâmetros próprios desta função, não do schema Zod.
+ *
+ * `expectedUpdatedAt` é `string` de propósito, não `Date`: é a MESMA regra de
+ * P-1 desde a origem (`getReviewForEdit`, T3) até aqui — nenhuma conversão, o
+ * valor só atravessa. Ver a nota completa no cabeçalho de `ReviewForm.tsx`.
+ *
+ * `reviewTitle` derivado (`derivarTitulo`, já aplicado pelo schema): igual ao
+ * create, resenha nunca sai com título vazio.
+ *
+ * `reviewer_name`/`editor_id` NÃO entram aqui, de propósito: o RPC não os
+ * aceita como parâmetro (a função não os toca — congelados, DD-6/posse fixa).
+ */
+export function toUpdateReviewRpcArgs(
+  input: ReviewInput,
+  reviewId: string,
+  expectedUpdatedAt: string,
+  slugBase: string | null,
+  status: ReviewStatus
+): GeneratedUpdateArgs {
+  const args: UpdateReviewRpcArgs = {
+    p_review_id: reviewId,
+    p_book_title: input.title,
+    p_author: input.author,
+    p_genre_id: input.genreId,
+    p_publisher: ouNulo(input.publisher),
+    p_isbn: ouNulo(input.isbn),
+    p_cover_url: ouNulo(input.coverUrl),
+    p_year: input.year ?? null,
+    p_publication_city: ouNulo(input.publicationCity),
+    p_review_title: input.reviewTitle,
+    p_body: ouNulo(input.body),
+    p_tags: input.tagsInput,
+    p_keywords: input.keywordsInput,
+    p_highlight_quote: ouNulo(input.highlightQuote),
+    p_further_reading: input.furtherReading,
+    p_status: status,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_slug_base: slugBase,
+    p_pages: input.pages ?? null,
+    p_original_language: ouNulo(input.originalLanguage),
+    p_translator: ouNulo(input.translator),
+    p_translated_from: ouNulo(input.translatedFrom),
+  }
+  return args as GeneratedUpdateArgs
+}
