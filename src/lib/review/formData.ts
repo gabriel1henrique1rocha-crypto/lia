@@ -77,12 +77,13 @@ export function readFurtherReading(formData: FormData): ItemLeitura[] {
 /**
  * `FormData` → objeto plano na forma que o `reviewInputSchema` espera.
  *
- * NÃO COLETA `pages`, `originalLanguage`, `translator` nem `translatedFrom`:
- * existem em `book` e no `bookInputSchema`, mas o `create_review_with_book`
- * (0011) não tem parâmetro para eles. Ler esses campos aqui capturaria digitação
- * que o mapeador do T5 descarta em silêncio — dado perdido é pior que dado não
- * perguntado. Acrescentá-los exige migration nova que estenda o RPC, e só então
- * este leitor e o formulário mudam.
+ * COLETA `pages`, `originalLanguage`, `translator` e `translatedFrom` desde a
+ * T2b (REV-19). Até a 0012, `create_review_with_book` não tinha parâmetro para
+ * eles — ler aqui teria capturado digitação que o mapeador descartava em
+ * silêncio, e por isso o leitor não os coletava. A 0012 acrescentou os quatro
+ * no fim da assinatura dos dois RPCs, com `default null`; o mapeador
+ * (`toCreateReviewRpcArgs`, `review/schema.ts`) foi ao mesmo tempo atualizado
+ * para parar de descartá-los.
  */
 export function readReviewForm(formData: FormData) {
   const texto = (chave: string) => {
@@ -102,6 +103,10 @@ export function readReviewForm(formData: FormData) {
     isbn: texto('isbn'),
     coverUrl: texto('coverUrl'),
     year: numero('year'),
+    pages: numero('pages'),
+    originalLanguage: texto('originalLanguage'),
+    translator: texto('translator'),
+    translatedFrom: texto('translatedFrom'),
     publicationCity: texto('publicationCity'),
     reviewTitle: texto('reviewTitle'),
     body: texto('body'),

@@ -119,8 +119,12 @@ describe('estrutura: dois fieldsets e todo campo com label explícito', () => {
     texto(/^Autor$/)
     texto(/^Editora/)
     numero(/^Ano/)
+    numero(/^Páginas/)
     texto(/^ISBN/)
     combo(/^Gênero$/)
+    combo(/^Idioma original/)
+    texto(/^Tradutor/)
+    combo(/^Idioma de origem/)
     texto(/^Cidade de publicação/)
     texto(/^URL da capa/)
     // Resenha
@@ -146,18 +150,27 @@ describe('estrutura: dois fieldsets e todo campo com label explícito', () => {
     expect(screen.getByText(/são obrigatórios/i)).toBeInTheDocument()
   })
 
-  it('NÃO coleta os campos que o RPC descarta, nem o nome de quem assina', () => {
+  it('COLETA os quatro campos de ficha técnica (P-3, 0012) — não mais descartados', () => {
     const { container } = montar()
     const nomes = [...container.querySelectorAll<HTMLElement>('[name]')].map((c) =>
       c.getAttribute('name')
     )
-    for (const ausente of ['pages', 'originalLanguage', 'translator', 'translatedFrom']) {
-      expect(nomes, `${ausente} não tem parâmetro no create_review_with_book`).not.toContain(
-        ausente
+    // Até a 0012 o RPC não tinha parâmetro para eles e este teste travava a
+    // AUSÊNCIA (dado descartado é pior que dado não perguntado). A 0012
+    // acrescentou os quatro à assinatura (T2b); agora trava a PRESENÇA.
+    for (const presente of ['pages', 'originalLanguage', 'translator', 'translatedFrom']) {
+      expect(nomes, `${presente} agora tem parâmetro em create_review_with_book (0012)`).toContain(
+        presente
       )
     }
+  })
+
+  it('NÃO coleta o nome de quem assina — é exibido, não perguntado (DD-6)', () => {
+    const { container } = montar()
+    const nomes = [...container.querySelectorAll<HTMLElement>('[name]')].map((c) =>
+      c.getAttribute('name')
+    )
     expect(nomes).not.toContain('reviewerName')
-    // Quem assina é exibido (DD-6: congelado de editor.name), não perguntado.
     expect(screen.getByText('Ana Ribeiro')).toBeInTheDocument()
   })
 })
@@ -292,6 +305,54 @@ describe('validação do cliente: o erro aparece NO campo que o causou', () => {
     preencher(numero(/^Ano/), String(new Date().getFullYear() + 1))
     fireEvent.click(botao('Salvar rascunho'))
     await waitFor(() => expect(erroDoCampo(numero(/^Ano/))).toMatch(/futuro/i))
+  })
+
+  it('páginas zero ou negativa → erro em Páginas, NUNCA no balão nativo do navegador', async () => {
+    montar()
+    preencherObrigatorios()
+    preencher(numero(/^Páginas/), '0')
+    fireEvent.click(botao('Salvar rascunho'))
+    await waitFor(() => expect(erroDoCampo(numero(/^Páginas/))).toMatch(/maior que zero/i))
+    // O <form noValidate> desliga a validação nativa do navegador — o erro só
+    // pode ter chegado pelo aria-describedby que erroDoCampo acabou de ler.
+    expect(document.querySelector('form')).toHaveAttribute('novalidate')
+  })
+
+  it('tradutor SEM idioma de origem → erro no campo Idioma de origem (book_translation_consistent)', async () => {
+    montar()
+    preencherObrigatorios()
+    preencher(texto(/^Tradutor/), 'Alguém')
+    fireEvent.click(botao('Salvar rascunho'))
+    // O Zod ancora a mensagem no campo que FALTA preencher (idioma de
+    // origem), não no que já está certo (tradutor) — é o erro que o editor
+    // de fato cometeu: lembrou do tradutor, esqueceu o idioma de origem.
+    await waitFor(() =>
+      expect(erroDoCampo(combo(/^Idioma de origem/))).toMatch(/idioma de origem/i)
+    )
+    // O tradutor está correto — não é ele que carrega a marcação de erro.
+    expect(texto(/^Tradutor/)).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('tradutor COM idioma de origem → sem erro, os dois valores chegam à action', async () => {
+    const { action, recebidas } = montar()
+    preencherObrigatorios()
+    preencher(texto(/^Tradutor/), 'Alguém')
+    preencher(combo(/^Idioma de origem/), 'ru')
+    fireEvent.click(botao('Salvar rascunho'))
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1))
+    expect(recebidas[0].get('translator')).toBe('Alguém')
+    expect(recebidas[0].get('translatedFrom')).toBe('ru')
+  })
+
+  it('página, idioma original e tradução completos chegam à action pelos nomes certos', async () => {
+    const { action, recebidas } = montar()
+    preencherObrigatorios()
+    preencher(numero(/^Páginas/), '256')
+    preencher(combo(/^Idioma original/), 'en')
+    fireEvent.click(botao('Salvar rascunho'))
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1))
+    expect(recebidas[0].get('pages')).toBe('256')
+    expect(recebidas[0].get('originalLanguage')).toBe('en')
   })
 
   it('PUBLICAR sem corpo → erro NO corpo; o mesmo payload salva como rascunho', async () => {
@@ -652,5 +713,35 @@ describe('slug (P-2) — três estados, nunca `disabled`', () => {
     // A explicação chega por aria-describedby, não só visualmente.
     const valor = screen.getByText('/resenha/ja-publicada')
     expect(valor).toHaveAttribute('aria-describedby')
+  })
+})
+
+/* ── 8. Ficha técnica (P-3, T2b) em `edit` — os SELECTS pré-selecionam ─────
+   `defaultValues` já é provado em geral pelo teste de `slugBase` acima; o que
+   falta é específico dos DOIS campos que são `<select>` em vez de `<input>` —
+   pré-selecionar a `<option>` certa é um mecanismo do DOM diferente de
+   preencher um `value` de texto, e vale conferir separadamente. */
+
+describe('ficha técnica (P-3) em edit — defaultValues chega aos quatro campos, inclusive os selects', () => {
+  it('página, tradutor e os dois idiomas pré-preenchidos, com a option certa selecionada', () => {
+    const action = vi.fn(async (): Promise<ReviewFormState> => SALVO)
+    render(
+      <ReviewForm
+        mode="edit"
+        action={action}
+        genres={GENEROS}
+        defaultValues={{
+          pages: '256',
+          originalLanguage: 'en',
+          translator: 'Alguém',
+          translatedFrom: 'ru',
+        }}
+      />
+    )
+
+    expect((numero(/^Páginas/) as HTMLInputElement).value).toBe('256')
+    expect((texto(/^Tradutor/) as HTMLInputElement).value).toBe('Alguém')
+    expect((combo(/^Idioma original/) as HTMLSelectElement).value).toBe('en')
+    expect((combo(/^Idioma de origem/) as HTMLSelectElement).value).toBe('ru')
   })
 })
