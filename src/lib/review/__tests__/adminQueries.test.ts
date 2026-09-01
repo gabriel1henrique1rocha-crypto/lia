@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// `getReviewForEdit` chama `notFound()` (Next lança de verdade em produção;
+// aqui simulamos o lançamento para poder afirmar "foi chamado" sem derrubar o
+// runner de teste). Mesmo padrão de `resenha/[slug]/__tests__/page.test.tsx`.
+const notFoundMock = vi.fn(() => {
+  throw new Error('NEXT_NOT_FOUND')
+})
+vi.mock('next/navigation', () => ({ notFound: () => notFoundMock() }))
+
 // Mesmo padrão de `actions.test.ts` (T6): client e gate mockados — o efeito da
 // RLS é responsabilidade do banco (merge-forward para a matriz de `review`,
 // 0008/rbac-matrix.integration.test.ts). Aqui o alvo é o CONTRATO: quais
@@ -16,7 +24,7 @@ vi.mock('@/lib/supabase/authenticated', () => ({
   createAuthenticatedClient: vi.fn(async () => ({ from })),
 }))
 
-import { listEditorReviews } from '../adminQueries'
+import { listEditorReviews, getReviewForEdit } from '../adminQueries'
 
 const REVIEW_DRAFT = {
   id: 'r1',
@@ -67,6 +75,7 @@ function mockQueryChain(
 beforeEach(() => {
   getAuthenticatedEditorMock.mockReset()
   from.mockReset()
+  notFoundMock.mockClear()
 })
 
 describe('listEditorReviews', () => {
@@ -153,5 +162,123 @@ describe('listEditorReviews', () => {
 
     expect(camposSelecionados).toHaveLength(1)
     expect(camposSelecionados[0]).not.toMatch(/\bbody\b/)
+  })
+})
+
+/**
+ * `getReviewForEdit` (T3). Diferente de `listEditorReviews`: não chama
+ * `getAuthenticatedEditor()` (não há ramo por papel — a RLS decide sozinha, de
+ * propósito, ver o cabeçalho do arquivo-fonte), e a cadeia é
+ * `.select(campos).eq('id', id).maybeSingle()`, não `.select().order()`.
+ *
+ * IDs distintos por teste, de propósito: a função é `cache()` do React, que
+ * memoiza por argumento. Reusar o mesmo id entre dois testes com mocks
+ * diferentes faria o segundo ler o resultado memoizado do primeiro — um falso
+ * verde (ou falso vermelho) que nada tem a ver com a lógica sob teste.
+ */
+type ResultadoSingle = { data: unknown; error: unknown }
+
+function mockGetChain(
+  resultado: ResultadoSingle,
+  opts: { capturarEq?: unknown[][]; capturarSelect?: string[] } = {}
+) {
+  return {
+    select: (campos: string) => {
+      opts.capturarSelect?.push(campos)
+      return {
+        eq: (...args: unknown[]) => {
+          opts.capturarEq?.push(args)
+          return { maybeSingle: () => Promise.resolve(resultado) }
+        },
+      }
+    },
+  }
+}
+
+const REVIEW_ROW = {
+  id: 'rev-edit-1',
+  book_id: 'book-1',
+  title: 'Resenha em edição',
+  slug: 'resenha-em-edicao',
+  status: 'draft',
+  editor_id: 'ed-1',
+  updated_at: '2026-08-26T19:06:39.251574+00:00', // microssegundos — ver nota abaixo
+  published_at: null,
+  book: { id: 'book-1', title: 'Livro X', genre: { name: 'Romance', slug: 'romance' } },
+}
+
+describe('getReviewForEdit', () => {
+  it('devolve a linha quando a RLS permite — book junto por join 1:1', async () => {
+    const camposSelecionados: string[] = []
+    from.mockReturnValue(
+      mockGetChain({ data: REVIEW_ROW, error: null }, { capturarSelect: camposSelecionados })
+    )
+
+    const resultado = await getReviewForEdit('rev-edit-1')
+
+    expect(resultado).toEqual(REVIEW_ROW)
+    expect(camposSelecionados[0]).toMatch(/\bbook\(/)
+    expect(notFoundMock).not.toHaveBeenCalled()
+  })
+
+  it('`updated_at` chega EXATO — sem tocar em Date, microssegundos intactos', async () => {
+    from.mockReturnValue(mockGetChain({ data: REVIEW_ROW, error: null }))
+
+    const resultado = await getReviewForEdit('rev-edit-2')
+
+    // Comparação de STRING, não de Date — um new Date(...) no meio do caminho
+    // arredondaria ".251574" para ".251" (milissegundos) e este teste pegaria.
+    expect(resultado.updated_at).toBe('2026-08-26T19:06:39.251574+00:00')
+    expect(typeof resultado.updated_at).toBe('string')
+  })
+
+  it('RLS esconde a linha (data null, sem erro) → notFound(), não devolve undefined em silêncio', async () => {
+    from.mockReturnValue(mockGetChain({ data: null, error: null }))
+
+    await expect(getReviewForEdit('rev-edit-3')).rejects.toThrow('NEXT_NOT_FOUND')
+    expect(notFoundMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('id malformado (22P02, não-UUID) → notFound(), NUNCA erro cru de 500', async () => {
+    from.mockReturnValue(
+      mockGetChain({
+        data: null,
+        error: { code: '22P02', message: 'invalid input syntax for type uuid: "x"' },
+      })
+    )
+
+    await expect(getReviewForEdit('nao-e-um-uuid')).rejects.toThrow('NEXT_NOT_FOUND')
+    expect(notFoundMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('outro erro do banco propaga CRU — não vira notFound() por engano', async () => {
+    from.mockReturnValue(
+      mockGetChain({ data: null, error: { code: '42501', message: 'permission denied' } })
+    )
+
+    await expect(getReviewForEdit('rev-edit-4')).rejects.toMatchObject({ code: '42501' })
+    expect(notFoundMock).not.toHaveBeenCalled()
+  })
+
+  it('NÃO filtra por editor_id — só por id (a posse é decidida na escrita, não aqui)', async () => {
+    const chamadasEq: unknown[][] = []
+    from.mockReturnValue(
+      mockGetChain({ data: REVIEW_ROW, error: null }, { capturarEq: chamadasEq })
+    )
+
+    await getReviewForEdit('rev-edit-5')
+
+    expect(chamadasEq).toEqual([['id', 'rev-edit-5']])
+  })
+
+  it('aceita um client injetado — não usa o client do módulo quando um é passado', async () => {
+    const fromInjetado = vi.fn().mockReturnValue(mockGetChain({ data: REVIEW_ROW, error: null }))
+    from.mockReturnValue(mockGetChain({ data: null, error: null })) // o do módulo: se for usado, cai em notFound()
+
+    const resultado = await getReviewForEdit('rev-edit-6', { from: fromInjetado } as never)
+
+    expect(resultado).toEqual(REVIEW_ROW)
+    expect(fromInjetado).toHaveBeenCalledWith('review')
+    expect(from).not.toHaveBeenCalled()
   })
 })

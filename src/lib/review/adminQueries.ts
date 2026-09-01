@@ -1,6 +1,9 @@
+import { cache } from 'react'
+import { notFound } from 'next/navigation'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated'
 import { getAuthenticatedEditor } from '@/lib/auth/requireEditor'
-import type { Database } from '@/lib/database.types'
+import type { Database, Tables } from '@/lib/database.types'
+import type { BookView } from '@/lib/book/queries'
 
 /**
  * Leitura do painel do editor (T7): a lista de `/admin/resenhas`. Client
@@ -75,3 +78,99 @@ export async function listEditorReviews(
   if (error) throw error
   return data ?? []
 }
+
+/**
+ * `getReviewForEdit(id)` — T3 (REV-19): carrega UMA resenha + a ficha do seu
+ * livro (join 1:1 por `book_id`, garantido por `review_book_id_key` UNIQUE)
+ * para a tela de edição. Client AUTENTICADO do editor — NUNCA `service_role`,
+ * que permanece dormente (C-2/D-09) e nada nesta feature o acorda.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * `updated_at` — STRING OPAQUA, A MESMA REGRA DO T2a, AGORA NA ORIGEM
+ *
+ * `Tables<'review'>['updated_at']` já é `string` no gerado (conferido:
+ * `database.types.ts` NUNCA tipa timestamp como `Date`), e este arquivo não
+ * toca o valor em lugar nenhum — sem `new Date(...)`, sem formatação. `data`
+ * vem direto da resposta JSON do PostgREST e SEGUE STRING até quem chamar
+ * `getReviewForEdit`. `timestamptz` do Postgres guarda MICROSSEGUNDOS; `Date`
+ * do JavaScript só tem MILISSEGUNDOS — um parse+reserialização em QUALQUER
+ * ponto do trajeto (aqui, no componente de página, no `defaultValues` do
+ * `ReviewForm`) faz a comparação `is distinct from` da 0012 NUNCA bater, e
+ * TODO save reporta conflito falso (40001) — com cara de bug de permissão,
+ * não de perda de precisão numérica. Se um dia um tipo do TypeScript forçar
+ * `Date` neste caminho, o conserto é mudar o TIPO, nunca o valor.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * RLS NÃO DEVOLVE LINHA → `notFound()`. 404, NÃO 403.
+ *
+ * Mesmo tratamento indistinto do RPC (42501 único para "não existe" e "não é
+ * seu", 0011/0012 — ver DR-5): diferenciar aqui vazaria a EXISTÊNCIA de
+ * rascunho alheio (responder 403 só quando a linha existe, mas está fora de
+ * alcance, entrega essa informação a quem não deveria tê-la). `.maybeSingle()`
+ * devolve `data: null` sem lançar quando a RLS esconde a linha ou ela
+ * simplesmente não existe — os dois casos chegam aqui INDISTINGUÍVEIS, e
+ * saem daqui INDISTINGUÍVEIS.
+ *
+ * ID malformado (não-UUID) também vira `notFound()`, não 500: `id` chega da
+ * rota como segmento dinâmico de URL, texto livre. Postgres rejeita com
+ * `22P02` (invalid_text_representation) ANTES de qualquer policy rodar —
+ * verificado contra o Postgres local (`curl` direto no PostgREST,
+ * `id=eq.not-a-uuid` → `{"code":"22P02", ...}`). Um 500 aqui distinguiria "URL
+ * mal formada" de "UUID válido mas não visível" — a MESMA fuga de informação
+ * que o parágrafo acima existe para fechar, só que por outra porta. Qualquer
+ * OUTRO código de erro sobe cru (não é RLS nem formato — é falha real).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * NÃO FILTRA POR POSSE NA QUERY — REJEITADO DE PROPÓSITO, NÃO ESQUECIDO
+ *
+ * Ao contrário de `listEditorReviews()` (acima nesta função, `.eq('editor_id',
+ * …)`), esta função NÃO restringe a linhas do próprio editor. As duas
+ * situações parecem iguais e não são: `listEditorReviews` filtra para CURAR
+ * uma LISTA (a RLS já autoriza ler o conjunto maior; o filtro só evita
+ * misturar "minhas resenhas" com publicadas de outros numa mesma tela — é
+ * apresentação, não autorização). Aqui, filtrar por posse DUPLICARIA a regra
+ * de autorização FORA da RLS — exatamente o que o M2 recusou (D-09: a RLS é o
+ * PORTÃO, uma vez só). Duas cópias da mesma regra podem divergir; a policy já
+ * decide isto sozinha, na hora do SAVE.
+ *
+ * CONSEQUÊNCIA DIRETA — a tela pode abrir e o save pode falhar: a policy de
+ * SELECT (`review_public_read`, 0005) deixa QUALQUER `authenticated` LER uma
+ * resenha PUBLICADA alheia. `getReviewForEdit` devolve a linha normalmente
+ * nesse caso — não é bug, é a RLS fazendo exatamente o que a 0005 autoriza.
+ * Quem nega a ESCRITA é a policy de UPDATE (`review_editor_update`, own-or-
+ * admin, 0008), avaliada só quando o formulário for salvo — T4.
+ *
+ * ACHADO DO T1 QUE MUDA A MENSAGEM QUE T4 VAI TRADUZIR: o `select ... for
+ * update` de `update_review_with_book` (0012) exige que a linha passe TAMBÉM
+ * pela policy de UPDATE, não só pela de SELECT (comprovado empiricamente no
+ * T1 — não é o mesmo comportamento de um SELECT simples como o desta função).
+ * Logo uma resenha publicada alheia, que ESTA função abre sem erro, falha no
+ * PASSO 1 do RPC com "Resenha inexistente ou fora do seu alcance" — a MESMA
+ * mensagem de "nunca existiu", nunca "Sem permissão para editar esta
+ * resenha". As 5 linhas de seed (`editor_id` nulo, T0) caem no mesmo caminho:
+ * abrem para leitura (se publicadas) ou 404 (se não), e o save de qualquer
+ * uma nega no passo 1. Nada disto é implementado aqui — é o contexto que T4
+ * precisa para traduzir o erro certo, e T8 para o roteiro de leitor de tela.
+ */
+export type ReviewForEdit = Tables<'review'> & { book: BookView }
+
+const REVIEW_FOR_EDIT_SELECT = '*, book(*, genre(name, slug))'
+
+export const getReviewForEdit = cache(
+  async (id: string, client?: AuthenticatedClient): Promise<ReviewForEdit> => {
+    const supabase = client ?? (await createAuthenticatedClient())
+    const { data, error } = await supabase
+      .from('review')
+      .select(REVIEW_FOR_EDIT_SELECT)
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) {
+      if (error.code === '22P02') notFound() // id não é um UUID — ver nota acima
+      throw error
+    }
+    if (!data) notFound() // RLS escondeu OU não existe — indistinguível, de propósito
+
+    return data as ReviewForEdit
+  }
+)
