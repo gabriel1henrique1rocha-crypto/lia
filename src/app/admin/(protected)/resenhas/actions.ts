@@ -10,6 +10,7 @@ import {
   reviewDraftSchema,
   reviewPublishSchema,
   toCreateReviewRpcArgs,
+  toUpdateReviewRpcArgs,
   type ReviewStatus,
 } from '@/lib/review/schema'
 
@@ -71,6 +72,9 @@ const ERRO_GENERICO = 'Não foi possível concluir a operação. Tente novamente
 const PG_SEM_PRIVILEGIO = '42501'
 const PG_UNICIDADE = '23505'
 const PG_CHECK = '23514'
+/** T4 (REV-19) — alcançáveis só a partir de `update_review_with_book` (0012). */
+const PG_CONFLITO_OTIMISTA = '40001'
+const PG_TIMEOUT = '57014'
 
 type PostgrestLikeError = { code?: string; message?: string } | null
 
@@ -97,6 +101,14 @@ function mapearErro(error: PostgrestLikeError): ReviewFormState {
       // (ver a análise de concorrência no cabeçalho da 0011). Erro NO CAMPO do
       // título, porque é dele que o slug deriva — não um erro de formulário
       // solto que o editor não sabe onde consertar.
+      //
+      // IMPRECISÃO ACEITA em update (T4): quem de fato dirige o slug em edição
+      // é `slugBase` (P-2), não `reviewTitle` — mas o caminho é o MESMO
+      // residual raríssimo já documentado na 0011 (corrida sob isolamento não
+      // padrão), e `reviewTitle` continua sendo um campo real e visível em
+      // qualquer um dos dois modos. Diferenciar por origem exigiria passar
+      // contexto extra por uma exceção que praticamente nunca dispara —
+      // registrado, não corrigido.
       return {
         status: 'error',
         message: 'Já existe uma resenha com um endereço muito parecido.',
@@ -110,6 +122,32 @@ function mapearErro(error: PostgrestLikeError): ReviewFormState {
         error.message
       )
       return { status: 'error', message: ERRO_GENERICO }
+
+    // T4 (REV-19/P-1) — conflito de edição concorrente. `40001` é o código
+    // PRÓPRIO que a 0012 levanta (distinto de `42501` de propósito — ver o
+    // cabeçalho da migration): "outra pessoa mexeu nisto enquanto você
+    // editava", não "você não pode editar isto". SEM `fieldErrors`: o
+    // conflito não pertence a UM campo, então o foco genérico do `ReviewForm`
+    // (T2a) vai para a região de status — já é o destino certo, nenhum código
+    // extra necessário aqui. O CONTEÚDO DIGITADO continua na tela porque
+    // `valores` é estado do React, não algo que este retorno precise
+    // preservar ativamente (T2a: campos controlados nunca se apagam sozinhos).
+    case PG_CONFLITO_OTIMISTA:
+      return {
+        status: 'error',
+        message:
+          'Esta resenha foi alterada por outra pessoa — recarregue a página e tente novamente.',
+      }
+
+    // T4 — o `select ... for update` do RPC de update BLOQUEIA quando duas
+    // edições da MESMA linha se sobrepõem (T1 mediu ~2,6s de bloqueio real).
+    // `authenticated` tem `statement_timeout` (8s no padrão Supabase); se a
+    // transação que segura o lock passar disso, a SEGUNDA morre com `57014`
+    // (query_canceled) em vez de `40001` — o bloqueio nunca chega a resolver a
+    // COMPARAÇÃO de conflito, só estoura o relógio primeiro. Sem esta
+    // tradução, o editor veria a mensagem genérica do Postgres.
+    case PG_TIMEOUT:
+      return { status: 'error', message: 'Não foi possível salvar agora — tente novamente.' }
 
     default:
       return { status: 'error', message: ERRO_GENERICO }
@@ -308,4 +346,121 @@ export async function unpublishReview(id: string): Promise<ReviewFormState> {
 
   revalidarRotasPublicas(atualizada[0]?.slug)
   return { status: 'saved', message: 'Resenha despublicada.' }
+}
+
+/**
+ * Atualiza livro + resenha atomicamente (T4, REV-19). Fluxo idêntico ao de
+ * `createReview` nos passos 1–2 (status validado PRIMEIRO, contra o enum; o
+ * schema — inclusive o gate de publicação — DERIVA desse valor, nunca do botão
+ * clicado nem de um branch cliente) — é o MESMO publish gate do M3, reusado,
+ * não reescrito: "Publicar" numa resenha que edita o corpo publica com o corpo
+ * NOVO; "Salvar rascunho" numa resenha JÁ publicada a DESPUBLICA (mesma função,
+ * nenhum caminho separado — `update_review_with_book` cobre as duas direções).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * OS TRÊS CAMPOS-MECANISMO — `reviewId`/`expectedUpdatedAt`/`slugBase` — NÃO
+ * PASSAM POR `readReviewForm`/ZOD, DE PROPÓSITO
+ *
+ * Não são conteúdo da ficha nem da resenha: são o ALVO da operação, o CARIMBO
+ * de versão (P-1) e a base opcional do slug (P-2). Read direto de `formData`,
+ * fora do schema — o mesmo raciocínio que já separa `status` (T6/A-1) do resto
+ * do payload.
+ *
+ * `expectedUpdatedAt`: STRING OPACA até o `.rpc()`. Nenhuma linha desta função
+ * o toca — sem `new Date(...)`, sem `.toISOString()`, sem normalização de
+ * timezone. É a MESMA string que saiu de `getReviewForEdit` (T3) e atravessou
+ * o campo oculto do `ReviewForm` (T2a); aqui ela só entra no argumento do RPC.
+ * Um parse em qualquer ponto do trajeto — aqui incluído — perde os
+ * microssegundos que `timestamptz` guarda e `Date` do JS não tem, e a
+ * comparação `is distinct from` da 0012 nunca bate: TODO save reportaria
+ * `40001` (conflito falso), com cara de bug de permissão, nunca de precisão.
+ *
+ * `slugBase`: só existe no `FormData` quando `ReviewForm` o renderizou — que
+ * (T2a) só acontece em `edit` + rascunho nunca publicado (P-2). Ausência ==
+ * "não mexer no slug", sem precisar perguntar ao banco se a resenha está
+ * publicada: o PRÓPRIO FORMULÁRIO já não oferece o campo nesse caso. O
+ * `slugify()` aqui é NORMALIZAÇÃO (mesma função do create), não a regra de
+ * "pode mudar" — essa regra mora inteira no RPC (`v_published_at is null` E
+ * `p_slug_base <> v_current_slug`, lidos AO VIVO na transação), e não é
+ * duplicada aqui: reenviar o valor sempre que presente é seguro porque o RPC
+ * no-opa sozinho quando nada mudou (nem toma o advisory lock de
+ * `unique_review_slug` nesse caso — conferido no corpo da 0012).
+ */
+export async function updateReview(
+  _prev: ReviewFormState,
+  formData: FormData
+): Promise<ReviewFormState> {
+  const sessao = await requireEditor()
+  if (sessao.status !== 'ok') {
+    return { status: 'error', message: SEM_PERMISSAO }
+  }
+
+  const reviewIdBruto = formData.get('reviewId')
+  if (typeof reviewIdBruto !== 'string' || reviewIdBruto === '') {
+    return { status: 'error', message: ERRO_GENERICO }
+  }
+  const reviewId = reviewIdBruto
+
+  // Ver a nota do cabeçalho: string opaca, sem NENHUM parse.
+  const expectedUpdatedAtBruto = formData.get('expectedUpdatedAt')
+  if (typeof expectedUpdatedAtBruto !== 'string' || expectedUpdatedAtBruto === '') {
+    return { status: 'error', message: ERRO_GENERICO }
+  }
+  const expectedUpdatedAt = expectedUpdatedAtBruto
+
+  // (1) status primeiro, contra o enum. Falha aqui = nada persistido.
+  const statusValidado = reviewStatusSchema.safeParse(formData.get('status'))
+  if (!statusValidado.success) {
+    return { status: 'error', message: 'Ação inválida.' }
+  }
+  const status: ReviewStatus = statusValidado.data
+
+  // (2) o schema vem do STATUS VALIDADO, nunca do botão — MESMO gate do create.
+  const schema = status === 'published' ? reviewPublishSchema : reviewDraftSchema
+
+  const bruto = readReviewForm(formData)
+  const parsed = schema.safeParse(bruto)
+  if (!parsed.success) {
+    return {
+      status: 'error',
+      message: 'Confira os campos destacados.',
+      fieldErrors: mapZodIssues(parsed.error.issues),
+      values: echoValues(bruto),
+    }
+  }
+
+  const slugBaseSubmetido = formData.get('slugBase')
+  const slugBaseNormalizado =
+    typeof slugBaseSubmetido === 'string' ? slugify(slugBaseSubmetido) : ''
+  const slugBase = slugBaseNormalizado === '' ? null : slugBaseNormalizado
+
+  const supabase = await createAuthenticatedClient()
+  const { data, error } = await supabase.rpc(
+    'update_review_with_book',
+    toUpdateReviewRpcArgs(parsed.data, reviewId, expectedUpdatedAt, slugBase, status)
+  )
+
+  if (error) return mapearErro(error)
+
+  // `/admin/resenhas` é dinâmica por construção (lê `cookies()` via
+  // `createAuthenticatedClient` — mesma nota já registrada acima, em
+  // `revalidarRotasPublicas`). Chamar `revalidatePath` aqui é NO-OP hoje;
+  // mantido por clareza e como salvaguarda caso a rota deixe de ser dinâmica
+  // no futuro.
+  revalidatePath('/admin/resenhas')
+
+  // `published_at` não-nulo == "esta resenha JÁ foi publicada alguma vez" —
+  // verdadeiro em TRÊS casos que todos precisam de revalidação pública, com
+  // uma condição só: (a) segue publicada e o conteúdo mudou; (b) acabou de
+  // publicar pela primeira vez NESTE save (`coalesce` do RPC acabou de
+  // carimbar); (c) acabou de ser DESPUBLICADA por este mesmo save (o carimbo
+  // preserva, nunca limpa — por isso ainda aparece aqui, e é exatamente o
+  // caso em que a página pública precisa sumir/revalidar para 404). O único
+  // caso que FICA de fora, corretamente, é rascunho→rascunho: nunca teve
+  // página pública, nada para invalidar. `data.slug` é sempre o alvo certo
+  // porque o slug NÃO MUDA depois da primeira publicação (P-2/REV-23) — não
+  // existe um "slug antigo" divergente a revalidar à parte.
+  if (data?.published_at) revalidarRotasPublicas(data.slug)
+
+  return { status: 'saved', message: 'Alterações salvas.' }
 }

@@ -18,7 +18,13 @@ vi.mock('@/lib/supabase/authenticated', () => ({
 const revalidatePath = vi.fn()
 vi.mock('next/cache', () => ({ revalidatePath: (p: string) => revalidatePath(p) }))
 
-import { createReview, publishReview, unpublishReview, type ReviewFormState } from '../actions'
+import {
+  createReview,
+  publishReview,
+  unpublishReview,
+  updateReview,
+  type ReviewFormState,
+} from '../actions'
 // `IDLE_STATE` desceu para um módulo puro: `'use server'` não pode exportar
 // valor (ver o cabeçalho de `formState.ts`). O tipo segue vindo do action.
 import { IDLE_STATE } from '@/lib/review/formState'
@@ -35,6 +41,25 @@ function form(campos: Record<string, string>): FormData {
 /** Ficha completa e válida; o teste sobrescreve o que quiser quebrar. */
 function fichaValida(over: Record<string, string> = {}) {
   return form({
+    title: 'Dom Casmurro',
+    author: 'Machado de Assis',
+    genreId: GENRE,
+    body: 'Corpo real da resenha.',
+    status: 'draft',
+    ...over,
+  })
+}
+
+const REVIEW_ID = 'rev-edit-1'
+// Microssegundos de propósito (não ".251"): é o valor que expõe um `new
+// Date(...)` indevido em qualquer ponto do caminho até `p_expected_updated_at`.
+const EXPECTED_UPDATED_AT = '2026-08-26T19:06:39.251574+00:00'
+
+/** Ficha completa e válida para `updateReview`; o teste sobrescreve o que quiser quebrar. */
+function fichaValidaEdit(over: Record<string, string> = {}) {
+  return form({
+    reviewId: REVIEW_ID,
+    expectedUpdatedAt: EXPECTED_UPDATED_AT,
     title: 'Dom Casmurro',
     author: 'Machado de Assis',
     genreId: GENRE,
@@ -77,6 +102,7 @@ describe('gate por operação (SEC-08)', () => {
     ['createReview', () => createReview(IDLE_STATE, fichaValida())],
     ['publishReview', () => publishReview('rev-1')],
     ['unpublishReview', () => unpublishReview('rev-1')],
+    ['updateReview', () => updateReview(IDLE_STATE, fichaValidaEdit())],
   ])('%s: sessão não-ok → NADA é escrito', async (_nome, chamar) => {
     requireEditorMock.mockResolvedValue({ status: 'anonymous' })
     const estado = await chamar()
@@ -446,11 +472,210 @@ describe('revalidação de cache', () => {
   })
 })
 
+// ── updateReview (T4, REV-19) ────────────────────────────────────────────────
+
+describe('updateReview — campos-mecanismo (reviewId/expectedUpdatedAt/slugBase)', () => {
+  it('reviewId ausente → erro genérico, RPC não chamado', async () => {
+    const fd = fichaValidaEdit()
+    fd.delete('reviewId')
+    const estado = await updateReview(IDLE_STATE, fd)
+    expect(estado.status).toBe('error')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('expectedUpdatedAt ausente → erro genérico, RPC não chamado', async () => {
+    const fd = fichaValidaEdit()
+    fd.delete('expectedUpdatedAt')
+    const estado = await updateReview(IDLE_STATE, fd)
+    expect(estado.status).toBe('error')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('reviewId e expectedUpdatedAt chegam ao RPC EXATOS — sem tocar em Date (P-1)', async () => {
+    await updateReview(IDLE_STATE, fichaValidaEdit())
+    expect(rpc.mock.calls[0][1].p_review_id).toBe(REVIEW_ID)
+    // Comparação de STRING: um `new Date(...)` no meio do caminho arredondaria
+    // ".251574" para ".251" (milissegundos) e este teste pegaria.
+    expect(rpc.mock.calls[0][1].p_expected_updated_at).toBe(EXPECTED_UPDATED_AT)
+  })
+
+  it('slugBase AUSENTE do FormData → p_slug_base null (o formulário não ofereceu o campo)', async () => {
+    const fd = fichaValidaEdit()
+    fd.delete('slugBase')
+    await updateReview(IDLE_STATE, fd)
+    expect(rpc.mock.calls[0][1].p_slug_base).toBeNull()
+  })
+
+  it('slugBase PRESENTE → normalizado (slugify) e enviado ao RPC', async () => {
+    await updateReview(IDLE_STATE, fichaValidaEdit({ slugBase: 'Ação e Coração' }))
+    expect(rpc.mock.calls[0][1].p_slug_base).toBe('acao-e-coracao')
+  })
+
+  it('slugBase presente mas em branco → null, mesmo tratamento de ausente', async () => {
+    await updateReview(IDLE_STATE, fichaValidaEdit({ slugBase: '   ' }))
+    expect(rpc.mock.calls[0][1].p_slug_base).toBeNull()
+  })
+})
+
+describe('updateReview — reusa o MESMO gate de publicação schema-determinístico (A-1)', () => {
+  it('PAYLOAD MANIPULADO: status=published SEM corpo → REJEITADO, nada persistido', async () => {
+    const estado = await updateReview(
+      IDLE_STATE,
+      fichaValidaEdit({ status: 'published', body: '' })
+    )
+    expect(estado.status).toBe('error')
+    expect(estado.fieldErrors?.body).toMatch(/corpo/i)
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('o MESMO payload passa como draft — o STATUS decide, não o campo mecanismo', async () => {
+    const estado = await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'draft', body: '' }))
+    expect(estado.status).toBe('saved')
+    expect(rpc).toHaveBeenCalledTimes(1)
+  })
+
+  it('status forjado FORA do enum → erro ANTES de tocar o RPC', async () => {
+    for (const forjado of ['publicado', 'PUBLISHED', 'admin', '']) {
+      rpc.mockClear()
+      const estado = await updateReview(IDLE_STATE, fichaValidaEdit({ status: forjado }))
+      expect(estado.status).toBe('error')
+      expect(estado.message).toBe('Ação inválida.')
+      expect(rpc).not.toHaveBeenCalled()
+    }
+  })
+
+  it('o p_status enviado ao RPC é o MESMO valor validado — não há divergência', async () => {
+    await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'published' }))
+    expect(rpc.mock.calls[0][1].p_status).toBe('published')
+
+    rpc.mockClear()
+    await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'draft' }))
+    expect(rpc.mock.calls[0][1].p_status).toBe('draft')
+  })
+})
+
+describe('updateReview — mapeamento dos códigos NOVOS do T4 (40001/57014)', () => {
+  it('40001 (conflito otimista, P-1) → "outra pessoa alterou", sem fieldErrors', async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '40001', message: 'could not serialize access' },
+    })
+    const estado = await updateReview(IDLE_STATE, fichaValidaEdit())
+    expect(estado.status).toBe('error')
+    expect(estado.message).toMatch(/outra pessoa/i)
+    expect(estado.fieldErrors).toBeUndefined()
+  })
+
+  it('57014 (timeout do lock de FOR UPDATE) → "tente novamente", nunca o erro cru do Postgres', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: '57014', message: 'query_canceled' } })
+    const estado = await updateReview(IDLE_STATE, fichaValidaEdit())
+    expect(estado.status).toBe('error')
+    expect(estado.message).toMatch(/tente novamente/i)
+    expect(estado.message).not.toMatch(/query_canceled|57014/)
+  })
+
+  it('42501 no update → SEM PERMISSÃO, mesmo mapeamento de create/publish/unpublish', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'denied' } })
+    const estado = await updateReview(IDLE_STATE, fichaValidaEdit())
+    expect(estado.message).toBe(SEM_PERMISSAO)
+  })
+
+  it('23505 (colisão de slug) no update → mesma mensagem NO CAMPO do create', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate key' } })
+    const estado = await updateReview(IDLE_STATE, fichaValidaEdit())
+    expect(estado.fieldErrors?.reviewTitle).toBeTruthy()
+  })
+})
+
+describe('updateReview — tags/keywords/further_reading atravessam pelo campo oculto (T2a)', () => {
+  it('tagsInput e keywordsInput chegam ao RPC como array', async () => {
+    await updateReview(
+      IDLE_STATE,
+      fichaValidaEdit({ tagsInput: 'ficção; clássico', keywordsInput: 'machado, realismo' })
+    )
+    expect(rpc.mock.calls[0][1].p_tags).toEqual(['ficção', 'clássico'])
+    expect(rpc.mock.calls[0][1].p_keywords).toEqual(['machado', 'realismo'])
+  })
+
+  it('itens indexados de further_reading viram o array de p_further_reading', async () => {
+    const fd = fichaValidaEdit()
+    fd.set('furtherReading.0.label', 'Ensaio sobre Machado')
+    fd.set('furtherReading.0.url', 'https://exemplo.org/ensaio')
+
+    await updateReview(IDLE_STATE, fd)
+
+    expect(rpc.mock.calls[0][1].p_further_reading).toEqual([
+      { label: 'Ensaio sobre Machado', url: 'https://exemplo.org/ensaio' },
+    ])
+  })
+})
+
+describe('updateReview — revalidação cobre as 4 transições de status (E-4)', () => {
+  it('SEMPRE revalida /admin/resenhas, mesmo em rascunho→rascunho', async () => {
+    rpc.mockResolvedValue({ data: { slug: 'dom-casmurro', published_at: null }, error: null })
+    await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'draft' }))
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/resenhas')
+  })
+
+  it('rascunho→rascunho: NÃO revalida rotas públicas — nunca teve página', async () => {
+    rpc.mockResolvedValue({ data: { slug: 'dom-casmurro', published_at: null }, error: null })
+    await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'draft' }))
+    expect(revalidatePath).not.toHaveBeenCalledWith('/')
+    expect(revalidatePath).not.toHaveBeenCalledWith('/resenha/dom-casmurro')
+  })
+
+  it('segue publicada e o conteúdo mudou: revalida home E página', async () => {
+    rpc.mockResolvedValue({
+      data: { slug: 'dom-casmurro', published_at: '2020-01-01T00:00:00Z' },
+      error: null,
+    })
+    await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'published' }))
+    expect(revalidatePath).toHaveBeenCalledWith('/')
+    expect(revalidatePath).toHaveBeenCalledWith('/resenha/dom-casmurro')
+  })
+
+  it('primeira publicação VIA EDIÇÃO: o RPC acabou de carimbar published_at → revalida', async () => {
+    rpc.mockResolvedValue({
+      data: { slug: 'dom-casmurro', published_at: '2026-09-01T00:00:00Z' },
+      error: null,
+    })
+    await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'published' }))
+    expect(revalidatePath).toHaveBeenCalledWith('/')
+    expect(revalidatePath).toHaveBeenCalledWith('/resenha/dom-casmurro')
+  })
+
+  it('DESPUBLICAR via edição: published_at PRESERVADO (nunca limpo) → ainda revalida', async () => {
+    // O carimbo nunca é limpo (mesma regra de `unpublishReview`) — é exatamente
+    // por isso que a condição única de `updateReview` cobre este caso: se o RPC
+    // devolvesse null aqui, a página pública ficaria servindo cache já errado.
+    rpc.mockResolvedValue({
+      data: { slug: 'dom-casmurro', published_at: '2020-01-01T00:00:00Z' },
+      error: null,
+    })
+    await updateReview(IDLE_STATE, fichaValidaEdit({ status: 'draft' }))
+    expect(revalidatePath).toHaveBeenCalledWith('/')
+    expect(revalidatePath).toHaveBeenCalledWith('/resenha/dom-casmurro')
+  })
+
+  it('erro NÃO revalida cache algum — nem /admin/resenhas', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'x' } })
+    await updateReview(IDLE_STATE, fichaValidaEdit())
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
 describe('caminho feliz', () => {
   it('createReview devolve saved e chama o RPC uma vez', async () => {
     const estado: ReviewFormState = await createReview(IDLE_STATE, fichaValida())
     expect(estado.status).toBe('saved')
     expect(rpc).toHaveBeenCalledTimes(1)
     expect(rpc.mock.calls[0][0]).toBe('create_review_with_book')
+  })
+
+  it('updateReview devolve saved e chama update_review_with_book uma vez', async () => {
+    const estado: ReviewFormState = await updateReview(IDLE_STATE, fichaValidaEdit())
+    expect(estado.status).toBe('saved')
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(rpc.mock.calls[0][0]).toBe('update_review_with_book')
   })
 })
