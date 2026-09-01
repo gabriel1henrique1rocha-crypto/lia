@@ -251,6 +251,15 @@ type GeneratedCreateArgs = Database['public']['Functions']['create_review_with_b
  * A lista é deliberadamente restrita: tornar TODOS os parâmetros nuláveis seria
  * mais fácil e pior — `p_author` e `p_book_title` alimentam colunas NOT NULL, e
  * afrouxá-los aqui trocaria um erro de compilação por um 500 em runtime.
+ *
+ * `p_pages`/`p_original_language`/`p_translator`/`p_translated_from` (T2b,
+ * REV-19) entraram aqui pela MESMA fricção dos demais: a 0012 lhes deu
+ * `default null` no SQL, então o gerador os marca `?:` (opcionais na
+ * CHAMADA), mas o TIPO de cada um continua o primitivo puro (`number`/
+ * `string`), nunca `| null` — o Postgres não registra nullability de
+ * PARÂMETRO no catálogo. Sem entrar aqui, passar `null` explicitamente (o
+ * que `ouNulo` faz) falharia a compilação mesmo a coluna sendo nullable
+ * (T0 confirmou: as quatro são `NULL` em `book`, sem exceção).
  */
 type ParamsNullable =
   | 'p_publisher'
@@ -260,6 +269,10 @@ type ParamsNullable =
   | 'p_publication_city'
   | 'p_body'
   | 'p_highlight_quote'
+  | 'p_pages'
+  | 'p_original_language'
+  | 'p_translator'
+  | 'p_translated_from'
 
 /**
  * Assinatura REAL do RPC: derivada da gerada, corrigindo a nullability APENAS
@@ -280,13 +293,12 @@ function ouNulo(valor: string | undefined): string | null {
 /**
  * Converte a entrada validada nos argumentos do RPC de criação.
  *
- * CAMPOS DA FICHA QUE O RPC NÃO ACEITA: `pages`, `originalLanguage`,
- * `translator` e `translatedFrom` existem em `book` (0001) e em
- * `bookInputSchema`, mas **não estão na assinatura do `create_review_with_book`**
- * (0011). Este mapeador os DESCARTA — em silêncio no runtime, mas não em
- * silêncio no código: se o formulário passar a coletá-los, o valor NÃO chega ao
- * banco, e a correção é acrescentar os parâmetros ao RPC por migration nova.
- * Há um teste fixando esse descarte, para que a mudança seja deliberada.
+ * `pages`, `originalLanguage`, `translator` e `translatedFrom` (T2b, REV-19):
+ * a 0012 acrescentou os quatro à assinatura de `create_review_with_book`, com
+ * `default null`. Até então este mapeador os DESCARTAVA de propósito — a
+ * 0011 não tinha parâmetro para eles, e capturar a digitação só para jogá-la
+ * fora seria pior que não a capturar (a intenção viveu nesta função até
+ * a 0012 abrir espaço para ela chegar ao banco).
  *
  * SOBRE O `as` NO RETORNO — é a ÚNICA asserção de tipo deste módulo, e está aqui
  * de propósito, em UM lugar, para que o T6 não precise inventar a sua:
@@ -326,6 +338,12 @@ export function toCreateReviewRpcArgs(
     p_further_reading: input.furtherReading,
     p_status: status,
     p_slug_base: slugBase,
+    // T2b (REV-19) — ficha completa (P-3). `pages` é número: mesmo padrão de
+    // `p_year` (`?? null`), não `ouNulo` (que opera sobre string).
+    p_pages: input.pages ?? null,
+    p_original_language: ouNulo(input.originalLanguage),
+    p_translator: ouNulo(input.translator),
+    p_translated_from: ouNulo(input.translatedFrom),
   }
   return args as GeneratedCreateArgs
 }

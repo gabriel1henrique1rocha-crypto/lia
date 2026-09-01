@@ -301,6 +301,14 @@ describe.skipIf(!RUN)('Atomicidade dos RPCs de escrita (REV-04, A-9)', () => {
 
     const { error } = await a.rpc('update_review_with_book', {
       p_review_id: reviewId,
+      // 0012 (REV-19/P-1) tornou este parâmetro obrigatório — sem default, ao
+      // contrário dos quatro campos de ficha técnica que a mesma migration
+      // acrescentou. Aqui só o suficiente para a chamada resolver: o valor
+      // acabou de ser lido do próprio `create`, então bate com o do banco e
+      // não interfere no injetor de falha deste caso (`further_reading`
+      // inválido). O CONFLITO otimista propriamente dito é T7, não este teste
+      // de atomicidade.
+      p_expected_updated_at: criado.data?.updated_at as string,
       p_book_title: `${MARCA} TITULO ALTERADO`,
       p_author: 'AUTOR ALTERADO',
       p_genre_id: GENRE,
@@ -360,6 +368,8 @@ describe.skipIf(!RUN)('Atomicidade dos RPCs de escrita (REV-04, A-9)', () => {
 
     const { error } = await a.rpc('update_review_with_book', {
       p_review_id: reviewId,
+      // Ver a nota no caso 3 (obrigatório desde a 0012/P-1).
+      p_expected_updated_at: criado.data?.updated_at as string,
       p_book_title: `${MARCA} ficha atualizada`,
       p_author: 'Autor atualizado',
       p_genre_id: GENRE,

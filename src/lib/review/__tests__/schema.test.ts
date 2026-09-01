@@ -445,18 +445,21 @@ describe('toCreateReviewRpcArgs — ponte para a assinatura do RPC', () => {
     expect(toCreateReviewRpcArgs(parsed, 'x', 'draft').p_status).toBe('draft')
   })
 
-  it('DESCARTA os campos da ficha que o RPC não aceita — comportamento fixado', () => {
-    // `pages`, `originalLanguage`, `translator` e `translatedFrom` existem em
-    // `book` e no bookInputSchema, mas NÃO estão na assinatura do RPC (0011).
-    // Este teste trava o descarte: se alguém acrescentar os parâmetros ao RPC,
-    // ele quebra e obriga a atualizar o mapeador em vez de esquecê-lo.
-    const comExtras = reviewDraftSchema.parse(
+  it('ENVIA os quatro campos de ficha técnica (P-3, 0012) — comportamento fixado', () => {
+    // Até a 0012, `pages`/`originalLanguage`/`translator`/`translatedFrom`
+    // existiam em `book`/`bookInputSchema` mas NÃO na assinatura do RPC — este
+    // teste travava o DESCARTE. A 0012 (REV-19/T1) acrescentou os quatro à
+    // assinatura, com `default null`; o mapeador foi atualizado (T2b), e este
+    // teste passa a travar o CONTRÁRIO: se alguém voltar a descartá-los, quebra.
+    const comFicha = reviewDraftSchema.parse(
       fichaMinima({ pages: 256, originalLanguage: 'pt', translator: 'X', translatedFrom: 'ru' })
     )
-    const args = toCreateReviewRpcArgs(comExtras, 'x', 'draft')
-    for (const ausente of ['p_pages', 'p_original_language', 'p_translator', 'p_translated_from']) {
-      expect(args).not.toHaveProperty(ausente)
-    }
+    const args = toCreateReviewRpcArgs(comFicha, 'x', 'draft')
+    expect(args.p_pages).toBe(256)
+    expect(args.p_original_language).toBe('pt')
+    expect(args.p_translator).toBe('X')
+    expect(args.p_translated_from).toBe('ru')
+
     // E o mapeador cobre TODOS os parâmetros que o RPC realmente tem.
     expect(Object.keys(args).sort()).toEqual(
       [
@@ -469,14 +472,26 @@ describe('toCreateReviewRpcArgs — ponte para a assinatura do RPC', () => {
         'p_highlight_quote',
         'p_isbn',
         'p_keywords',
+        'p_original_language',
+        'p_pages',
         'p_publication_city',
         'p_publisher',
         'p_review_title',
         'p_slug_base',
         'p_status',
         'p_tags',
+        'p_translated_from',
+        'p_translator',
         'p_year',
       ].sort()
     )
+  })
+
+  it('ausentes viram NULL, nunca `undefined` nem string vazia', () => {
+    const args = toCreateReviewRpcArgs(parsed, 'x', 'draft')
+    expect(args.p_pages).toBeNull()
+    expect(args.p_original_language).toBeNull()
+    expect(args.p_translator).toBeNull()
+    expect(args.p_translated_from).toBeNull()
   })
 })

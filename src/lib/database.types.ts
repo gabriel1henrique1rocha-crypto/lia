@@ -293,12 +293,16 @@ export type Database = {
           p_highlight_quote: string
           p_isbn: string
           p_keywords: string[]
+          p_original_language?: string
+          p_pages?: number
           p_publication_city: string
           p_publisher: string
           p_review_title: string
           p_slug_base: string
           p_status: Database["public"]["Enums"]["review_status"]
           p_tags: string[]
+          p_translated_from?: string
+          p_translator?: string
           p_year: number
         }
         Returns: {
@@ -339,17 +343,23 @@ export type Database = {
           p_body: string
           p_book_title: string
           p_cover_url: string
+          p_expected_updated_at: string
           p_further_reading: Json
           p_genre_id: string
           p_highlight_quote: string
           p_isbn: string
           p_keywords: string[]
+          p_original_language?: string
+          p_pages?: number
           p_publication_city: string
           p_publisher: string
           p_review_id: string
           p_review_title: string
+          p_slug_base?: string
           p_status: Database["public"]["Enums"]["review_status"]
           p_tags: string[]
+          p_translated_from?: string
+          p_translator?: string
           p_year: number
         }
         Returns: {

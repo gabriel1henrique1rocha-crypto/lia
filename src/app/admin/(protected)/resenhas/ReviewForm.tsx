@@ -14,6 +14,7 @@ import { Field } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { reviewDraftSchema, reviewPublishSchema, reviewStatusSchema } from '@/lib/review/schema'
 import { echoValues, furtherReadingName, mapZodIssues, readReviewForm } from '@/lib/review/formData'
+import { LANGUAGES } from '@/lib/book/language'
 import type { ReviewFormState } from './actions'
 
 /**
@@ -76,13 +77,14 @@ import type { ReviewFormState } from './actions'
  *   renderiza. Um `select` que busca sozinho viraria mais um caminho de leitura
  *   a proteger.
  * · **Não decide publicação.** Ver "OS DOIS BOTÕES" abaixo.
- * · **Não coleta `pages`, `originalLanguage`, `translator`, `translatedFrom`
- *   nem o nome de quem assina.** Nenhum deles tem parâmetro no
- *   `create_review_with_book` (0011): o que fosse digitado ali seria descartado
- *   em silêncio no mapeamento do T5. Campo que perde o que recebe é pior que
- *   campo ausente — o editor confia que gravou. O nome de quem assina aparece
- *   como TEXTO (não input) porque o RPC o congela de `editor.name` (DD-6): é
- *   informação a mostrar, não dado a pedir.
+ * · **Não coleta o nome de quem assina.** O RPC o congela de `editor.name`
+ *   (DD-6) — é informação a MOSTRAR (texto, não input), não dado a pedir.
+ * · **`pages`/`originalLanguage`/`translator`/`translatedFrom` SÃO coletados
+ *   desde a T2b (P-3/0012)** — até então não tinham parâmetro no RPC (0011) e
+ *   este arquivo os descartava de propósito (campo que perde o que recebe é
+ *   pior que campo ausente). A 0012 abriu espaço na assinatura, com
+ *   `default null`; ver "Idioma original"/"Tradutor"/"Idioma de origem"/
+ *   "Páginas" na ficha do livro, mais abaixo.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * OS DOIS BOTÕES ENVIAM `status`; NÃO DECIDEM STATUS
@@ -172,7 +174,11 @@ const CAMPOS = [
   'genreId',
   'publisher',
   'year',
+  'pages',
   'isbn',
+  'originalLanguage',
+  'translator',
+  'translatedFrom',
   'publicationCity',
   'coverUrl',
   'reviewTitle',
@@ -473,6 +479,22 @@ export function ReviewForm({
             showOptional
             helpText={`Entre 1 e ${ANO_MAXIMO}.`}
           />
+          {/* T2b (REV-19/P-3) — ficha técnica completa. `type="number"` é só
+              apresentação: o `<form noValidate>` desliga a validação nativa do
+              navegador (não confiável para leitor de tela — varia por
+              navegador, alguns nem anunciam), então o erro de "menor que 1"
+              chega SEMPRE pelo mesmo `Field`/`aria-describedby` dos demais
+              campos, nunca pelo balão nativo do `type="number"`. */}
+          <Field
+            label="Páginas"
+            {...campoProps('pages')}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            showOptional
+            helpText="Número inteiro maior que zero."
+          />
           <Field
             label="ISBN"
             {...campoProps('isbn')}
@@ -480,6 +502,39 @@ export function ReviewForm({
             showOptional
             helpText="10 ou 13 dígitos. O dígito verificador é conferido."
           />
+          <Field
+            as="select"
+            label="Idioma original"
+            {...campoProps('originalLanguage')}
+            showOptional
+          >
+            <option value="">Selecione…</option>
+            {Object.entries(LANGUAGES).map(([codigo, nome]) => (
+              <option key={codigo} value={codigo}>
+                {nome}
+              </option>
+            ))}
+          </Field>
+          <Field label="Tradutor" {...campoProps('translator')} showOptional />
+          {/* `book_translation_consistent` (banco) / `bookInputSchema`
+              (superRefine, T5): tradutor sem idioma de origem é erro. O Zod já
+              ancora essa mensagem em `translatedFrom` — é o campo que falta
+              preencher, não o que já está certo —, então ela chega aqui pelo
+              MESMO `campoProps`/`aria-describedby` de qualquer outro erro,
+              sem tratamento especial. */}
+          <Field
+            as="select"
+            label="Idioma de origem"
+            {...campoProps('translatedFrom')}
+            showOptional
+          >
+            <option value="">Selecione…</option>
+            {Object.entries(LANGUAGES).map(([codigo, nome]) => (
+              <option key={codigo} value={codigo}>
+                {nome}
+              </option>
+            ))}
+          </Field>
           <Field label="Cidade de publicação" {...campoProps('publicationCity')} showOptional />
           <Field
             label="URL da capa"
