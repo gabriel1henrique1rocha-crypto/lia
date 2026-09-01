@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { ReviewForm, type GenreOption } from '../ReviewForm'
+import { ReviewForm, type GenreOption, type ReviewFormProps } from '../ReviewForm'
 import type { ReviewFormState } from '../actions'
 
 /**
@@ -32,7 +32,9 @@ function montar(resposta: ReviewFormState = SALVO) {
     recebidas.push(formData)
     return resposta
   })
-  const utils = render(<ReviewForm action={action} genres={GENEROS} signedBy="Ana Ribeiro" />)
+  const utils = render(
+    <ReviewForm mode="create" action={action} genres={GENEROS} signedBy="Ana Ribeiro" />
+  )
   return { ...utils, action, recebidas }
 }
 
@@ -519,5 +521,136 @@ describe('os dois botões mandam status; quem decide publicação é o servidor'
     const acoes = container.querySelector('.lia-review-form__actions')!
     expect(within(acoes as HTMLElement).getAllByRole('button')).toHaveLength(2)
     expect(acoes.querySelector('div[onclick], span[role="button"]')).toBeNull()
+  })
+})
+
+/* ── 7. `mode: 'edit'` (T2a) — só a CASCA; T3–T5 ligam os dados de verdade ──
+   Nada aqui reexercita `create`: os 37 testes acima já provam que `create`
+   não mudou. O que falta provar é que os campos ocultos de `edit` — o ponto
+   de falha nº 1 da feature (DR-3) — realmente carregam o valor certo pelo
+   nome certo, e que o slug (P-2) escolhe a variante certa das três. */
+
+describe("mode: 'edit' — campos ocultos preservam o que a UI não edita (DR-3)", () => {
+  const action = vi.fn(async (): Promise<ReviewFormState> => SALVO)
+
+  function montarEdit(props: Partial<ReviewFormProps> = {}) {
+    return render(
+      <ReviewForm
+        mode="edit"
+        action={action}
+        genres={GENEROS}
+        signedBy="Ana Ribeiro"
+        reviewId="rev-123"
+        expectedUpdatedAt="2026-08-26T19:06:39.251574+00:00"
+        isPublished={false}
+        preservedTags={['neurodiversidade', 'autismo']}
+        preservedKeywords={['umberto eco']}
+        preservedFurtherReading={[{ label: 'Ensaio', url: 'https://exemplo.org/ensaio' }]}
+        {...props}
+      />
+    )
+  }
+
+  it('tags/keywords NÃO viram campo editável — chegam como hidden com o valor preservado', () => {
+    const { container } = montarEdit()
+
+    // A UI não oferece edição (D-12): nenhum <Field> visível para os dois.
+    expect(screen.queryByRole('textbox', { name: /^Tags/ })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: /^Palavras-chave/ })).toBeNull()
+
+    const tagsHidden = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="tagsInput"]'
+    )
+    const keywordsHidden = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="keywordsInput"]'
+    )
+    expect(tagsHidden?.value).toBe('neurodiversidade, autismo')
+    expect(keywordsHidden?.value).toBe('umberto eco')
+  })
+
+  it('further_reading preservado usa o MESMO nome indexado que o leitor já espera', () => {
+    const { container } = montarEdit()
+
+    // Sem UI de adicionar/remover em edit (mesmo tratamento de tags/keywords).
+    expect(screen.queryByRole('button', { name: /^Adicionar leitura$/ })).toBeNull()
+
+    const label = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="furtherReading.0.label"]'
+    )
+    const url = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="furtherReading.0.url"]'
+    )
+    expect(label?.value).toBe('Ensaio')
+    expect(url?.value).toBe('https://exemplo.org/ensaio')
+  })
+
+  it('reviewId e expectedUpdatedAt viajam como hidden, com o valor RECEBIDO sem tocar', () => {
+    const { container } = montarEdit()
+
+    const reviewIdHidden = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="reviewId"]'
+    )
+    const updatedAtHidden = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="expectedUpdatedAt"]'
+    )
+    expect(reviewIdHidden?.value).toBe('rev-123')
+    // O valor exato, com os microssegundos intactos — nunca reformatado.
+    expect(updatedAtHidden?.value).toBe('2026-08-26T19:06:39.251574+00:00')
+  })
+
+  it('`create` continua SEM nenhum hidden — os campos ocultos são exclusivos de `edit`', () => {
+    const { container } = montar() // mode: 'create', sem nenhuma prop nova
+    expect(container.querySelectorAll('input[type="hidden"]')).toHaveLength(0)
+  })
+})
+
+describe('slug (P-2) — três estados, nunca `disabled`', () => {
+  const action = vi.fn(async (): Promise<ReviewFormState> => SALVO)
+
+  it('`create`: campo de slug AUSENTE — o slug segue derivado do título', () => {
+    const { container } = montar()
+    expect(screen.queryByRole('textbox', { name: /slug/i })).toBeNull()
+    expect(container.querySelector('[name="slugBase"]')).toBeNull()
+  })
+
+  it('`edit` + rascunho nunca publicado: campo de TEXTO editável, pré-preenchido', () => {
+    render(
+      <ReviewForm
+        mode="edit"
+        action={action}
+        genres={GENEROS}
+        isPublished={false}
+        defaultValues={{ slugBase: 'meu-rascunho-atual' }}
+      />
+    )
+
+    const campo = screen.getByRole('textbox', { name: /Endereço da resenha/i })
+    expect(campo).toHaveAttribute('name', 'slugBase')
+    expect(campo).not.toHaveAttribute('disabled')
+    expect((campo as HTMLInputElement).value).toBe('meu-rascunho-atual')
+  })
+
+  it('`edit` + já publicada: TEXTO ESTÁTICO com explicação — nunca `disabled`', () => {
+    const { container } = render(
+      <ReviewForm
+        mode="edit"
+        action={action}
+        genres={GENEROS}
+        isPublished={true}
+        defaultValues={{ slugBase: 'ja-publicada' }}
+      />
+    )
+
+    // Nem campo (disabled sai da ordem de tabulação — ver cabeçalho do componente).
+    expect(screen.queryByRole('textbox', { name: /Endereço da resenha/i })).toBeNull()
+    expect(container.querySelector('[disabled]')).toBeNull()
+
+    expect(screen.getByText('Endereço da resenha')).toBeInTheDocument()
+    expect(screen.getByText('/resenha/ja-publicada')).toBeInTheDocument()
+    expect(screen.getByText(/o endereço não muda mais/i)).toBeInTheDocument()
+
+    // A explicação chega por aria-describedby, não só visualmente.
+    const valor = screen.getByText('/resenha/ja-publicada')
+    expect(valor).toHaveAttribute('aria-describedby')
   })
 })

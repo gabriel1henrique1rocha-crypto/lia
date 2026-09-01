@@ -39,5 +39,12 @@ async function acaoDemonstrativa(
 }
 
 export function ReviewFormDemo() {
-  return <ReviewForm action={acaoDemonstrativa} genres={GENEROS_DEMO} signedBy="Ana Ribeiro" />
+  return (
+    <ReviewForm
+      mode="create"
+      action={acaoDemonstrativa}
+      genres={GENEROS_DEMO}
+      signedBy="Ana Ribeiro"
+    />
+  )
 }

@@ -1,6 +1,14 @@
 'use client'
 
-import { useActionState, useCallback, useId, useLayoutEffect, useRef, useState } from 'react'
+import {
+  Fragment,
+  useActionState,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Field } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +17,53 @@ import { echoValues, furtherReadingName, mapZodIssues, readReviewForm } from '@/
 import type { ReviewFormState } from './actions'
 
 /**
- * Formulário de resenha (T8) — a primeira superfície de escrita do painel.
+ * Formulário de resenha (T8), extraído em MODO DUPLO na T2a (REV-19) para
+ * servir criação E edição sem duplicar a superfície que passou pelo gate axe.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * T2a — REGRA DURA: `mode: 'create'` produz o MESMO HTML de antes da extração
+ *
+ * Só `mode: 'create'` é exercido nesta task; os campos de `edit` entram na
+ * assinatura SEM CONSUMIDOR (T3–T5 os ligam). Verificado por comparação
+ * literal do HTML renderizado — repouso, com leituras adicionadas e com erro
+ * de validação — antes e depois desta extração: idêntico byte a byte nos três
+ * estados. Toda ramificação nova é condicionada a `mode === 'edit'`, nunca ao
+ * contrário — o caminho de `create` não pergunta "estou em create?", ele
+ * simplesmente continua sendo o que já era.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CAMPOS OCULTOS DE `edit` — POR QUE EXISTEM, E POR QUE SÃO PERIGOSOS
+ *
+ * `tags`, `keywords` e `further_reading` NÃO são editáveis nesta tela enquanto
+ * D-12 (taxonomia de deficiência representada) estiver `[PREENCHER]` — não há
+ * UI de vocabulário controlado para oferecer. Mas o RPC (0011/0012) faz
+ * `coalesce(p_tags, '{}')` / `coalesce(p_keywords, '{}')` /
+ * `coalesce(p_further_reading, '[]'::jsonb)`: omitir o campo NÃO preserva o
+ * valor atual — GRAVA VAZIO. `o-projeto-rosie` tem 15 tags reais em produção;
+ * salvar uma edição do corpo sem reenviá-las as apagaria em silêncio. Por isso
+ * `mode === 'edit'` os transporta como `<input type="hidden">`, com os MESMOS
+ * nomes de campo que `readReviewForm`/`reviewDraftSchema` já leem
+ * (`tagsInput`, `keywordsInput`, `furtherReading.N.label/url` via
+ * `furtherReadingName` — nenhum formato novo, mesma leitura de sempre) — a UI
+ * não oferece edição, mas o valor faz a viagem de volta intacto.
+ *
+ * `expectedUpdatedAt` (P-1) é o campo mais perigoso de mexer: viaja como a
+ * STRING EXATA que o Supabase devolveu, nunca como `Date`. Ver a nota no local
+ * onde ele é renderizado, mais abaixo — resumo aqui: `Date` do JS só tem
+ * milissegundos, `timestamptz` do Postgres guarda microssegundos, e qualquer
+ * parse+reserialização no caminho perde a precisão. A comparação
+ * `is distinct from` do RPC (0012) então NUNCA bate, e TODO save relata
+ * conflito falso — com cara de bug de permissão, não de bug de precisão.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * SLUG (P-2) — POR QUE NÃO EXISTE VERSÃO `disabled`
+ *
+ * Três estados, não dois: ausente (`create`), editável (`edit` + rascunho
+ * nunca publicado) e TEXTO ESTÁTICO com explicação (`edit` + já publicada).
+ * Nunca `disabled`: um campo desabilitado SAI da ordem de tabulação e some da
+ * navegação por formulário em leitor de tela — a informação ("por que não
+ * posso mudar isto?") desapareceria em vez de ser explicada. Texto estático
+ * com `aria-describedby` permanece perceptível e diz o motivo.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * O QUE ESTE COMPONENTE NÃO FAZ, DE PROPÓSITO
@@ -61,13 +115,41 @@ import type { ReviewFormState } from './actions'
 
 export type GenreOption = { id: string; name: string }
 
+/** `create`: formulário de criação (T8, comportamento intocado). `edit`: T3–T5. */
+export type ReviewFormMode = 'create' | 'edit'
+
+/**
+ * Valores iniciais dos campos de valor único (ver `CAMPOS` abaixo) — inclusive
+ * `slugBase`, que só é lido em `mode: 'edit'`. `Partial`: em `create` o objeto
+ * inteiro está ausente e cada campo nasce vazio, como sempre.
+ */
+export type ReviewFormValues = Partial<Record<Campo, string>>
+
 export type ReviewFormProps = {
-  /** Action que persiste (T6). Injetada para o componente não amarrar rota. */
+  mode: ReviewFormMode
+  /** Action que persiste (T6/T4). Injetada para o componente não amarrar rota. */
   action: (prev: ReviewFormState, formData: FormData) => Promise<ReviewFormState>
   /** Gêneros para o `select` — `genre_id` é NOT NULL no banco. */
   genres: GenreOption[]
   /** Nome que assinará a resenha. Exibido, não coletado (DD-6). */
   signedBy?: string | null
+  /** Valores atuais para pré-preencher `mode: 'edit'`. Ignorado em `create`. */
+  defaultValues?: ReviewFormValues
+  /** ID da resenha em edição. Viaja como campo oculto — `mode: 'edit'` só. */
+  reviewId?: string
+  /**
+   * `updated_at` lido junto com `defaultValues`, para o conflito otimista
+   * (P-1/0012). Ver a nota completa onde é renderizado, mais abaixo.
+   */
+  expectedUpdatedAt?: string
+  /** Governa o modo do campo de slug (P-2). Irrelevante em `create`. */
+  isPublished?: boolean
+  /** Tags atuais, a REENVIAR intactas em `mode: 'edit'` (não editáveis — D-12). */
+  preservedTags?: string[]
+  /** Mesma regra de `preservedTags`, para palavras-chave. */
+  preservedKeywords?: string[]
+  /** Mesma regra, para leituras adicionais — formato ainda não fixado por T3. */
+  preservedFurtherReading?: unknown[]
 }
 
 const ESTADO_INICIAL: ReviewFormState = { status: 'idle', message: '' }
@@ -79,6 +161,10 @@ const ANO_MAXIMO = new Date().getFullYear()
  * Campos de valor único. A lista existe para o estado ser DERIVADO dela — um
  * campo novo entra aqui e ganha estado, nome e eco sem edição em três lugares.
  * Os repetíveis (`furtherReading.N.*`) têm estado próprio, por serem lista.
+ *
+ * `slugBase` (T2a): só renderiza em `mode: 'edit'` (P-2) — entrar na lista
+ * custa zero em `create`, porque nenhum `Field` chama `campoProps('slugBase')`
+ * nesse modo; a chave fica no estado, inerte, sem virar elemento na tela.
  */
 const CAMPOS = [
   'title',
@@ -94,6 +180,7 @@ const CAMPOS = [
   'highlightQuote',
   'tagsInput',
   'keywordsInput',
+  'slugBase',
 ] as const
 
 type Campo = (typeof CAMPOS)[number]
@@ -114,7 +201,19 @@ type FocoPendente =
   | { tipo: 'remover'; indice: number }
   | { tipo: 'adicionar' }
 
-export function ReviewForm({ action, genres, signedBy }: ReviewFormProps) {
+export function ReviewForm({
+  mode,
+  action,
+  genres,
+  signedBy,
+  defaultValues,
+  reviewId,
+  expectedUpdatedAt,
+  isPublished,
+  preservedTags,
+  preservedKeywords,
+  preservedFurtherReading,
+}: ReviewFormProps) {
   /**
    * Envolve a action com a validação do cliente. Como o retorno tem a MESMA
    * forma (`ReviewFormState`), o resto do componente não sabe — nem precisa
@@ -166,8 +265,17 @@ export function ReviewForm({ action, genres, signedBy }: ReviewFormProps) {
    * O eco de `state.values` (T6) continua vindo do servidor e permanece útil a
    * quem consuma a action sem este componente; aqui a digitação já vive no
    * estado do React e não precisa ser reidratada.
+   *
+   * T2a: `{ ...VALORES_VAZIOS, ...defaultValues }` — em `create`,
+   * `defaultValues` é `undefined`, e espalhar `undefined` num objeto não faz
+   * nada (não lança, não sobrescreve chave nenhuma); o resultado é
+   * `VALORES_VAZIOS` exatamente como antes desta task. Só `edit`, com
+   * `defaultValues` de verdade, pré-preenche.
    */
-  const [valores, setValores] = useState<Record<Campo, string>>(VALORES_VAZIOS)
+  const [valores, setValores] = useState<Record<Campo, string>>({
+    ...VALORES_VAZIOS,
+    ...defaultValues,
+  })
 
   /**
    * CANCELA o reset automático que o React 19 dispara ao fim de TODA action.
@@ -199,6 +307,7 @@ export function ReviewForm({ action, genres, signedBy }: ReviewFormProps) {
   }, [])
 
   const bylineId = useId()
+  const slugStaticId = useId()
 
   const erroDe = (campo: string) => state.fieldErrors?.[campo]
 
@@ -394,6 +503,36 @@ export function ReviewForm({ action, genres, signedBy }: ReviewFormProps) {
             helpText="Se ficar vazio, a resenha usa o título do livro."
           />
 
+          {/* Slug (P-2) — três estados, nunca `disabled` (ver o cabeçalho do
+              arquivo). Ausente em `create`: a rota de criação não pede — o
+              slug nasce derivado do título, como sempre. */}
+          {mode === 'edit' &&
+            (isPublished ? (
+              // Mesma forma visual do bloco "Quem assina" logo abaixo — rótulo +
+              // valor + ajuda, todos texto estático. Reuso deliberado: é o MESMO
+              // padrão (informação que não se edita aqui, com o porquê explicado),
+              // e reaproveitar as classes já auditadas evita introduzir classe CSS
+              // nova sem passar por design nesta task mecânica.
+              <div className="lia-review-form__byline">
+                <p className="lia-review-form__byline-label" id={slugStaticId}>
+                  Endereço da resenha
+                </p>
+                <p className="lia-review-form__byline-value" aria-describedby={slugStaticId}>
+                  /resenha/{valores.slugBase}
+                </p>
+                <p className="lia-review-form__byline-help">
+                  Publicada: o endereço não muda mais, mesmo editando o título.
+                </p>
+              </div>
+            ) : (
+              <Field
+                label="Endereço da resenha (slug)"
+                {...campoProps('slugBase')}
+                showOptional
+                helpText="Deriva do título se deixado como está. Só pode mudar enquanto a resenha não for publicada."
+              />
+            ))}
+
           <Field
             as="textarea"
             label="Corpo da resenha"
@@ -426,81 +565,150 @@ export function ReviewForm({ action, genres, signedBy }: ReviewFormProps) {
             helpText="Um trecho curto para abrir a página. Não há campo de fonte: para atribuir, escreva a fonte no próprio texto."
           />
 
-          <Field
-            label="Tags"
-            {...campoProps('tagsInput')}
-            showOptional
-            helpText="Separe por vírgula ou ponto e vírgula. Ex.: clássico, romance"
-          />
+          {/* Tags/palavras-chave (D-12): editáveis SÓ em `create`. Em `edit`
+              não há UI de vocabulário controlado ainda — a tela não pode
+              oferecer edição que não existe —, mas o valor ATUAL precisa
+              viajar de volta pelo MESMO nome de campo que `readReviewForm`
+              já lê (`tagsInput`/`keywordsInput`), senão o RPC grava `{}` por
+              cima das 15 tags reais de `o-projeto-rosie` (ver cabeçalho). */}
+          {mode === 'create' ? (
+            <Field
+              label="Tags"
+              {...campoProps('tagsInput')}
+              showOptional
+              helpText="Separe por vírgula ou ponto e vírgula. Ex.: clássico, romance"
+            />
+          ) : (
+            <input type="hidden" name="tagsInput" value={(preservedTags ?? []).join(', ')} />
+          )}
 
-          <Field
-            label="Palavras-chave"
-            {...campoProps('keywordsInput')}
-            showOptional
-            helpText="Separe por vírgula ou ponto e vírgula. Usadas em metadados de busca."
-          />
+          {mode === 'create' ? (
+            <Field
+              label="Palavras-chave"
+              {...campoProps('keywordsInput')}
+              showOptional
+              helpText="Separe por vírgula ou ponto e vírgula. Usadas em metadados de busca."
+            />
+          ) : (
+            <input
+              type="hidden"
+              name="keywordsInput"
+              value={(preservedKeywords ?? []).join(', ')}
+            />
+          )}
 
           {/* Fieldset ANINHADO: cada item repetível é um par de campos que só
               faz sentido junto, e o `legend` dá ao grupo um nome que o leitor de
               tela anuncia ao entrar. Aninhar é HTML válido e não cria um
-              terceiro agrupamento de topo — continuam dois. */}
-          <fieldset className="lia-review-form__repeatable">
-            <legend className="lia-review-form__legend lia-review-form__legend--sub">
-              Leituras adicionais
-            </legend>
-            <p className="lia-review-form__hint">
-              Links de apoio. Itens em branco são descartados ao salvar.
-            </p>
+              terceiro agrupamento de topo — continuam dois.
 
-            {leituras.length > 0 && (
-              <ul className="lia-review-form__leituras">
-                {leituras.map((leitura, indice) => (
-                  <li key={leitura.chave} className="lia-review-form__leitura">
-                    <Field
-                      label={`Título do link ${indice + 1}`}
-                      name={furtherReadingName(indice, 'label')}
-                      value={leitura.label}
-                      onChange={(evento) =>
-                        atualizarLeitura(indice, 'label', evento.currentTarget.value)
-                      }
-                      error={erroDe(furtherReadingName(indice, 'label'))}
-                    />
-                    <Field
-                      label={`Endereço do link ${indice + 1}`}
-                      name={furtherReadingName(indice, 'url')}
-                      type="url"
-                      inputMode="url"
-                      value={leitura.url}
-                      onChange={(evento) =>
-                        atualizarLeitura(indice, 'url', evento.currentTarget.value)
-                      }
-                      error={erroDe(furtherReadingName(indice, 'url'))}
-                    />
-                    <Button
-                      ref={(elemento) => {
-                        removerRefs.current[indice] = elemento
-                      }}
-                      variant="secondary"
-                      icon={<Trash2 size={16} />}
-                      onClick={() => removerLeitura(indice)}
-                      className="lia-review-form__leitura-remover"
-                    >
-                      Remover leitura {indice + 1}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
+              MESMO TRATAMENTO de tags/keywords em `edit` (D-12): a UI de
+              adicionar/remover só existe em `create`. Os itens atuais viajam
+              como pares ocultos, pelo MESMO `furtherReadingName` que o leitor
+              indexado já espera — não é formato novo, é o de sempre, só que
+              sem controle visível para editar. */}
+          {mode === 'create' ? (
+            <fieldset className="lia-review-form__repeatable">
+              <legend className="lia-review-form__legend lia-review-form__legend--sub">
+                Leituras adicionais
+              </legend>
+              <p className="lia-review-form__hint">
+                Links de apoio. Itens em branco são descartados ao salvar.
+              </p>
 
-            <Button
-              ref={adicionarRef}
-              variant="secondary"
-              icon={<Plus size={16} />}
-              onClick={adicionarLeitura}
-            >
-              Adicionar leitura
-            </Button>
-          </fieldset>
+              {leituras.length > 0 && (
+                <ul className="lia-review-form__leituras">
+                  {leituras.map((leitura, indice) => (
+                    <li key={leitura.chave} className="lia-review-form__leitura">
+                      <Field
+                        label={`Título do link ${indice + 1}`}
+                        name={furtherReadingName(indice, 'label')}
+                        value={leitura.label}
+                        onChange={(evento) =>
+                          atualizarLeitura(indice, 'label', evento.currentTarget.value)
+                        }
+                        error={erroDe(furtherReadingName(indice, 'label'))}
+                      />
+                      <Field
+                        label={`Endereço do link ${indice + 1}`}
+                        name={furtherReadingName(indice, 'url')}
+                        type="url"
+                        inputMode="url"
+                        value={leitura.url}
+                        onChange={(evento) =>
+                          atualizarLeitura(indice, 'url', evento.currentTarget.value)
+                        }
+                        error={erroDe(furtherReadingName(indice, 'url'))}
+                      />
+                      <Button
+                        ref={(elemento) => {
+                          removerRefs.current[indice] = elemento
+                        }}
+                        variant="secondary"
+                        icon={<Trash2 size={16} />}
+                        onClick={() => removerLeitura(indice)}
+                        className="lia-review-form__leitura-remover"
+                      >
+                        Remover leitura {indice + 1}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <Button
+                ref={adicionarRef}
+                variant="secondary"
+                icon={<Plus size={16} />}
+                onClick={adicionarLeitura}
+              >
+                Adicionar leitura
+              </Button>
+            </fieldset>
+          ) : (
+            (preservedFurtherReading ?? []).map((item, indice) => {
+              const leitura = item as { label?: string; url?: string }
+              return (
+                <Fragment key={indice}>
+                  <input
+                    type="hidden"
+                    name={furtherReadingName(indice, 'label')}
+                    value={leitura.label ?? ''}
+                  />
+                  <input
+                    type="hidden"
+                    name={furtherReadingName(indice, 'url')}
+                    value={leitura.url ?? ''}
+                  />
+                </Fragment>
+              )
+            })
+          )}
+
+          {/* `reviewId` — só `edit` tem um ID para identificar. */}
+          {mode === 'edit' && reviewId !== undefined && (
+            <input type="hidden" name="reviewId" value={reviewId} />
+          )}
+
+          {/*
+           * `expectedUpdatedAt` (P-1) — STRING OPACA, JAMAIS `Date`.
+           *
+           * `value={expectedUpdatedAt}` recebe a string exata que o Supabase
+           * devolveu e a repassa sem tocar — sem `new Date(...)`, sem
+           * `.toISOString()`, sem formatação, sem normalização de timezone.
+           * `timestamptz` do Postgres guarda MICROSSEGUNDOS; `Date` do
+           * JavaScript só tem MILISSEGUNDOS. Se este valor passasse por um
+           * `Date` em qualquer ponto do trajeto — aqui, na action, no
+           * cliente que popula `defaultValues` —, os microssegundos
+           * cairiam, a comparação `is distinct from` do RPC (0012) NUNCA
+           * bateria, e TODO save reportaria conflito falso (40001) — com
+           * cara de bug de permissão, não de perda de precisão numérica.
+           * Se algum tipo do TypeScript um dia forçar `Date` aqui, o
+           * conserto é mudar o TIPO, nunca o valor.
+           */}
+          {mode === 'edit' && expectedUpdatedAt !== undefined && (
+            <input type="hidden" name="expectedUpdatedAt" value={expectedUpdatedAt} />
+          )}
         </div>
       </fieldset>
 
