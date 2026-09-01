@@ -124,7 +124,7 @@ test('a tabela tem caption e cabeçalhos de linha e de coluna', async ({ page })
   const tabela = page.locator(TABELA)
 
   await expect(tabela.locator('caption')).toHaveText(/Suas resenhas/)
-  await expect(tabela.locator('thead th[scope="col"]')).toHaveCount(4)
+  await expect(tabela.locator('thead th[scope="col"]')).toHaveCount(5)
   await expect(tabela.locator('tbody th[scope="row"]')).toHaveCount(2)
 })
 
@@ -148,7 +148,7 @@ test('a região da tabela é alcançável por Tab e tem nome acessível', async 
   expect(contorno.cor).toBe('rgb(31, 95, 214)')
 })
 
-test('do fim da tabela chega-se ao link de criar por Tab, e ele é acionável por teclado', async ({
+test('da região da tabela chega-se aos links de editar por Tab, um por linha (T5)', async ({
   page,
 }) => {
   await page.goto('/styleguide')
@@ -156,12 +156,42 @@ test('do fim da tabela chega-se ao link de criar por Tab, e ele é acionável po
   const regiao = page.locator(`${LISTA} [role="region"]`)
   await regiao.focus()
 
-  // Próxima parada depois da tabela: o convite do estado vazio (a única âncora
-  // desta seção — não há link por linha, a rota de edição não existe).
+  // As duas linhas da tabela de exemplo (ver `resenhasDoEditor` no styleguide),
+  // em ORDEM DE DOM — é o link de editar de cada uma, não o contêiner, que a
+  // tabulação alcança primeiro.
   await page.keyboard.press('Tab')
-  const focado = page.locator(`${LISTA} a`).first()
+  const editarLabirinto = page.getByRole('link', {
+    name: 'Editar resenha: A biblioteca como labirinto',
+  })
+  await expect(editarLabirinto).toBeFocused()
+
+  await page.keyboard.press('Tab')
+  const editarIracema = page.getByRole('link', {
+    name: 'Editar resenha: Iracema, entre a lenda e a língua',
+  })
+  await expect(editarIracema).toBeFocused()
+
+  // Enter navega — e cai no gate, provando o alvo e a proteção de uma vez.
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/admin\/login/)
+})
+
+test('do fim da tabela chega-se ao link de criar por Tab, e ele é acionável por teclado', async ({
+  page,
+}) => {
+  await page.goto('/styleguide')
+
+  // Foca o ÚLTIMO link de editar (fim das linhas da tabela), não a região: o
+  // teste anterior já prova que a região leva a eles; este prova o próximo
+  // passo, do fim da tabela até o convite do estado vazio logo abaixo.
+  const ultimoEditar = page.getByRole('link', {
+    name: 'Editar resenha: Iracema, entre a lenda e a língua',
+  })
+  await ultimoEditar.focus()
+
+  await page.keyboard.press('Tab')
+  const focado = page.getByRole('link', { name: /Escrever a primeira resenha/ })
   await expect(focado).toBeFocused()
-  await expect(focado).toHaveText(/Escrever a primeira resenha/)
 
   // Enter navega — e cai no gate, provando o alvo e a proteção de uma vez.
   await page.keyboard.press('Enter')

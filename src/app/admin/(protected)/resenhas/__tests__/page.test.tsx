@@ -72,12 +72,13 @@ describe('/admin/resenhas', () => {
     expect(metadata.robots).toEqual({ index: false, follow: false })
   })
 
-  it('NÃO aponta para a rota de edição — ela não existe nesta sprint', async () => {
+  it('cada linha aponta para a rota de edição (T5)', async () => {
     listEditorReviewsMock.mockResolvedValue([LINHA])
-    const { container } = await renderizar()
+    await renderizar()
 
-    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'))
-    expect(hrefs.some((href) => href?.includes('/editar'))).toBe(false)
+    expect(
+      screen.getByRole('link', { name: 'Editar resenha: A biblioteca como labirinto' })
+    ).toHaveAttribute('href', '/admin/resenhas/r1/editar')
   })
 })
 
@@ -110,6 +111,44 @@ describe('confirmação de criação (volta do redirect)', () => {
     await renderizar({ criada: '<script>alert(1)</script>' })
 
     // O parâmetro só SELECIONA uma mensagem fixa; fora do mapa, nada aparece.
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByText(/alert\(1\)/)).toBeNull()
+  })
+})
+
+describe('confirmação de EDIÇÃO (volta do redirect de updateReviewAndGoToList, T5)', () => {
+  it('?editada=rascunho anuncia alterações salvas como rascunho, com FOCO no aviso', async () => {
+    listEditorReviewsMock.mockResolvedValue([LINHA])
+    await renderizar({ editada: 'rascunho' })
+
+    const aviso = screen.getByRole('status')
+    expect(aviso).toHaveTextContent(/Alterações salvas como rascunho/)
+    expect(aviso).toHaveFocus()
+  })
+
+  it('?editada=publicada anuncia alterações salvas — texto DIFERENTE de "Resenha publicada" (E-9)', async () => {
+    listEditorReviewsMock.mockResolvedValue([LINHA])
+    await renderizar({ editada: 'publicada' })
+
+    // Não é `CONFIRMACOES.publicada`: quem editou uma resenha publicada há
+    // meses não "acabou de publicar" — o texto de `criada=publicada` mentiria
+    // sobre o que de fato aconteceu.
+    const aviso = screen.getByRole('status')
+    expect(aviso).toHaveTextContent(/Alterações salvas/)
+    expect(aviso).not.toHaveTextContent(/^Resenha publicada/)
+  })
+
+  it('?criada= tem precedência se, por algum motivo, os dois vierem juntos', async () => {
+    listEditorReviewsMock.mockResolvedValue([LINHA])
+    await renderizar({ criada: 'rascunho', editada: 'publicada' })
+
+    expect(screen.getByRole('status')).toHaveTextContent(/Rascunho salvo/)
+  })
+
+  it('valor arbitrário em ?editada= NÃO vira texto na tela', async () => {
+    listEditorReviewsMock.mockResolvedValue([LINHA])
+    await renderizar({ editada: '<script>alert(1)</script>' })
+
     expect(screen.queryByRole('status')).toBeNull()
     expect(screen.queryByText(/alert\(1\)/)).toBeNull()
   })

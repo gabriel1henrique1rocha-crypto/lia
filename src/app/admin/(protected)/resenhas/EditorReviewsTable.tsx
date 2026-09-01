@@ -60,9 +60,11 @@ export function EditorReviewsTable({ reviews }: { reviews: EditorReviewListItem[
 
   return (
     /* Contêiner rolável em telas estreitas. `tabIndex` + `role="region"` com
-       nome: sem eles, quem navega só por teclado não consegue rolar a tabela
-       (não há link nenhum dentro das linhas — a rota de edição não existe nesta
-       sprint), e o axe reprova com `scrollable-region-focusable`. */
+       nome: um link DENTRO de uma linha não torna o CONTÊINER em si alcançável
+       — tabular até ele move o foco para o link, não rola o contêiner —, então
+       mesmo com o link de editar (T5) abaixo o wrapper continua precisando do
+       seu próprio alvo de foco, senão o axe reprova com
+       `scrollable-region-focusable`. */
     <div
       className="lia-admin-table__scroll"
       role="region"
@@ -80,6 +82,7 @@ export function EditorReviewsTable({ reviews }: { reviews: EditorReviewListItem[
             <th scope="col">Livro</th>
             <th scope="col">Situação</th>
             <th scope="col">Atualizada em</th>
+            <th scope="col">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -102,6 +105,21 @@ export function EditorReviewsTable({ reviews }: { reviews: EditorReviewListItem[
                 <time dateTime={review.updated_at}>
                   {FORMATO_DATA.format(new Date(review.updated_at))}
                 </time>
+              </td>
+              <td>
+                {/* Rótulo VISÍVEL igual em toda linha ("Editar") — se o nome
+                    acessível fosse só esse texto, um leitor de tela navegando
+                    por links ouviria "Editar", "Editar", "Editar", sem dizer
+                    de qual resenha. `aria-label` COMPÕE o rótulo com o título
+                    (T5, REV-19) — a mesma razão por trás do `scope="row"`
+                    acima, aplicada a um link em vez de uma célula. */}
+                <Link
+                  className="lia-link"
+                  href={`/admin/resenhas/${review.id}/editar`}
+                  aria-label={`Editar resenha: ${review.title}`}
+                >
+                  Editar
+                </Link>
               </td>
             </tr>
           ))}
