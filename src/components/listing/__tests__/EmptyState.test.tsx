@@ -8,6 +8,7 @@ const params: ListingParams = {
   q: 'inexistente',
   genero: '',
   autor: '',
+  deficiencia: '',
   ordem: 'recentes',
   pagina: 1,
 }

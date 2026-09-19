@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPublishedReviewBySlug } from '@/lib/review/queries'
+import { disabilitiesOf } from '@/lib/review/disabilities'
 import { excerpt } from '@/lib/review/excerpt'
 import { BookCover } from '@/components/book/BookCover'
 import { HighlightQuote } from '@/components/review/HighlightQuote'
@@ -93,6 +94,7 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
 
   const { book } = review
   const paragraphs = splitParagraphs(review.body)
+  const deficiencias = disabilitiesOf(review)
 
   return (
     <article className="lia-review">
@@ -123,7 +125,7 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
         <h2 id="ficha">Ficha técnica</h2>
         {/* Ficha resumida (doc de customização): Título, Autor, Ano. A ficha
             completa (editora, ISBN, tradução…) segue no banco e no formulário
-            do admin; "Deficiência(s) representada(s)" entra com a D-12. */}
+            do admin. Deficiência(s) representada(s): D-12 (0013). */}
         <dl className="lia-book-details">
           <dt>Título</dt>
           <dd>{book.title}</dd>
@@ -133,6 +135,25 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
             <>
               <dt>Ano</dt>
               <dd>{book.year}</dd>
+            </>
+          )}
+          {/* D-12 (DIS-06): omitido por inteiro quando vazio — sem <dt> órfão.
+              Lista dentro do <dd> (HTML válido): o leitor de tela anuncia a
+              contagem ("lista, 2 itens") em vez de uma frase com vírgulas. */}
+          {deficiencias.length > 0 && (
+            <>
+              <dt>
+                {deficiencias.length > 1
+                  ? 'Deficiências representadas'
+                  : 'Deficiência representada'}
+              </dt>
+              <dd>
+                <ul className="lia-book-details__list">
+                  {deficiencias.map((d) => (
+                    <li key={d.slug}>{d.name}</li>
+                  ))}
+                </ul>
+              </dd>
             </>
           )}
         </dl>
