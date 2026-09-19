@@ -12,12 +12,14 @@ const options = {
     { name: 'Realismo', slug: 'realismo' },
   ],
   authors: ['Machado de Assis', 'Eça de Queirós'],
+  disabilities: [],
 }
 
 const params: ListingParams = {
   q: 'dom',
   genero: 'romance',
   autor: '',
+  deficiencia: '',
   ordem: 'titulo',
   pagina: 1,
 }
@@ -69,5 +71,32 @@ describe('ListingControls', () => {
     const results = await axe.run(container)
     const critical = results.violations.filter((v) => v.impact === 'critical')
     expect(critical).toEqual([])
+  })
+})
+
+describe('filtro por deficiência representada (D-12, DIS-07)', () => {
+  const comDeficiencias = {
+    ...options,
+    disabilities: [
+      { name: 'Deficiência física', slug: 'deficiencia-fisica' },
+      { name: 'TEA', slug: 'tea' },
+    ],
+  }
+
+  it('aparece como PRIMEIRO filtro, rotulado, com "Todas" e a pré-seleção da URL', () => {
+    const { container } = render(
+      <ListingControls params={{ ...params, deficiencia: 'tea' }} options={comDeficiencias} />
+    )
+    const select = screen.getByLabelText('Deficiência representada')
+    expect(select).toHaveValue('tea')
+    expect(select).toHaveAttribute('name', 'deficiencia')
+    expect(select).toHaveTextContent('Todas as deficiências')
+    const primeiroFiltro = container.querySelector('.lia-listing-controls__filters select')
+    expect(primeiroFiltro).toBe(select)
+  })
+
+  it('sem nenhum termo com resenha publicada, o controle não é renderizado', () => {
+    render(<ListingControls params={params} options={options} />)
+    expect(screen.queryByLabelText('Deficiência representada')).toBeNull()
   })
 })

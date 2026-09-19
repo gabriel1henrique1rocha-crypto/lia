@@ -8,6 +8,7 @@ describe('parseListingParams', () => {
       q: '',
       genero: '',
       autor: '',
+      deficiencia: '',
       ordem: 'recentes',
       pagina: 1,
     })
@@ -23,7 +24,14 @@ describe('parseListingParams', () => {
   it('ignora o param `nota` legado (D-11) sem lançar nem vazar a chave', () => {
     const parsed = parseListingParams({ nota: '4' })
     expect(parsed).not.toHaveProperty('nota')
-    expect(parsed).toEqual({ q: '', genero: '', autor: '', ordem: 'recentes', pagina: 1 })
+    expect(parsed).toEqual({
+      q: '',
+      genero: '',
+      autor: '',
+      deficiencia: '',
+      ordem: 'recentes',
+      pagina: 1,
+    })
   })
 
   it('ordem: só valores do conjunto, senão default recentes (edge case ?ordem=xyz)', () => {
@@ -54,6 +62,7 @@ describe('buildListingHref', () => {
     q: 'dom',
     genero: 'romance',
     autor: 'Machado',
+    deficiencia: '',
     ordem: 'titulo',
     pagina: 2,
   }
@@ -72,6 +81,7 @@ describe('buildListingHref', () => {
       q: '',
       genero: '',
       autor: '',
+      deficiencia: '',
       ordem: 'recentes',
       pagina: 1,
     })

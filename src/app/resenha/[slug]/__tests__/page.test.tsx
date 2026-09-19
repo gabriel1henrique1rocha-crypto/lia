@@ -367,3 +367,47 @@ describe('generateMetadata — palavras-chave', () => {
     expect(meta.keywords).toBeUndefined()
   })
 })
+
+/* ── D-12 — deficiência(s) representada(s) na ficha ──────────────────────── */
+
+describe('deficiência representada (D-12, DIS-06)', () => {
+  const termo = (name: string, slug: string, sort_order: number) => ({
+    term: { name, slug, sort_order },
+  })
+
+  it('uma deficiência: rótulo no singular, valor em lista', async () => {
+    const { container } = await renderizar({
+      ...SEM_CAMPOS_NOVOS,
+      review_disability: [termo('Transtorno do Espectro Autista (TEA)', 'tea', 60)],
+    } as ReviewView)
+
+    const rotulos = [...container.querySelectorAll('.lia-book-details dt')].map(
+      (dt) => dt.textContent
+    )
+    expect(rotulos).toContain('Deficiência representada')
+    const lista = container.querySelector('.lia-book-details dd ul')!
+    expect(within(lista as HTMLElement).getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('várias: rótulo no plural, na ordem editorial, sem o termo desativado', async () => {
+    const { container } = await renderizar({
+      ...SEM_CAMPOS_NOVOS,
+      review_disability: [
+        termo('TEA', 'tea', 60),
+        { term: null },
+        termo('Deficiência física', 'deficiencia-fisica', 10),
+      ],
+    } as ReviewView)
+
+    expect(screen.getByText('Deficiências representadas')).toBeInTheDocument()
+    const itens = [...container.querySelectorAll('.lia-book-details dd li')].map(
+      (li) => li.textContent
+    )
+    expect(itens).toEqual(['Deficiência física', 'TEA'])
+  })
+
+  it('sem vínculos (caso das resenhas atuais): nenhum rótulo órfão', async () => {
+    const { container } = await renderizar(SEM_CAMPOS_NOVOS as ReviewView)
+    expect(container.textContent).not.toMatch(/Deficiência/)
+  })
+})

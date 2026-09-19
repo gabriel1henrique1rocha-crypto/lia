@@ -1,9 +1,5 @@
 import type { ListingParams, SortOrder } from '@/lib/review/listingParams'
-
-type FilterOptions = {
-  genres: { name: string; slug: string }[]
-  authors: string[]
-}
+import type { FilterOptions } from '@/lib/review/queries'
 
 const SORT_LABELS: Record<SortOrder, string> = {
   recentes: 'Mais recentes',
@@ -77,6 +73,34 @@ export function ListingControls({
       </div>
 
       <div className="lia-listing-controls__filters">
+        {/* Deficiência representada (D-12) — o eixo editorial do observatório,
+            por isso o PRIMEIRO filtro, no lugar que já foi da nota. Só aparece
+            quando há ao menos um termo com resenha publicada: um select só com
+            "Todas" seria um controle que não controla nada. */}
+        {options.disabilities.length > 0 && (
+          <div className="lia-field">
+            <label className="lia-field__label" htmlFor="deficiencia">
+              Deficiência representada
+            </label>
+            <span className="lia-field__select-wrap">
+              <select
+                className="lia-field__control"
+                id="deficiencia"
+                name="deficiencia"
+                defaultValue={params.deficiencia}
+              >
+                <option value="">Todas as deficiências</option>
+                {options.disabilities.map((d) => (
+                  <option key={d.slug} value={d.slug}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <Chevron />
+            </span>
+          </div>
+        )}
+
         <div className="lia-field">
           <label className="lia-field__label" htmlFor="genero">
             Gênero

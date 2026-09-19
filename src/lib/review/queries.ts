@@ -4,6 +4,7 @@ import { createPublicClient } from '@/lib/supabase/public'
 import type { Database, Tables } from '@/lib/database.types'
 import type { BookView } from '@/lib/book/queries'
 import { excerpt } from '@/lib/review/excerpt'
+import { disabilitiesOf, type DisabilityTag } from '@/lib/review/disabilities'
 import { escapeLike, PAGE_SIZE, type ListingParams } from '@/lib/review/listingParams'
 
 /** Cliente de leitura. Default = ANON em produção (TD-04 — sem service_role no
@@ -18,9 +19,16 @@ type ReadClient = SupabaseClient<Database>
  */
 export type ReviewView = Tables<'review'> & {
   book: BookView
+  /**
+   * Vínculos de deficiência. `term` vem `null` quando o termo está DESATIVADO
+   * (RLS de `disability_term` só mostra ativos ao público) — filtrar antes de
+   * exibir (`disabilitiesOf`).
+   */
+  review_disability?: { term: DisabilityTag | null }[]
 }
 
-const REVIEW_SELECT = '*, book(*, genre(name, slug))'
+const REVIEW_SELECT =
+  '*, book(*, genre(name, slug)), review_disability(term:disability_term(name, slug, sort_order))'
 
 /**
  * Busca a resenha publicada pelo `slug`, ou `null` quando inexistente OU em
@@ -113,6 +121,15 @@ function toListItem(row: RawListRow): ReviewListItem {
  * Reusado pela fatia e pela contagem-fallback; `head:true` conta sem transferir
  * linhas. O `let query = …; query = query.eq(…)` preserva o tipo do builder.
  */
+/**
+ * Com filtro de deficiência (D-12, DIS-07), o select ganha a junção `!inner`:
+ * só sobram resenhas com ao menos um vínculo cujo termo tem o slug pedido. O
+ * PostgREST não duplica a linha-pai por vínculo, então a contagem segue certa.
+ * Sem filtro, a junção NÃO entra — incluí-la como `!inner` sumiria com as
+ * resenhas sem deficiência marcada.
+ */
+const LIST_SELECT_WITH_DISABILITY = `${LIST_SELECT}, review_disability!inner(disability_term!inner(slug))`
+
 function buildFilteredSelect(
   client: ReadClient,
   params: ListingParams,
@@ -120,11 +137,16 @@ function buildFilteredSelect(
 ) {
   let query = client
     .from('review')
-    .select(LIST_SELECT, { count: 'exact', head })
+    .select(params.deficiencia ? LIST_SELECT_WITH_DISABILITY : LIST_SELECT, {
+      count: 'exact',
+      head,
+    })
     .eq('status', 'published')
   if (params.q) query = query.ilike('title', `%${escapeLike(params.q)}%`)
   if (params.genero) query = query.eq('book.genre.slug', params.genero)
   if (params.autor) query = query.eq('book.author', params.autor)
+  if (params.deficiencia)
+    query = query.eq('review_disability.disability_term.slug', params.deficiencia)
   return query
 }
 
@@ -162,7 +184,11 @@ export async function listPublishedReviews(
     }
     throw error
   }
-  const rows = ((data as RawListRow[] | null) ?? []).map(toListItem)
+  // `unknown` no meio: com o select escolhido em runtime (com/sem a junção de
+  // deficiência), o parser de tipos do supabase-js não infere a forma — mas as
+  // DUAS variantes devolvem as mesmas colunas de `LIST_SELECT` (a junção só
+  // filtra; o campo extra é ignorado por `toListItem`).
+  const rows = ((data as unknown as RawListRow[] | null) ?? []).map(toListItem)
   return { rows, total: count ?? 0 }
 }
 
@@ -184,17 +210,37 @@ export async function listFeaturedReviews(
  * Opções dos selects de filtro, derivadas do acervo PUBLICADO (DD-4) — nenhum
  * valor de filtro sem resultado possível. Query leve + dedupe/sort em JS.
  */
+export type FilterOptions = {
+  genres: { name: string; slug: string }[]
+  authors: string[]
+  /** Só termos ATIVOS com ao menos uma resenha publicada, em `sort_order` (DIS-07). */
+  disabilities: { name: string; slug: string }[]
+}
+
 export async function listFilterOptions(
   client: ReadClient = createPublicClient()
-): Promise<{ genres: { name: string; slug: string }[]; authors: string[] }> {
+): Promise<FilterOptions> {
   const { data, error } = await client
     .from('review')
-    .select('book!inner(author, genre!inner(name, slug))')
+    .select(
+      'book!inner(author, genre!inner(name, slug)), review_disability(term:disability_term(name, slug, sort_order))'
+    )
     .eq('status', 'published')
   if (error) throw error
   const rows =
-    (data as { book: { author: string; genre: { name: string; slug: string } | null } }[] | null) ??
-    []
+    (data as
+      | {
+          book: { author: string; genre: { name: string; slug: string } | null }
+          review_disability?: { term: DisabilityTag | null }[]
+        }[]
+      | null) ?? []
+  const disabilityBySlug = new Map<string, DisabilityTag>()
+  for (const row of rows) {
+    for (const term of disabilitiesOf(row)) disabilityBySlug.set(term.slug, term)
+  }
+  const disabilities = [...disabilityBySlug.values()]
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'pt-BR'))
+    .map(({ name, slug }) => ({ name, slug }))
   const genreBySlug = new Map<string, string>()
   const authors = new Set<string>()
   for (const row of rows) {
@@ -204,5 +250,9 @@ export async function listFilterOptions(
   const genres = [...genreBySlug.entries()]
     .map(([slug, name]) => ({ name, slug }))
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-  return { genres, authors: [...authors].sort((a, b) => a.localeCompare(b, 'pt-BR')) }
+  return {
+    genres,
+    authors: [...authors].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    disabilities,
+  }
 }

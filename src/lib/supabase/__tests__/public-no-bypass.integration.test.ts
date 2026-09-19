@@ -61,6 +61,7 @@ describe.skipIf(!RUN)('SEC-14 — anon ≠ bypass com service_role no ambiente (
       q: '',
       genero: '',
       autor: '',
+      deficiencia: '',
       ordem: 'recentes',
       pagina: 1,
     })

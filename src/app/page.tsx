@@ -3,6 +3,7 @@ import {
   listFeaturedReviews,
   listPublishedReviews,
   listFilterOptions,
+  type FilterOptions,
   type ReviewListItem,
 } from '@/lib/review/queries'
 import {
@@ -22,12 +23,12 @@ type SearchParams = Promise<RawSearchParams>
 
 type HomeData = {
   featured: ReviewListItem[]
-  options: { genres: { name: string; slug: string }[]; authors: string[] }
+  options: FilterOptions
   listing: { rows: ReviewListItem[]; total: number }
   clampedParams: ListingParams
 }
 
-const PARAM_KEYS = ['q', 'genero', 'autor', 'ordem', 'pagina'] as const
+const PARAM_KEYS = ['q', 'genero', 'autor', 'deficiencia', 'ordem', 'pagina'] as const
 
 /** Há busca/filtro/paginação ativos? → decide o noindex (SEO §5). */
 function hasActiveParams(raw: RawSearchParams): boolean {

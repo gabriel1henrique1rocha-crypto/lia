@@ -10,6 +10,8 @@ export type ListingParams = {
   q: string
   genero: string
   autor: string
+  /** Slug de `disability_term` (D-12, DIS-07). Inválido/desconhecido → sem filtro. */
+  deficiencia: string
   ordem: SortOrder
   pagina: number
 }
@@ -43,6 +45,10 @@ export function parseListingParams(raw: RawSearchParams): ListingParams {
   const q = first(raw.q).trim().slice(0, MAX_Q)
   const genero = first(raw.genero).trim()
   const autor = first(raw.autor).trim()
+  // Slug só aceita o formato do CHECK da 0013; qualquer outra coisa degrada para
+  // "sem filtro" (mesma regra de `?nota=` legado — nunca erro).
+  const deficienciaRaw = first(raw.deficiencia).trim()
+  const deficiencia = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(deficienciaRaw) ? deficienciaRaw : ''
 
   const ordemRaw = first(raw.ordem)
   const ordem: SortOrder = (SORT_ORDERS as readonly string[]).includes(ordemRaw)
@@ -52,7 +58,7 @@ export function parseListingParams(raw: RawSearchParams): ListingParams {
   const paginaParsed = Number.parseInt(first(raw.pagina), 10)
   const pagina = Number.isInteger(paginaParsed) && paginaParsed >= 1 ? paginaParsed : 1
 
-  return { q, genero, autor, ordem, pagina }
+  return { q, genero, autor, deficiencia, ordem, pagina }
 }
 
 /**
@@ -69,6 +75,7 @@ export function buildListingHref(
   if (merged.q) sp.set('q', merged.q)
   if (merged.genero) sp.set('genero', merged.genero)
   if (merged.autor) sp.set('autor', merged.autor)
+  if (merged.deficiencia) sp.set('deficiencia', merged.deficiencia)
   if (merged.ordem !== 'recentes') sp.set('ordem', merged.ordem)
   if (merged.pagina > 1) sp.set('pagina', String(merged.pagina))
   const qs = sp.toString()
