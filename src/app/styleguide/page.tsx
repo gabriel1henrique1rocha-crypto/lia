@@ -23,7 +23,7 @@ import type { BookView } from '@/lib/book/queries'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Guia de estilos · LIA',
+  title: 'Guia de estilos · OLDA',
   robots: { index: false, follow: false },
 }
 

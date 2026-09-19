@@ -221,7 +221,7 @@ test('TD-07: o header público precede o conteúdo em /admin, mas o skip link o 
   // Depois do salto, a próxima parada NÃO é um item do header.
   await page.keyboard.press('Tab')
   const nomeFocado = await page.evaluate(() => (document.activeElement?.textContent ?? '').trim())
-  expect(['Quem somos', 'Catálogo', 'Filmografia', 'LIACast', 'Sugestões LIA']).not.toContain(
+  expect(['Quem somos', 'Resenhas', 'Filmografia', 'LIACast', 'Sugestões LIA']).not.toContain(
     nomeFocado
   )
 })

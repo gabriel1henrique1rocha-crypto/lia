@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPublishedReviewBySlug } from '@/lib/review/queries'
 import { excerpt } from '@/lib/review/excerpt'
-import { BookDetails } from '@/components/book/BookDetails'
 import { BookCover } from '@/components/book/BookCover'
 import { HighlightQuote } from '@/components/review/HighlightQuote'
 import { ReviewTags } from '@/components/review/ReviewTags'
@@ -50,12 +49,12 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { slug } = await params
   const review = await getPublishedReviewBySlug(slug)
   if (!review) {
-    return { title: 'Resenha não encontrada · LIA' }
+    return { title: 'Resenha não encontrada · OLDA' }
   }
   const description = excerpt(review.body)
   const url = `/resenha/${slug}`
   return {
-    title: `${review.title} · LIA`,
+    title: `${review.title} · OLDA`,
     description,
     /**
      * PALAVRAS-CHAVE VIVEM AQUI, E SÓ AQUI (REV-09 / design §7).
@@ -77,7 +76,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
  * Rota `/resenha/[slug]` (App Router, SSR). Server Component async: resolve o
  * slug via getPublishedReviewBySlug (filtro status='published' explícito), e se
  * nada volta chama notFound() → 404 acessível (not-found.tsx). O conteúdo é um
- * <article> semântico com um único <h1>, reusando BookDetails para a ficha.
+ * <article> semântico com um único <h1>, com a ficha resumida.
  * Nenhum componente de cliente no caminho factual — 100% SSR (RVW-26).
  *
  * DEGRADAÇÃO É O CASO NORMAL, NÃO A EXCEÇÃO (T11/T12): as 5 resenhas em
@@ -94,7 +93,6 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
 
   const { book } = review
   const paragraphs = splitParagraphs(review.body)
-  const assinatura = review.reviewer_name?.trim()
 
   return (
     <article className="lia-review">
@@ -110,14 +108,8 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
           Sobre <cite>{book.title}</cite>, de {book.author}
         </p>
 
-        {/* QUEM ASSINA A RESENHA — não o autor do livro.
-            "Resenha por" é explícito de propósito: o campo vizinho já traz um
-            nome de pessoa (o autor da obra), e um byline solto ("Ana Ribeiro")
-            logo abaixo de "de Umberto Eco" seria lido como mais um autor. O
-            rótulo carrega a relação, não a posição na página.
-            Congelado no create a partir de `editor.name` (DD-6): é o resenhista
-            DAQUELA resenha, e não muda se a conta mudar de nome depois. */}
-        {assinatura && <p className="lia-review__byline">Resenha por {assinatura}</p>}
+        {/* "Resenha por" removido (doc de customização): o nome de quem
+            resenha já vem no corpo do texto. `reviewer_name` segue no banco. */}
       </header>
 
       {/* A capa ILUSTRA a resenha; não a abre. O wrapper é o que lhe dá
@@ -129,7 +121,21 @@ export default async function ReviewPage({ params }: { params: Promise<Params> }
 
       <section className="lia-review__section" aria-labelledby="ficha">
         <h2 id="ficha">Ficha técnica</h2>
-        <BookDetails book={book} headingLevel={3} />
+        {/* Ficha resumida (doc de customização): Título, Autor, Ano. A ficha
+            completa (editora, ISBN, tradução…) segue no banco e no formulário
+            do admin; "Deficiência(s) representada(s)" entra com a D-12. */}
+        <dl className="lia-book-details">
+          <dt>Título</dt>
+          <dd>{book.title}</dd>
+          <dt>Autor</dt>
+          <dd>{book.author}</dd>
+          {book.year != null && (
+            <>
+              <dt>Ano</dt>
+              <dd>{book.year}</dd>
+            </>
+          )}
+        </dl>
       </section>
 
       {/* `--prose` marca o TEXTO CORRIDO — é o único bloco que precisa da medida

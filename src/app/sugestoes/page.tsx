@@ -6,7 +6,7 @@ import { SectionPlaceholder } from '@/components/nav/SectionPlaceholder'
 // Também NÃO entra em sitemap enquanto estiver vazia (o projeto ainda não tem
 // `app/sitemap.ts`; ao criar um, excluir estas rotas até ganharem conteúdo).
 export const metadata: Metadata = {
-  title: 'Sugestões LIA · LIA',
+  title: 'Sugestões LIA · OLDA',
   description: 'Seção de sugestões de leitura do LIA — em construção, será publicada em breve.',
 }
 

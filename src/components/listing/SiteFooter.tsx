@@ -7,7 +7,7 @@ export function SiteFooter() {
   const year = new Date().getFullYear()
   return (
     <footer className="lia-site-footer">
-      <p>LIA — Leituras e impressões anotadas · © {year}</p>
+      <p>Grupo de pesquisa Leituras Inclusivas e Anticapacitistas (LIA) · © {year}</p>
     </footer>
   )
 }

@@ -586,6 +586,16 @@
     flex-direction: column;
     gap: var(--spacing-7);
   }
+  .lia-home__hero {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+  .lia-home__subtitle {
+    margin: 0;
+    font: var(--type-prose);
+    color: var(--text-secondary);
+  }
   .lia-home__title {
     margin: 0;
     font: var(--type-heading);
@@ -1100,7 +1110,7 @@
   .lia-site-header__brand {
     font-family: var(--font-display);
     font-weight: var(--font-weight-semibold);
-    font-size: var(--text-base);
+    font-size: var(--text-lg);
     color: var(--text-strong); /* ink-900 sobre paper-50 = 15.9:1 AAA */
     text-decoration: none;
   }
@@ -1121,6 +1131,9 @@
     /* Alvo de toque >= 44px de altura (WCAG 2.5.8) mesmo com o texto pequeno. */
     min-height: var(--spacing-target-min);
     font: var(--type-label);
+    /* Doc de customização: o texto do menu era pequeno demais para leitura
+       confortável. Sobe de --text-sm (14px) para --text-md (18px). */
+    font-size: var(--text-md);
     color: var(--text-secondary); /* ink-700 sobre paper-50 = 9.3:1 AAA */
     text-decoration: none;
     /* Reserva desde já a espessura do indicador de página atual: ao mudar de

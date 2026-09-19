@@ -46,13 +46,6 @@ const ROUTES: PlaceholderRoute[] = [
     file: 'src/app/filmografia/page.tsx',
   },
   {
-    path: '/liacast',
-    heading: 'LIACast',
-    Page: LIACastPage,
-    metadata: liacastMeta,
-    file: 'src/app/liacast/page.tsx',
-  },
-  {
     path: '/sugestoes',
     heading: 'Sugestões LIA',
     Page: SugestoesPage,
@@ -89,7 +82,7 @@ describe.each(ROUTES)('placeholder $path', ({ heading, Page, metadata, file }) =
   })
 
   it('tem metadata com title e description próprios', () => {
-    expect(metadata.title).toBe(`${heading} · LIA`)
+    expect(metadata.title).toBe(`${heading} · OLDA`)
     expect(typeof metadata.description).toBe('string')
     expect((metadata.description as string).length).toBeGreaterThan(0)
   })
@@ -124,5 +117,16 @@ describe('cobertura do menu', () => {
       expect(label).toBe(heading)
       cleanup()
     }
+  })
+})
+
+describe('LIACast', () => {
+  it('tem um único <h1> e o link do podcast no Spotify, com nova aba anunciada', () => {
+    render(<LIACastPage />)
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    const link = screen.getByRole('link', { name: /Ouvir o LIACast no Spotify/ })
+    expect(link).toHaveAttribute('href', 'https://open.spotify.com/show/033PtdAZjM7W0PhzXdHD9p')
+    expect(link).toHaveAccessibleName(/nova aba/)
+    expect(liacastMeta.title).toBe('LIACast · OLDA')
   })
 })

@@ -53,7 +53,9 @@ export async function generateMetadata({
   const params = parseListingParams(raw)
   const active = hasActiveParams(raw)
   return {
-    title: params.q ? `Busca: “${params.q}” · LIA` : 'LIA — Leituras e impressões anotadas',
+    title: params.q
+      ? `Busca: “${params.q}” · OLDA`
+      : 'OLDA — Observatório Anticapacitista de Literatura e Deficiência',
     alternates: { canonical: '/' },
     robots: { index: !active, follow: true },
   }
@@ -95,7 +97,14 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   if (!data) {
     return (
       <div className="lia-home">
-        <h1 className="lia-home__title">Resenhas</h1>
+        <header className="lia-home__hero">
+        <h1 className="lia-home__title">
+          Observatório Anticapacitista de Literatura e Deficiência
+        </h1>
+        <p className="lia-home__subtitle">
+          Mapeamento crítico das representações da deficiência na literatura ocidental
+        </p>
+      </header>
         <div className="lia-empty" role="status">
           <p className="lia-empty__title">Não foi possível carregar as resenhas</p>
           <p className="lia-empty__text">
@@ -114,7 +123,14 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
   return (
     <div className="lia-home">
-      <h1 className="lia-home__title">Catálogo</h1>
+      <header className="lia-home__hero">
+        <h1 className="lia-home__title">
+          Observatório Anticapacitista de Literatura e Deficiência
+        </h1>
+        <p className="lia-home__subtitle">
+          Mapeamento crítico das representações da deficiência na literatura ocidental
+        </p>
+      </header>
 
       <FeaturedCarousel reviews={featured} />
 
