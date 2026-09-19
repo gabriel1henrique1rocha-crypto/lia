@@ -124,8 +124,22 @@ describe('campos novos PRESENTES', () => {
     const rotulos = [...container.querySelectorAll('.lia-book-details dt')].map(
       (dt) => dt.textContent
     )
-    expect(rotulos).toEqual(['Título', 'Autor', 'Ano'])
+    // O fixture não traz `year`: o par "Ano" é omitido, sem <dt> órfão.
+    expect(rotulos).toEqual(['Título', 'Autor'])
     expect(screen.queryByText('Rio de Janeiro')).toBeNull()
+  })
+
+  it('a ficha inclui o Ano quando o livro tem ano', async () => {
+    const { container } = await renderizar({
+      ...COM_CAMPOS_NOVOS,
+      book: { ...COM_CAMPOS_NOVOS.book, year: 1980 },
+    } as ReviewView)
+
+    const rotulos = [...container.querySelectorAll('.lia-book-details dt')].map(
+      (dt) => dt.textContent
+    )
+    expect(rotulos).toEqual(['Título', 'Autor', 'Ano'])
+    expect(screen.getByText('1980')).toBeInTheDocument()
   })
 
   it('as tags aparecem como lista, sem link', async () => {
@@ -169,7 +183,8 @@ describe('campos novos PRESENTES', () => {
     expect(container.querySelector('script')).toBeNull()
     expect(container.querySelector('img')).toBeNull()
     expect(container.querySelector('b')).toBeNull()
-    expect(screen.getByText(/<script>alert\(1\)<\/script>/)).toBeInTheDocument()
+    // `reviewer_name` não é mais exibido; o texto da tag prova o escape.
+    expect(screen.getByText('<b>tag</b>')).toBeInTheDocument()
   })
 
   it('axe: sem violação COM os campos preenchidos', async () => {
