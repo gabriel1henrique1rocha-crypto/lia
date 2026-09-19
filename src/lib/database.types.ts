@@ -131,6 +131,33 @@ export type Database = {
           },
         ]
       }
+      disability_term: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       editor: {
         Row: {
           active: boolean
@@ -204,6 +231,36 @@ export type Database = {
             columns: ["review_id"]
             isOneToOne: false
             referencedRelation: "review"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_disability: {
+        Row: {
+          review_id: string
+          term_id: string
+        }
+        Insert: {
+          review_id: string
+          term_id: string
+        }
+        Update: {
+          review_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_disability_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_disability_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "disability_term"
             referencedColumns: ["id"]
           },
         ]
@@ -284,6 +341,7 @@ export type Database = {
     Functions: {
       create_review_with_book: {
         Args: {
+          p_disability_ids?: string[]
           p_author: string
           p_body: string
           p_book_title: string
@@ -339,6 +397,7 @@ export type Database = {
       unique_review_slug: { Args: { p_base: string }; Returns: string }
       update_review_with_book: {
         Args: {
+          p_disability_ids?: string[]
           p_author: string
           p_body: string
           p_book_title: string
