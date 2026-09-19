@@ -13,7 +13,15 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Field } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { reviewDraftSchema, reviewPublishSchema, reviewStatusSchema } from '@/lib/review/schema'
-import { echoValues, furtherReadingName, mapZodIssues, readReviewForm } from '@/lib/review/formData'
+import {
+  DISABILITY_IDS,
+  DISABILITY_IDS_SENT,
+  echoValues,
+  furtherReadingName,
+  mapZodIssues,
+  readReviewForm,
+} from '@/lib/review/formData'
+import type { DisabilityOption } from '@/lib/review/adminQueries'
 import { LANGUAGES } from '@/lib/book/language'
 import type { ReviewFormState } from './actions'
 
@@ -152,6 +160,13 @@ export type ReviewFormProps = {
   preservedKeywords?: string[]
   /** Mesma regra, para leituras adicionais — formato ainda não fixado por T3. */
   preservedFurtherReading?: unknown[]
+  /**
+   * Termos de deficiência (D-12, DIS-05). Sem a prop, o grupo não é renderizado
+   * NEM o marcador `disabilityIdsSent` — o servidor então não mexe nos vínculos.
+   */
+  disabilityOptions?: DisabilityOption[]
+  /** Ids já vinculados à resenha (`mode: 'edit'`). */
+  defaultDisabilityIds?: string[]
 }
 
 const ESTADO_INICIAL: ReviewFormState = { status: 'idle', message: '' }
@@ -219,6 +234,8 @@ export function ReviewForm({
   preservedTags,
   preservedKeywords,
   preservedFurtherReading,
+  disabilityOptions,
+  defaultDisabilityIds,
 }: ReviewFormProps) {
   /**
    * Envolve a action com a validação do cliente. Como o retorno tem a MESMA
@@ -311,6 +328,29 @@ export function ReviewForm({
     form.addEventListener('reset', cancelar, true)
     return () => form.removeEventListener('reset', cancelar, true)
   }, [])
+
+  /**
+   * Deficiências marcadas — CONTROLADAS pelo mesmo motivo dos demais campos
+   * (o reset do React 19 é cancelado acima; o estado é a fonte de verdade).
+   */
+  const [deficiencias, setDeficiencias] = useState<Set<string>>(
+    () => new Set(defaultDisabilityIds ?? [])
+  )
+  function alternarDeficiencia(id: string, marcado: boolean) {
+    setDeficiencias((atual) => {
+      const proximo = new Set(atual)
+      if (marcado) proximo.add(id)
+      else proximo.delete(id)
+      return proximo
+    })
+  }
+  /**
+   * Vínculos que ESTE usuário não enxerga como opção (termo desativado, para
+   * quem não é admin): viajam ocultos para o conjunto enviado não os apagar.
+   */
+  const idsVisiveis = new Set((disabilityOptions ?? []).map((opcao) => opcao.id))
+  const vinculosOcultos = [...deficiencias].filter((id) => !idsVisiveis.has(id))
+  const deficienciasHelpId = useId()
 
   const bylineId = useId()
   const slugStaticId = useId()
@@ -546,6 +586,51 @@ export function ReviewForm({
           />
         </div>
       </fieldset>
+
+      {disabilityOptions && (
+        <fieldset className="lia-review-form__group" aria-describedby={deficienciasHelpId}>
+          <legend className="lia-review-form__legend">Deficiência(s) representada(s)</legend>
+          <p id={deficienciasHelpId} className="lia-review-form__hint">
+            Marque todas as que aparecem na obra. Opcional.
+          </p>
+
+          {/* Marcador: "este formulário tem o grupo" — ver `DISABILITY_IDS_SENT`. */}
+          <input type="hidden" name={DISABILITY_IDS_SENT} value="1" />
+          {vinculosOcultos.map((id) => (
+            <input key={id} type="hidden" name={DISABILITY_IDS} value={id} />
+          ))}
+
+          {disabilityOptions.length > 0 ? (
+            <ul className="lia-review-form__checks">
+              {disabilityOptions.map((opcao) => (
+                <li key={opcao.id}>
+                  <label
+                    className="lia-review-form__check"
+                    htmlFor={`${deficienciasHelpId}-${opcao.id}`}
+                  >
+                    <input
+                      id={`${deficienciasHelpId}-${opcao.id}`}
+                      type="checkbox"
+                      name={DISABILITY_IDS}
+                      value={opcao.id}
+                      checked={deficiencias.has(opcao.id)}
+                      onChange={(evento) =>
+                        alternarDeficiencia(opcao.id, evento.currentTarget.checked)
+                      }
+                    />
+                    <span>
+                      {opcao.name}
+                      {!opcao.active && ' (desativado)'}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="lia-review-form__hint">Nenhuma deficiência cadastrada ainda.</p>
+          )}
+        </fieldset>
+      )}
 
       <fieldset className="lia-review-form__group">
         <legend className="lia-review-form__legend">A resenha</legend>

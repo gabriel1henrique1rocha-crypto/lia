@@ -152,9 +152,13 @@ export async function listEditorReviews(
  * uma nega no passo 1. Nada disto é implementado aqui — é o contexto que T4
  * precisa para traduzir o erro certo, e T8 para o roteiro de leitor de tela.
  */
-export type ReviewForEdit = Tables<'review'> & { book: BookView }
+export type ReviewForEdit = Tables<'review'> & {
+  book: BookView
+  /** Vínculos de deficiência (D-12). RLS: próprias resenhas, ou todas se admin. */
+  review_disability: { term_id: string }[]
+}
 
-const REVIEW_FOR_EDIT_SELECT = '*, book(*, genre(name, slug))'
+const REVIEW_FOR_EDIT_SELECT = '*, book(*, genre(name, slug)), review_disability(term_id)'
 
 export const getReviewForEdit = cache(
   async (id: string, client?: AuthenticatedClient): Promise<ReviewForEdit> => {
@@ -174,3 +178,27 @@ export const getReviewForEdit = cache(
     return data as ReviewForEdit
   }
 )
+
+/** Opção do grupo de deficiências no formulário do admin (D-12, DIS-05). */
+export type DisabilityOption = { id: string; name: string; active: boolean }
+
+/**
+ * Termos de deficiência para o formulário do admin, em `sort_order`.
+ *
+ * Client AUTENTICADO: admin enxerga também os DESATIVADOS (policy
+ * `disability_term_admin_read`, 0013) — necessário para manter marcado um
+ * termo desativado numa resenha antiga. Editor comum recebe só os ativos; o
+ * formulário preserva como oculto qualquer vínculo que ele não enxergue.
+ */
+export async function listDisabilityOptions(
+  client?: AuthenticatedClient
+): Promise<DisabilityOption[]> {
+  const supabase = client ?? (await createAuthenticatedClient())
+  const { data, error } = await supabase
+    .from('disability_term')
+    .select('id, name, active')
+    .order('sort_order')
+    .order('name')
+  if (error) throw error
+  return data ?? []
+}

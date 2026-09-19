@@ -186,6 +186,13 @@ const reviewBase = bookInputSchema.safeExtend({
   keywordsInput: listaDeTermos,
   highlightQuote: z.string().trim().optional(),
   furtherReading: z.array(furtherReadingItem).default([]),
+  /**
+   * Deficiência(s) representada(s) (D-12, DIS-04/05). `undefined` = o formulário
+   * NÃO trouxe o grupo (ex.: página antiga em cache durante o deploy) → o RPC
+   * recebe `null` e não mexe nos vínculos. Array (inclusive vazio) = conjunto
+   * completo a gravar. Publicar sem deficiência é permitido (DIS-08, P-3).
+   */
+  disabilityIds: z.array(z.uuid({ message: 'Deficiência inválida' })).optional(),
 })
 
 /**
@@ -273,6 +280,7 @@ type ParamsNullable =
   | 'p_original_language'
   | 'p_translator'
   | 'p_translated_from'
+  | 'p_disability_ids'
 
 /**
  * Assinatura REAL do RPC: derivada da gerada, corrigindo a nullability APENAS
@@ -344,6 +352,8 @@ export function toCreateReviewRpcArgs(
     p_original_language: ouNulo(input.originalLanguage),
     p_translator: ouNulo(input.translator),
     p_translated_from: ouNulo(input.translatedFrom),
+    // D-12 (DIS-04): `null` = não mexer; array = conjunto completo.
+    p_disability_ids: input.disabilityIds ?? null,
   }
   return args as GeneratedCreateArgs
 }
@@ -416,6 +426,7 @@ export function toUpdateReviewRpcArgs(
     p_original_language: ouNulo(input.originalLanguage),
     p_translator: ouNulo(input.translator),
     p_translated_from: ouNulo(input.translatedFrom),
+    p_disability_ids: input.disabilityIds ?? null,
   }
   return args as GeneratedUpdateArgs
 }

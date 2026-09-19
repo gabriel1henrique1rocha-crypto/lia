@@ -16,6 +16,9 @@ vi.mock('@/lib/book/queries', () => ({ listGenres: () => listGenresMock() }))
 const getReviewForEditMock = vi.fn()
 vi.mock('@/lib/review/adminQueries', () => ({
   getReviewForEdit: (id: string) => getReviewForEditMock(id),
+  // D-12: termos do grupo de deficiências. Lista vazia — o grupo em si é
+  // coberto por `ReviewForm.disabilities.test.tsx`.
+  listDisabilityOptions: async () => [],
 }))
 
 const acaoInjetada = vi.fn(async (): Promise<ReviewFormState> => ({ status: 'idle', message: '' }))
@@ -38,6 +41,7 @@ const REVIEW_RASCUNHO: ReviewForEdit = {
   slug: 'resenha-em-edicao',
   status: 'draft',
   editor_id: 'ed-1',
+  review_disability: [],
   reviewer_name: 'Ana Ribeiro',
   created_at: '2026-08-01T00:00:00Z',
   updated_at: '2026-08-26T19:06:39.251574+00:00', // microssegundos — string opaca, ver o teste dedicado

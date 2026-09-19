@@ -467,6 +467,7 @@ describe('toCreateReviewRpcArgs — ponte para a assinatura do RPC', () => {
         'p_body',
         'p_book_title',
         'p_cover_url',
+        'p_disability_ids',
         'p_further_reading',
         'p_genre_id',
         'p_highlight_quote',

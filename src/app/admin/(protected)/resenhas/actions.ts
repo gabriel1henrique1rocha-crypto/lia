@@ -75,6 +75,8 @@ const PG_CHECK = '23514'
 /** T4 (REV-19) — alcançáveis só a partir de `update_review_with_book` (0012). */
 const PG_CONFLITO_OTIMISTA = '40001'
 const PG_TIMEOUT = '57014'
+/** foreign_key_violation — id de deficiência/gênero inexistente (D-12). */
+const PG_FK = '23503'
 
 type PostgrestLikeError = { code?: string; message?: string } | null
 
@@ -148,6 +150,16 @@ function mapearErro(error: PostgrestLikeError): ReviewFormState {
     // tradução, o editor veria a mensagem genérica do Postgres.
     case PG_TIMEOUT:
       return { status: 'error', message: 'Não foi possível salvar agora — tente novamente.' }
+
+    // D-12 (0013) — FK violada: um id enviado (deficiência ou gênero) não existe
+    // mais no banco. Na prática: termo/gênero removido por SQL enquanto o
+    // formulário estava aberto, ou payload forjado. O RPC já reverteu tudo.
+    case PG_FK:
+      return {
+        status: 'error',
+        message:
+          'Uma das opções escolhidas não existe mais — recarregue a página e tente novamente.',
+      }
 
     default:
       return { status: 'error', message: ERRO_GENERICO }
