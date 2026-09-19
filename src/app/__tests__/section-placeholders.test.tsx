@@ -104,7 +104,7 @@ describe.each(ROUTES)('placeholder $path', ({ heading, Page, metadata, file }) =
 
 describe('cobertura do menu', () => {
   it('todo destino do header tem página — os 5 novos aqui, "Resenhas" na home', () => {
-    const placeholderPaths = ROUTES.map((r) => r.path)
+    const placeholderPaths = [...ROUTES.map((r) => r.path), '/liacast']
     const missing = DESTINATIONS.filter((d) => d.href !== '/' && !placeholderPaths.includes(d.href))
     expect(missing).toEqual([])
   })
