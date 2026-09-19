@@ -18,7 +18,7 @@ function focusedName(page: Page) {
 const NAV_LABELS = [
   'Quem somos',
   'Autores com deficiência',
-  'Catálogo',
+  'Resenhas',
   'Filmografia',
   'LIACast',
   'Sugestões LIA',
@@ -33,7 +33,7 @@ test('ordem de tabulação: skip link → marca → os 6 destinos', async ({ pag
     order.push(await focusedName(page))
   }
 
-  expect(order).toEqual(['Ir para o conteúdo principal', 'LIA — página inicial', ...NAV_LABELS])
+  expect(order).toEqual(['Ir para o conteúdo principal', 'OLDA — página inicial', ...NAV_LABELS])
 })
 
 test('o skip link continua pulando o header inteiro', async ({ page }) => {
@@ -113,7 +113,7 @@ test('aria-current="page" acompanha a rota, um item por vez', async ({ page }) =
   for (const [path, label] of [
     ['/quem-somos', 'Quem somos'],
     ['/autores', 'Autores com deficiência'],
-    ['/', 'Catálogo'],
+    ['/', 'Resenhas'],
     ['/filmografia', 'Filmografia'],
     ['/liacast', 'LIACast'],
     ['/sugestoes', 'Sugestões LIA'],

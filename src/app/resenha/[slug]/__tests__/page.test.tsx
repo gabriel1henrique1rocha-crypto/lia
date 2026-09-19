@@ -83,10 +83,11 @@ beforeEach(() => {
 /* ── 1. Campos presentes ─────────────────────────────────────────────────── */
 
 describe('campos novos PRESENTES', () => {
-  it('a assinatura diz que é da RESENHA — não se confunde com o autor do livro', async () => {
-    await renderizar(COM_CAMPOS_NOVOS)
+  it('não exibe "Resenha por" — o nome de quem resenha vem no corpo do texto', async () => {
+    const { container } = await renderizar(COM_CAMPOS_NOVOS)
 
-    expect(screen.getByText(/Resenha por Ana Ribeiro/)).toBeInTheDocument()
+    expect(screen.queryByText(/Resenha por/)).toBeNull()
+    expect(container.querySelector('.lia-review__byline')).toBeNull()
     // A linha vizinha atribui a OBRA, com relação explícita ("de"), para os
     // dois nomes de pessoa na mesma vizinhança não se lerem como o mesmo papel.
     expect(screen.getByText(/de Eco, Umberto/)).toBeInTheDocument()
@@ -117,15 +118,14 @@ describe('campos novos PRESENTES', () => {
     ).toBeTruthy()
   })
 
-  it('a cidade de publicação entra na ficha, na ordem ABNT (antes da editora)', async () => {
+  it('a ficha é resumida: Título, Autor e Ano, nessa ordem', async () => {
     const { container } = await renderizar(COM_CAMPOS_NOVOS)
 
     const rotulos = [...container.querySelectorAll('.lia-book-details dt')].map(
       (dt) => dt.textContent
     )
-    expect(rotulos).toContain('Cidade de publicação')
-    expect(rotulos.indexOf('Cidade de publicação')).toBeLessThan(rotulos.indexOf('Editora'))
-    expect(screen.getByText('Rio de Janeiro')).toBeInTheDocument()
+    expect(rotulos).toEqual(['Título', 'Autor', 'Ano'])
+    expect(screen.queryByText('Rio de Janeiro')).toBeNull()
   })
 
   it('as tags aparecem como lista, sem link', async () => {
@@ -348,7 +348,7 @@ describe('generateMetadata — palavras-chave', () => {
     getPublishedReviewBySlugMock.mockResolvedValue(null)
     const meta = await generateMetadata({ params: Promise.resolve({ slug: 'nao-existe' }) })
 
-    expect(meta.title).toBe('Resenha não encontrada · LIA')
+    expect(meta.title).toBe('Resenha não encontrada · OLDA')
     expect(meta.keywords).toBeUndefined()
   })
 })

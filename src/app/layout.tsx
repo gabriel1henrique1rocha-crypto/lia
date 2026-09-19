@@ -33,8 +33,9 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'LIA — Leituras e impressões anotadas',
-  description: 'Catálogo de resenhas e anotações de leitura.',
+  title: 'OLDA — Observatório Anticapacitista de Literatura e Deficiência',
+  description:
+    'Mapeamento crítico das representações da deficiência na literatura ocidental.',
 }
 
 export default function RootLayout({
@@ -57,8 +58,8 @@ export default function RootLayout({
         {/* Ordem no DOM = ordem de tabulação: skip link → marca → navegação →
             conteúdo. O skip link segue pulando TUDO isto de uma vez. */}
         <header className="lia-site-header">
-          <Link href="/" className="lia-site-header__brand" aria-label="LIA — página inicial">
-            LIA
+          <Link href="/" className="lia-site-header__brand" aria-label="OLDA — página inicial">
+            OLDA
           </Link>
           <SiteNav />
         </header>
