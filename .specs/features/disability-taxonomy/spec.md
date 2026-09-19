@@ -1,6 +1,6 @@
 # DIS — `disability-taxonomy` (D-12, vertical de livros)
 
-**Marco:** M4 · **Fase:** Specify — **aguardando aprovação** · **ADR:** [D-12](../../project/DECISIONS.md#d-12--taxonomia-de-deficiência-representada)
+**Marco:** M4 · **Fase:** Execute concluído (2026-09-19) — spec **aprovada** com P-1..P-4 conforme recomendação · **ADR:** [D-12](../../project/DECISIONS.md#d-12--taxonomia-de-deficiência-representada)
 **Origem:** doc "Customização do site" (Mirian, 2026-09-14) — "Resenhas: buscador por deficiência representada no lugar da nota"; "Página da resenha: DEFICIÊNCIA(S) REPRESENTADA(S), mais de uma por obra"; comentário: "usar as defis que constam no nosso formulário de coleta de dados".
 
 ## 1. Problema
