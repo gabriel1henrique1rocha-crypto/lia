@@ -19,6 +19,31 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+/** Nome dos checkboxes de deficiência representada (D-12) — um por termo. */
+export const DISABILITY_IDS = 'disabilityIds'
+
+/**
+ * Campo oculto que declara "este formulário TEM o grupo de deficiências".
+ *
+ * Checkbox desmarcado não viaja no `FormData`: sem este marcador, "nenhuma
+ * marcada" e "o formulário nem tinha o grupo" chegariam iguais (lista vazia), e
+ * a segunda apagaria os vínculos em silêncio. Com ele: presente → o conjunto
+ * enviado é o conjunto completo (vazio limpa); ausente → não mexer.
+ */
+export const DISABILITY_IDS_SENT = 'disabilityIdsSent'
+
+/**
+ * Lê os ids de deficiência marcados. `undefined` quando o grupo não veio (ver
+ * `DISABILITY_IDS_SENT`); ids repetidos são colapsados.
+ */
+export function readDisabilityIds(formData: FormData): string[] | undefined {
+  if (!formData.has(DISABILITY_IDS_SENT)) return undefined
+  const ids = formData
+    .getAll(DISABILITY_IDS)
+    .filter((valor): valor is string => typeof valor === 'string' && valor !== '')
+  return [...new Set(ids)]
+}
+
 /** Prefixo dos campos repetíveis de "para saber mais" (`further_reading`). */
 export const FURTHER_READING = 'furtherReading'
 
@@ -114,6 +139,7 @@ export function readReviewForm(formData: FormData) {
     keywordsInput: texto('keywordsInput') ?? '',
     highlightQuote: texto('highlightQuote'),
     furtherReading: readFurtherReading(formData),
+    disabilityIds: readDisabilityIds(formData),
   }
 }
 

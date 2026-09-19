@@ -4,6 +4,8 @@ import type { ReviewFormState } from '../../actions'
 
 const listGenresMock = vi.fn()
 vi.mock('@/lib/book/queries', () => ({ listGenres: () => listGenresMock() }))
+// D-12: a página também carrega os termos de deficiência (client autenticado).
+vi.mock('@/lib/review/adminQueries', () => ({ listDisabilityOptions: async () => [] }))
 
 // A action de verdade arrasta `next/cache` e o client do Supabase para o jsdom.
 // O que interessa aqui é que a PÁGINA a entrega ao formulário — não o que ela faz.
@@ -83,7 +85,10 @@ describe('/admin/resenhas/nova', () => {
     // Um único `form`, o do T8, e nenhum campo de status escondido: a escolha
     // entre rascunho e publicação continua viajando nos dois submits.
     expect(container.querySelectorAll('form')).toHaveLength(1)
-    expect(container.querySelector('input[type="hidden"]')).toBeNull()
+    // O único oculto permitido é o marcador do grupo de deficiências (D-12),
+    // que declara "o formulário tem o grupo" — não é status nem gate.
+    const ocultos = [...container.querySelectorAll<HTMLInputElement>('input[type="hidden"]')]
+    expect(ocultos.map((o) => o.name)).toEqual(['disabilityIdsSent'])
     expect(container.querySelectorAll('[name="status"]')).toHaveLength(2)
   })
 })

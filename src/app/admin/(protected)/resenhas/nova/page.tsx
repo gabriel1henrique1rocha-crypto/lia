@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { listGenres } from '@/lib/book/queries'
+import { listDisabilityOptions } from '@/lib/review/adminQueries'
 import { ReviewForm } from '../ReviewForm'
 import { createReviewAndGoToList } from './actions'
 
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
 }
 
 export default async function NovaResenhaPage() {
-  const genres = await listGenres()
+  const [genres, disabilityOptions] = await Promise.all([listGenres(), listDisabilityOptions()])
 
   return (
     <section className="lia-admin" aria-labelledby="nova-resenha-heading">
@@ -51,7 +52,12 @@ export default async function NovaResenhaPage() {
         </Link>
       </p>
 
-      <ReviewForm mode="create" action={createReviewAndGoToList} genres={genres} />
+      <ReviewForm
+        mode="create"
+        action={createReviewAndGoToList}
+        genres={genres}
+        disabilityOptions={disabilityOptions}
+      />
     </section>
   )
 }

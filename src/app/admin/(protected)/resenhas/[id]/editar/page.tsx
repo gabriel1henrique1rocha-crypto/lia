@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { listGenres } from '@/lib/book/queries'
-import { getReviewForEdit } from '@/lib/review/adminQueries'
+import { getReviewForEdit, listDisabilityOptions } from '@/lib/review/adminQueries'
 import { ReviewForm, type ReviewFormValues } from '../../ReviewForm'
 import { updateReviewAndGoToList } from './actions'
 
@@ -48,7 +48,11 @@ export default async function EditarResenhaPage({ params }: { params: Promise<Pa
   // acima com o MESMO `id` — o React memoiza pelo argumento dentro do mesmo
   // request, então isto não dispara uma segunda consulta. Mesmo padrão de
   // `/resenha/[slug]/page.tsx`.
-  const [review, genres] = await Promise.all([getReviewForEdit(id), listGenres()])
+  const [review, genres, disabilityOptions] = await Promise.all([
+    getReviewForEdit(id),
+    listGenres(),
+    listDisabilityOptions(),
+  ])
   const { book } = review
 
   /**
@@ -134,6 +138,8 @@ export default async function EditarResenhaPage({ params }: { params: Promise<Pa
         // em runtime, mas o TIPO não sabe disso. `Array.isArray` é a checagem,
         // não uma suposição — sem ela, um `as unknown[]` esconderia a
         // divergência se o CHECK algum dia mudasse.
+        disabilityOptions={disabilityOptions}
+        defaultDisabilityIds={review.review_disability.map((vinculo) => vinculo.term_id)}
         preservedFurtherReading={
           Array.isArray(review.further_reading) ? review.further_reading : []
         }
