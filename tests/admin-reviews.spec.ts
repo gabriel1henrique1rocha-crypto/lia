@@ -138,14 +138,14 @@ test('a região da tabela é alcançável por Tab e tem nome acessível', async 
   await expect(regiao).toBeFocused()
   await expect(regiao).toHaveAttribute('aria-labelledby', /.+/)
 
-  // Foco visível: o anel global do @layer base (3px sólidos em #1f5fd6).
+  // Foco visível: o anel global do @layer base (3px sólidos em --focus-ring, teal D-13b).
   const contorno = await regiao.evaluate((el) => {
     const s = getComputedStyle(el)
     return { estilo: s.outlineStyle, largura: s.outlineWidth, cor: s.outlineColor }
   })
   expect(contorno.estilo).toBe('solid')
   expect(parseFloat(contorno.largura)).toBeGreaterThanOrEqual(2)
-  expect(contorno.cor).toBe('rgb(31, 95, 214)')
+  expect(contorno.cor).toBe('rgb(15, 94, 90)')
 })
 
 test('da região da tabela chega-se aos links de editar por Tab, um por linha (T5)', async ({

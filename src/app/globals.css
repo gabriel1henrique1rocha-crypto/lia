@@ -2,35 +2,55 @@
 
 /* 1. @theme — primitivas que geram utilities */
 @theme {
-  /* Cores: papel (fundos quentes) */
-  --color-paper-0: #ffffff;
-  --color-paper-50: #fbf8f1;
-  --color-paper-100: #f5f0e6;
-  --color-paper-200: #ece5d6;
-  --color-paper-300: #ded5c4;
-  --color-paper-400: #c9bea8;
+  /* ── Identidade D-13b (home-redesign) — paleta do protótipo aprovado ──────
+     ÚNICO lugar do projeto com cor literal (HOME-01, teste `tokens.test.ts`).
+     Razões de contraste de cada par em spec home-redesign §7. */
 
-  /* Cores: tinta */
-  --color-ink-900: #211c17;
-  --color-ink-800: #2e2823;
-  --color-ink-700: #4b4239;
-  --color-ink-500: #756a5e;
-  --color-ink-300: #a89c8c;
+  /* Fundos */
+  --color-ground: #f6f1e7; /* página */
+  --color-band: #ece3d1; /* faixas, superfícies, hover suave */
+  --color-field: #fffdf8; /* campos e cartões claros */
+  --color-divider: #d9cfbc; /* fios decorativos (1.37:1 — nunca identifica controle) */
 
-  /* Cores: oxblood */
-  --color-oxblood-50: #f7ebe7;
-  --color-oxblood-600: #963a2e;
-  --color-oxblood-700: #7e2d24;
-  --color-oxblood-800: #651f18;
+  /* Tinta */
+  --color-ink: #1d1a16; /* texto principal — 15.4:1 sobre ground */
+  --color-ink-soft: #5a5247; /* texto secundário — 6.83:1 ground / 6.03:1 band */
+  --color-ink-field: #6e6557; /* borda de campo — 5.64:1 campo / 4.5:1 band (1.4.11) */
+  --color-ink-faint: #a89c8c; /* só controle desabilitado (1.4.3 isenta) */
 
-  /* Cores: sálvia — acento de marca da seção "Em destaque" da home (DD-7).
-     sage-100 = fundo pastel; sage-700 = eyebrow/acento. Verificado:
-     ink-900 sobre sage-100 = 13.0:1 (AAA, texto dos slides);
-     sage-700 sobre sage-100 = 5.5:1 (AA, eyebrow). Só tokens — sem hex fora daqui. */
-  --color-sage-100: #dce5d3;
-  --color-sage-700: #4f5c47;
+  /* Acento (link, ação primária, foco) */
+  --color-teal: #0f5e5a; /* 6.74:1 ground / 5.95:1 band; branco sobre = 7.58:1 */
+  --color-teal-deep: #0a4441; /* hover — 9.74:1 ground */
+  --color-white: #ffffff; /* texto sobre acento */
 
-  /* Cores: feedback */
+  /* Escuros (cards, sinopse, degradê) */
+  --color-night: #2b2620; /* card sem capa — ground sobre = 13.3:1 */
+  --color-overlay: rgb(29 26 22 / 0.97); /* sinopse — ground sobre (pior caso) = 14.2:1 */
+  --color-scrim-strong: rgb(20 17 13 / 0.94);
+  --color-scrim-mid: rgb(20 17 13 / 0.8); /* ground sobre, imagem branca = 9.05:1 */
+  --color-scrim-clear: rgb(20 17 13 / 0);
+
+  /* Arte do fallback sem capa (HOME-19, A-5) — fundos escuros, formas claras
+     translúcidas. Todos com ground ≥ 7:1 por cima (texto do card). */
+  --color-art-1: #3b4a6b;
+  --color-art-2: #2e5e5a;
+  --color-art-3: #7a3b2e;
+  --color-art-4: #4a3a5c;
+  --color-art-5: #5b4a2a;
+  --color-art-6: #2f4b3a;
+  --color-art-7: #6b3b4f;
+  --color-art-8: #34495a;
+  --color-art-9: #7a4a22;
+  --color-art-10: #3f3a5a;
+  --color-art-11: #2e4e3e;
+  --color-art-12: #5e3a3a;
+  --color-art-13: #3a5068;
+  --color-art-14: #4e4a2e;
+  --color-art-shape-fill: rgb(246 241 231 / 0.13);
+  --color-art-shape-line: rgb(246 241 231 / 0.3);
+  --color-art-shape-path: rgb(246 241 231 / 0.35);
+
+  /* Feedback (mantidos — reconferidos no fundo novo, spec §7) */
   --color-red-700: #9b2620;
   --color-red-50: #fbeae8;
   --color-green-700: #1f6b3b;
@@ -40,13 +60,10 @@
   --color-blue-700: #1b4f8a;
   --color-blue-50: #e8eef6;
 
-  /* Cores: foco */
-  --color-focus-blue: #1f5fd6;
-
-  /* Tipografia: famílias (variáveis CSS de next/font injetadas em <html>) */
-  --font-display: var(--font-spectral), Georgia, serif;
-  --font-body: var(--font-newsreader), Georgia, serif;
-  --font-ui: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  /* Tipografia: famílias (variáveis de next/font injetadas em <html>, D-13b) */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-atkinson), system-ui, sans-serif;
+  --font-ui: var(--font-atkinson), system-ui, sans-serif;
 
   /* Tipografia: pesos */
   --font-weight-regular: 400;
@@ -121,32 +138,37 @@
 /* 2. :root — aliases semânticos (não geram utilities Tailwind) */
 :root {
   /* Superfícies */
-  --surface-page: var(--color-paper-50);
-  --surface-card: var(--color-paper-0);
-  --surface-subtle: var(--color-paper-100);
-  --surface-hover: var(--color-paper-200);
-  --surface-accent: var(--color-oxblood-50);
+  --surface-page: var(--color-ground);
+  --surface-card: var(--color-field);
+  --surface-subtle: var(--color-band);
+  --surface-hover: var(--color-band);
+  --surface-accent: var(--color-band);
+  --surface-inverse: var(--color-night);
+  --surface-overlay: var(--color-overlay);
 
   /* Texto */
-  --text-strong: var(--color-ink-900);
-  --text-body-color: var(--color-ink-800);
-  --text-secondary: var(--color-ink-700);
-  --text-muted: var(--color-ink-500);
-  --text-disabled: var(--color-ink-300);
-  --text-on-accent: var(--color-paper-0);
-  --text-link: var(--color-oxblood-700);
-  --text-link-hover: var(--color-oxblood-800);
+  --text-strong: var(--color-ink);
+  --text-body-color: var(--color-ink);
+  --text-secondary: var(--color-ink-soft);
+  /* A-4: o muted antigo dava 4.14:1 sobre band — unificado ao secundário. */
+  --text-muted: var(--color-ink-soft);
+  --text-disabled: var(--color-ink-faint);
+  --text-on-accent: var(--color-white);
+  --text-on-inverse: var(--color-ground);
+  --text-on-inverse-muted: var(--color-divider); /* 10.4:1 sobre a sinopse */
+  --text-link: var(--color-teal);
+  --text-link-hover: var(--color-teal-deep);
 
   /* Bordas */
-  --border-subtle: var(--color-paper-300);
-  --border-default: var(--color-paper-400);
-  --border-strong: var(--color-ink-300);
+  --border-subtle: var(--color-divider);
+  --border-default: var(--color-ink-field); /* contorno de campo ≥ 3:1 (1.4.11) */
+  --border-strong: var(--color-ink);
 
   /* Ação primária */
-  --action-primary-bg: var(--color-oxblood-700);
-  --action-primary-bg-hover: var(--color-oxblood-800);
-  --action-primary-bg-active: var(--color-oxblood-800);
-  --action-primary-text: var(--color-paper-0);
+  --action-primary-bg: var(--color-teal);
+  --action-primary-bg-hover: var(--color-teal-deep);
+  --action-primary-bg-active: var(--color-teal-deep);
+  --action-primary-text: var(--color-white);
 
   /* Feedback */
   --feedback-error-text: var(--color-red-700);
@@ -159,10 +181,10 @@
   --feedback-info-bg: var(--color-blue-50);
 
   /* Foco */
-  --focus-ring: var(--color-focus-blue);
+  --focus-ring: var(--color-teal);
   --focus-ring-offset: var(--surface-page);
   --focus-ring-width: 3px;
-  --focus-ring-offset-width: 2px;
+  --focus-ring-offset-width: 3px; /* HOME-05 */
   --focus-shadow:
     0 0 0 var(--focus-ring-offset-width) var(--focus-ring-offset),
     0 0 0 calc(var(--focus-ring-offset-width) + var(--focus-ring-width)) var(--focus-ring);
@@ -177,7 +199,8 @@
   --border-width-strong: 2px;
 
   /* Tipografia composta (shorthand font:) — consumido por @layer components */
-  --type-label: var(--font-weight-medium) var(--text-sm)/var(--leading-normal) var(--font-ui);
+  /* A-3: Atkinson Hyperlegible só tem 400/700 — rótulo em 700 (o 500 cairia em 400). */
+  --type-label: var(--font-weight-bold) var(--text-sm)/var(--leading-normal) var(--font-ui);
   --type-meta: var(--font-weight-regular) var(--text-xs)/var(--leading-normal) var(--font-ui);
   --type-heading: var(--font-weight-semibold) var(--text-xl)/var(--leading-snug) var(--font-display);
   --type-prose: var(--font-weight-regular) var(--text-md)/var(--leading-relaxed) var(--font-body);
@@ -222,7 +245,7 @@
     justify-content: center;
     gap: var(--spacing-2);
     font-family: var(--font-ui);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-bold);
     line-height: 1;
     text-decoration: none;
     white-space: nowrap;
@@ -389,7 +412,7 @@
     font-family: var(--font-ui);
     font-size: var(--text-sm);
     color: var(--feedback-error-text);
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-bold);
   }
   .lia-field__error-icon {
     flex: none;
@@ -495,13 +518,13 @@
     background: var(--surface-subtle);
   }
   /* Capa tipográfica de fallback (BookCover): título sobre fundo de marca
-     quando não há imagem. Só tokens (sem hex). Contraste paper-0/oxblood-700 AA. */
+     quando não há imagem. Só tokens (sem hex). ground sobre night = 13.3:1. */
   .lia-card__media--type {
     display: flex;
     align-items: flex-end;
     padding: var(--spacing-5);
-    background: var(--color-oxblood-700);
-    color: var(--color-paper-0);
+    background: var(--surface-inverse);
+    color: var(--text-on-inverse); /* 13.3:1 */
     font: var(--type-heading);
     text-wrap: balance;
   }
@@ -578,35 +601,74 @@
     color: var(--text-secondary); /* ink-700 → contraste forte (AA+) */
   }
 
-  /* ================= LISTAGEM / HOME (review-listing-search, T5) =================
-     Só tokens (inclui sálvia T3). Foco visível herda o anel global (@layer base). */
+  /* ================= HOME (home-redesign, D-13) =================
+     Só tokens. Foco herda o anel global (@layer base). Especificação: spec
+     home-redesign §4; contraste de cada par em §7. */
 
-  /* ---------- Estrutura da home ---------- */
+  /* ---------- Estrutura ---------- */
   .lia-home {
-    max-width: var(--container-lg);
-    margin-inline: auto;
-    padding: var(--spacing-6) var(--spacing-5) var(--spacing-8);
+    --home-gutter: clamp(var(--spacing-4), 4vw, var(--spacing-8));
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-7);
+    gap: var(--spacing-8);
+    padding-bottom: var(--spacing-8);
   }
   .lia-home__hero {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-2);
-  }
-  .lia-home__subtitle {
-    margin: 0;
-    font: var(--type-prose);
-    color: var(--text-secondary);
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: var(--spacing-8) var(--home-gutter) 0;
+    text-align: center;
   }
   .lia-home__title {
     margin: 0;
-    font: var(--type-heading);
-    font-size: var(--text-3xl);
-    line-height: var(--text-3xl--line-height);
-    letter-spacing: var(--tracking-tight);
+    max-width: 22ch;
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-semibold);
+    font-size: clamp(var(--text-2xl), 5vw, var(--text-4xl));
+    line-height: var(--leading-tight);
+    letter-spacing: -0.01em;
+    color: var(--text-strong); /* 15.4:1 */
+    text-wrap: balance;
+  }
+  .lia-home__subtitle {
+    margin: 0;
+    max-width: 45rem;
+    font-family: var(--font-body);
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    color: var(--text-secondary); /* 6.83:1 */
+  }
+  .lia-home__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+    padding-inline: var(--home-gutter);
+    scroll-margin-top: var(--spacing-5);
+  }
+  .lia-home__section-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+  .lia-home__section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-semibold);
+    font-size: clamp(var(--text-xl), 3.5vw, 2.75rem);
+    line-height: var(--leading-tight);
     color: var(--text-strong);
+  }
+  .lia-home__section-lead {
+    margin: 0;
+    font-size: var(--text-md);
+    color: var(--text-secondary);
+  }
+  .lia-home__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-8);
   }
   .lia-section__head {
     display: flex;
@@ -624,167 +686,483 @@
   /* Contagem de resultados (role="status") — DD-9/LST-23 */
   .lia-results__count {
     margin: 0;
-    font: var(--type-meta);
-    font-size: var(--text-sm);
-    color: var(--text-muted);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--text-md);
+    color: var(--text-strong);
   }
 
-  /* ---------- Grid de resultados ---------- */
-  .lia-grid {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-    gap: var(--spacing-5);
-  }
-  .lia-grid > li {
-    display: flex;
-  }
-
-  /* ---------- ReviewCard: cartão inteiro clicável (overlay) ---------- */
-  /* O link do TÍTULO se expande a todo o cartão via ::after — cartão inteiro
-     clicável (LST-02) SEM inflar o nome acessível do link (só o título). */
-  .lia-review-card {
-    position: relative;
-    width: 100%;
-  }
-  .lia-card__link {
-    color: inherit;
-    text-decoration: none;
-  }
-  .lia-card__link::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-  }
-  /* Anel de foco no cartão inteiro quando o link recebe foco por teclado */
-  .lia-review-card:has(.lia-card__link:focus-visible) {
-    outline: var(--focus-ring-width) solid var(--focus-ring);
-    outline-offset: var(--focus-ring-offset-width);
-  }
-  .lia-review-card:has(.lia-card__link:focus-visible) .lia-card__link:focus-visible {
-    outline: none;
-  }
-  .lia-review-card:hover {
-    border-color: var(--border-default);
-    box-shadow: var(--shadow-lg);
-  }
-  .lia-card__author {
-    margin: 0;
-    font: var(--type-meta);
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-  }
-
-  /* ---------- Seção "Em destaque" (região de marca sálvia — DD-7) ---------- */
-  .lia-featured {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-4);
-    padding: var(--spacing-6) var(--spacing-5);
-    background: var(--color-sage-100);
-    border-radius: var(--radius-lg);
-  }
-  .lia-featured__eyebrow {
-    margin: 0;
-    font: var(--type-meta);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-caps);
-    color: var(--color-sage-700); /* 5.5:1 sobre sage-100 (AA) */
-  }
-  .lia-featured__title {
-    margin: 0;
-    font: var(--type-heading);
-    color: var(--color-ink-900); /* 13.0:1 sobre sage-100 (AAA) */
-  }
-  .lia-featured__viewport {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: var(--spacing-3);
-  }
-  .lia-featured__track {
-    list-style: none;
-    margin: 0;
-    padding: var(--spacing-1);
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(15rem, 18rem);
-    gap: var(--spacing-4);
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
-  }
-  .lia-featured__track > li {
-    scroll-snap-align: start;
-    display: flex;
-  }
-  .lia-featured__nav {
+  /* ---------- Controles compartilhados (setas, pausa, "ver todos") ---------- */
+  .lia-ctl {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--spacing-target-min);
-    height: var(--spacing-target-min);
+    gap: var(--spacing-2);
+    min-height: var(--spacing-target-min); /* HOME-06 */
+    padding: 0 var(--spacing-4);
+    border: var(--border-width-strong) solid var(--border-strong); /* 13.6:1 sobre band */
     border-radius: var(--radius-full);
-    border: var(--border-width) solid var(--color-sage-700);
-    background: var(--surface-card);
-    color: var(--color-sage-700);
-    font-size: var(--text-lg);
-    line-height: 1;
+    background: transparent;
+    color: var(--text-strong);
+    font: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-bold);
     cursor: pointer;
   }
-  .lia-featured__nav:hover {
-    border-color: var(--color-ink-900);
-    color: var(--color-ink-900);
+  .lia-ctl:hover {
+    background: var(--text-strong);
+    color: var(--surface-page); /* 15.4:1 */
   }
-  .lia-featured__nav:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .lia-featured__dots {
-    list-style: none;
-    margin: 0;
+  .lia-ctl--icon {
+    width: var(--spacing-target-min);
     padding: 0;
-    display: flex;
-    gap: var(--spacing-2);
-    justify-content: center;
   }
-  .lia-featured__dot {
-    width: var(--spacing-2);
-    height: var(--spacing-2);
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--color-sage-700) 35%, transparent);
+  .lia-more-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-target-min);
+    padding: 0 var(--spacing-2);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-link); /* 6.74 ground / 5.95 band */
+    text-underline-offset: 4px;
   }
-  .lia-featured__dot[data-active] {
-    background: var(--color-sage-700);
+  .lia-more-link:hover {
+    color: var(--text-link-hover);
   }
 
-  /* ---------- Controles de busca/filtro (form GET) ---------- */
+  /* ---------- Faixa "Em destaque" (HOME-10..18) ---------- */
+  .lia-strip {
+    /* A-10: o anel de foco com offset fica sobre a faixa — mesma cor de fundo. */
+    --focus-ring-offset: var(--surface-subtle);
+    /* Largura da máscara de borda e folga do foco (HOME-17). Encolhem em tela
+       estreita: a 320px um card de 248px não caberia entre duas máscaras de
+       56px, e o card focado ficaria sob o degradê. */
+    --strip-mask: clamp(0.75rem, 4vw, 3.5rem);
+    --strip-focus-gap: calc(var(--strip-mask) + clamp(0.5rem, 3vw, 2.5rem));
+    --strip-pad: clamp(var(--spacing-4), 3vw, 2.5rem);
+    margin-inline: clamp(var(--spacing-3), 2vw, var(--spacing-6));
+    padding: var(--spacing-6) 0 var(--spacing-5);
+    border-radius: 1.75rem;
+    background: var(--surface-subtle);
+  }
+  .lia-strip__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3) var(--spacing-4);
+    padding: 0 clamp(var(--spacing-4), 3vw, 2.5rem) var(--spacing-3);
+  }
+  .lia-strip__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--text-2xl);
+    line-height: var(--leading-snug);
+    color: var(--text-strong); /* 13.6:1 sobre band */
+  }
+  .lia-strip__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+  /* Viewport rolável. `scroll-padding-inline` > máscara (96px vs 56px no desktop): um card
+     focado nunca fica sob o degradê (HOME-17, 2.4.11). Barra escondida: a
+     rolagem continua por Tab, gesto, roda e setas. */
+  .lia-strip__viewport {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    padding: var(--spacing-3) var(--strip-pad);
+    scroll-padding-inline: var(--strip-focus-gap);
+    /* Container: o card grande mede-se pela faixa, não pela janela (HOME-17). */
+    container-type: inline-size;
+  }
+  .lia-strip__viewport::-webkit-scrollbar {
+    display: none;
+  }
+  /* Máscara nas bordas só quando há o que rolar. */
+  .lia-strip__viewport[data-masked] {
+    /* Máscara lê só o ALFA: qualquer cor opaca serve; usa-se um token. */
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      var(--color-ink) var(--strip-mask),
+      var(--color-ink) calc(100% - var(--strip-mask)),
+      transparent 100%
+    );
+  }
+  .lia-strip__group {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--spacing-5);
+    margin: 0;
+    padding: 0 var(--spacing-5) 0 0;
+    list-style: none;
+  }
+  .lia-strip__item {
+    flex-shrink: 0;
+  }
+
+  /* ---------- Card de descoberta (HOME-19..24) ---------- */
+  .lia-dcard {
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: var(--surface-inverse);
+    color: var(--text-on-inverse); /* 13.3:1 */
+  }
+  .lia-dcard--lg {
+    width: 15.5rem;
+    height: 22rem;
+  }
+  /* Em faixa estreita o card cede para caber INTEIRO na área livre entre as
+     máscaras (HOME-17/32): largura útil = scrollport − 2 × folga do foco. */
+  .lia-strip .lia-dcard--lg {
+    width: min(15.5rem, 100cqi + 2 * var(--strip-pad) - 2 * var(--strip-focus-gap) - 2px);
+  }
+  .lia-dcard--sm {
+    width: 13.5rem;
+    height: 19rem;
+  }
+  .lia-dcard__art {
+    position: absolute;
+    inset: 0;
+  }
+  .lia-dcard__img,
+  .lia-dcard__shapes {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .lia-dcard__art[data-tone='1'] {
+    background: var(--color-art-1);
+  }
+  .lia-dcard__art[data-tone='2'] {
+    background: var(--color-art-2);
+  }
+  .lia-dcard__art[data-tone='3'] {
+    background: var(--color-art-3);
+  }
+  .lia-dcard__art[data-tone='4'] {
+    background: var(--color-art-4);
+  }
+  .lia-dcard__art[data-tone='5'] {
+    background: var(--color-art-5);
+  }
+  .lia-dcard__art[data-tone='6'] {
+    background: var(--color-art-6);
+  }
+  .lia-dcard__art[data-tone='7'] {
+    background: var(--color-art-7);
+  }
+  .lia-dcard__art[data-tone='8'] {
+    background: var(--color-art-8);
+  }
+  .lia-dcard__art[data-tone='9'] {
+    background: var(--color-art-9);
+  }
+  .lia-dcard__art[data-tone='10'] {
+    background: var(--color-art-10);
+  }
+  .lia-dcard__art[data-tone='11'] {
+    background: var(--color-art-11);
+  }
+  .lia-dcard__art[data-tone='12'] {
+    background: var(--color-art-12);
+  }
+  .lia-dcard__art[data-tone='13'] {
+    background: var(--color-art-13);
+  }
+  .lia-dcard__art[data-tone='14'] {
+    background: var(--color-art-14);
+  }
+  .lia-dcard__shape-fill {
+    fill: var(--color-art-shape-fill);
+  }
+  .lia-dcard__shape-line {
+    fill: none;
+    stroke: var(--color-art-shape-line);
+    stroke-width: 1.5;
+  }
+  .lia-dcard__shape-path {
+    fill: none;
+    stroke: var(--color-art-shape-path);
+    stroke-width: 1.5;
+  }
+  /* Degradê que garante o título legível sobre QUALQUER imagem (HOME-20, A-6):
+     α ≥ .61 (4.5:1 sobre branco) até ~46% da altura; a legenda cabe nessa
+     zona porque o título é limitado a 3 linhas. */
+  .lia-dcard__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      var(--color-scrim-strong) 0%,
+      var(--color-scrim-mid) 38%,
+      var(--color-scrim-clear) 72%
+    );
+  }
+  .lia-dcard__cap {
+    position: absolute;
+    inset: auto 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+    padding: var(--spacing-5);
+  }
+  .lia-dcard__kicker {
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--text-on-inverse);
+  }
+  .lia-dcard__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--text-lg);
+    line-height: 1.15;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .lia-dcard--sm .lia-dcard__title {
+    font-size: 1.25rem;
+  }
+  .lia-dcard__link {
+    color: var(--text-on-inverse);
+    text-decoration: none;
+  }
+  .lia-dcard__link:hover {
+    color: var(--text-on-inverse);
+  }
+  /* Card inteiro clicável (HOME-23): o ::after do link cobre o card; o nome
+     acessível continua só o título. */
+  .lia-dcard__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+  }
+  .lia-dcard__link:focus-visible {
+    outline: none;
+  }
+  /* Anel no card inteiro (HOME-05). Offset deixa o fundo da página entre anel e
+     card: o anel contrasta com o fundo (6.74 ground / 5.95 band). */
+  .lia-dcard:has(.lia-dcard__link:focus-visible) {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset-width);
+  }
+  /* Sinopse (HOME-21): no DOM sempre (aria-describedby), visível no hover e no
+     foco por teclado; Esc marca `data-dismissed` (SynopsisEscape). Não
+     intercepta clique — o card continua navegando (HOME-23/24). */
+  .lia-dcard__syn {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    padding: var(--spacing-5);
+    background: var(--surface-overlay);
+    color: var(--text-on-inverse); /* 14.2:1 pior caso */
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease;
+    pointer-events: none;
+  }
+  /* `:not([data-dismissed])` DENTRO da regra que mostra (e não uma regra que
+     esconde depois): `:has()` soma a especificidade do argumento e venceria. */
+  @media (hover: hover) {
+    .lia-dcard:not([data-dismissed]):hover .lia-dcard__syn {
+      opacity: 1;
+      transform: none;
+    }
+    /* A legenda some sob a sinopse (o overlay é .97 e a deixaria "fantasma").
+       Opacidade, NÃO visibility: o link continua focável e no leitor de tela. */
+    .lia-dcard:not([data-dismissed]):hover .lia-dcard__cap {
+      opacity: 0;
+    }
+  }
+  .lia-dcard:not([data-dismissed]):has(.lia-dcard__link:focus-visible) .lia-dcard__syn {
+    opacity: 1;
+    transform: none;
+  }
+  .lia-dcard:not([data-dismissed]):has(.lia-dcard__link:focus-visible) .lia-dcard__cap {
+    opacity: 0;
+  }
+  .lia-dcard__syn-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-semibold);
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+  .lia-dcard__syn-meta {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-on-inverse-muted); /* 10.4:1 */
+  }
+  .lia-dcard__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .lia-dcard__tag {
+    padding: var(--spacing-1) 0.625rem;
+    border-radius: var(--radius-full);
+    background: var(--text-on-inverse);
+    color: var(--text-strong); /* 15.4:1 */
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-bold);
+  }
+  /* `flex-shrink: 0`: sem isto o flex encolhe a caixa e o clamp corta uma
+     linha ao meio. O número de linhas cabe no card com título de até 2 linhas
+     (lg: 352px → 5 linhas de 24px; sm: 304px → 3 linhas de 22,5px). */
+  .lia-dcard__syn-text {
+    flex-shrink: 0;
+    margin: 0;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .lia-dcard--sm .lia-dcard__syn-text {
+    font-size: 0.9375rem;
+    -webkit-line-clamp: 3;
+  }
+  .lia-dcard__syn-more {
+    margin-top: auto;
+    font-weight: var(--font-weight-bold);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .lia-dcard__byline {
+    margin: var(--spacing-3) 0 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary); /* 6.83:1 */
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lia-dcard__syn {
+      transition: none;
+      transform: none;
+    }
+  }
+
+  /* ---------- Fileiras por deficiência (HOME-25..28) ---------- */
+  .lia-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+  .lia-row__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+  }
+  .lia-row__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--text-xl);
+    line-height: var(--leading-snug);
+    color: var(--text-strong);
+  }
+  .lia-row__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+  /* Região rolável focável (A-7): o anel aparece quando ela mesma tem o foco. */
+  .lia-row__scroller {
+    overflow-x: auto;
+    padding: var(--spacing-3) var(--spacing-2) var(--spacing-4);
+    scroll-padding-inline: var(--spacing-5);
+    border-radius: 0.75rem;
+    scrollbar-width: thin;
+  }
+  .lia-row__list {
+    display: flex;
+    gap: var(--spacing-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .lia-row__item {
+    flex-shrink: 0;
+    width: 13.5rem;
+  }
+
+  /* ---------- Grade de resultados (modo busca, HOME-30) ---------- */
+  .lia-results__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+    justify-items: start;
+    gap: var(--spacing-7) var(--spacing-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* ---------- Controles de busca/filtro (form GET, HOME-29) ---------- */
   .lia-listing-controls {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-4);
-    padding: var(--spacing-5);
-    background: var(--surface-card);
-    border: var(--border-width) solid var(--border-subtle);
-    border-radius: var(--radius-lg);
+    padding: var(--spacing-6);
+    background: var(--surface-subtle);
+    border-radius: 1.25rem;
+    --focus-ring-offset: var(--surface-subtle);
   }
-  .lia-listing-controls__search {
+  .lia-listing-controls__main {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
+    gap: var(--spacing-4);
+  }
+  .lia-listing-controls__q {
+    flex: 2 1 18rem;
+  }
+  .lia-listing-controls__dis {
+    flex: 1 1 14rem;
+  }
+  .lia-listing-controls__actions {
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--spacing-3);
   }
-  .lia-listing-controls__search .lia-field {
-    flex: 1 1 16rem;
+  .lia-listing-controls__summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-target-min);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-link); /* 5.95:1 sobre band */
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
   .lia-listing-controls__filters {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
     gap: var(--spacing-4);
     align-items: end;
+    padding-top: var(--spacing-3);
   }
 
   /* ---------- Paginação ---------- */
@@ -1103,56 +1481,88 @@
      :where(a, ...):focus-visible do @layer base (especificidade 0: as regras
      abaixo NÃO o sobrescrevem). */
 
+  /* HOME-07 (D-13b): marca à esquerda, navegação à direita. Em viewport
+     estreito os dois EMPILHAM (flex-wrap) e a lista quebra em linhas — sem
+     hambúrguer: todos os itens seguem no DOM e tabuláveis. */
   .lia-site-header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--spacing-2) var(--spacing-5);
-    padding: var(--spacing-3) var(--spacing-5);
+    justify-content: space-between;
+    gap: var(--spacing-3) var(--spacing-6);
+    padding: var(--spacing-4) clamp(var(--spacing-4), 4vw, var(--spacing-8));
     border-bottom: var(--border-width) solid var(--border-subtle);
   }
   .lia-site-header__brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-target-min);
     font-family: var(--font-display);
     font-weight: var(--font-weight-semibold);
-    font-size: var(--text-lg);
-    color: var(--text-strong); /* ink-900 sobre paper-50 = 15.9:1 AAA */
+    font-size: var(--text-xl);
+    letter-spacing: var(--tracking-wide);
+    color: var(--text-strong); /* 15.4:1 */
     text-decoration: none;
   }
+  .lia-site-header__brand:hover {
+    color: var(--text-strong);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
 
-  /* Sem hambúrguer: a lista QUEBRA EM LINHAS quando não cabe. Todos os itens
-     permanecem no DOM e tabuláveis em qualquer viewport. */
   .lia-site-nav__list {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    column-gap: var(--spacing-5);
+    justify-content: flex-end;
+    gap: var(--spacing-1);
   }
   .lia-site-nav__link {
     display: inline-flex;
     align-items: center;
-    /* Alvo de toque >= 44px de altura (WCAG 2.5.8) mesmo com o texto pequeno. */
+    /* Alvo de toque >= 44px (HOME-06). */
     min-height: var(--spacing-target-min);
-    font: var(--type-label);
-    /* Doc de customização: o texto do menu era pequeno demais para leitura
-       confortável. Sobe de --text-sm (14px) para --text-md (18px). */
+    padding: 0 var(--spacing-3);
+    border-radius: var(--radius-full);
+    font-family: var(--font-ui);
+    font-weight: var(--font-weight-regular);
     font-size: var(--text-md);
-    color: var(--text-secondary); /* ink-700 sobre paper-50 = 9.3:1 AAA */
+    line-height: var(--leading-snug);
+    color: var(--text-strong); /* 15.4:1 */
     text-decoration: none;
-    /* Reserva desde já a espessura do indicador de página atual: ao mudar de
-       rota o item não "cresce" e não empurra a linha. */
-    border-bottom: var(--border-width-strong) solid transparent;
   }
   .lia-site-nav__link:hover {
-    color: var(--text-strong);
+    background: var(--surface-hover);
+    color: var(--text-strong); /* 13.6:1 sobre band */
     text-decoration: underline;
+    text-underline-offset: 4px;
   }
   /* Página atual: cor + peso + sublinhado grosso. Nunca só cor (WCAG 1.4.1). */
   .lia-site-nav__link[aria-current='page'] {
-    color: var(--text-link); /* oxblood-700 sobre paper-50 = 8.7:1 AAA */
-    font-weight: var(--font-weight-semibold);
-    border-bottom-color: var(--text-link);
+    color: var(--text-link); /* 6.74:1 */
+    font-weight: var(--font-weight-bold);
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 6px;
+  }
+
+  /* Skip link (layout): escondido até receber foco. */
+  .lia-skip-link {
+    position: absolute;
+    left: var(--spacing-5);
+    top: -5rem;
+    z-index: 50;
+    padding: var(--spacing-3) var(--spacing-5);
+    border-radius: var(--radius-lg);
+    background: var(--text-strong);
+    color: var(--surface-page); /* 15.4:1 */
+    font-weight: var(--font-weight-bold);
+    text-decoration: none;
+  }
+  .lia-skip-link:focus {
+    top: var(--spacing-4);
   }
 
   /* ================= PAINEL DO EDITOR (reviews-crud, T10) =================
@@ -1237,7 +1647,7 @@
     white-space: nowrap;
   }
   .lia-admin-table__row-header {
-    font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-bold);
     color: var(--text-strong);
   }
   .lia-admin-table td {

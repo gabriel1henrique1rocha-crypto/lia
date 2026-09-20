@@ -189,12 +189,12 @@ test('foco visível em todo controle do formulário', async ({ page }) => {
       return { largura: s.outlineWidth, estilo: s.outlineStyle, cor: s.outlineColor }
     })
     const nome = await controle.evaluate((el) => el.getAttribute('name') ?? el.textContent?.trim())
-    // Anel global do @layer base: 3px sólidos em --color-focus-blue (#1f5fd6).
+    // Anel global do @layer base: 3px sólidos em --focus-ring (teal, D-13b).
     expect(contorno.estilo, `${nome} sem estilo de outline`).toBe('solid')
     expect(parseFloat(contorno.largura), `${nome} com outline fino demais`).toBeGreaterThanOrEqual(
       2
     )
-    expect(contorno.cor, `${nome} com anel fora do token de foco`).toBe('rgb(31, 95, 214)')
+    expect(contorno.cor, `${nome} com anel fora do token de foco`).toBe('rgb(15, 94, 90)')
   }
 })
 
