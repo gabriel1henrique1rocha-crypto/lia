@@ -1,29 +1,28 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Spectral, Newsreader, IBM_Plex_Sans } from 'next/font/google'
+import { Atkinson_Hyperlegible, Fraunces } from 'next/font/google'
 import { SiteFooter } from '@/components/listing/SiteFooter'
 import { SiteNav } from '@/components/nav/SiteNav'
 import './globals.css'
 
-const spectral = Spectral({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
+/**
+ * Identidade D-13b (HOME-02). Fraunces só nos pesos que o sistema usa (500/600);
+ * Atkinson Hyperlegible — desenhada para leitura com baixa visão — para corpo e
+ * UI, 400/700 (a família não tem 500: ver A-3 nos tokens).
+ */
+const fraunces = Fraunces({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['500', '600'],
   display: 'swap',
-  variable: '--font-spectral',
+  variable: '--font-fraunces',
 })
 
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  weight: ['400'],
+const atkinson = Atkinson_Hyperlegible({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
   display: 'swap',
-  variable: '--font-newsreader',
-})
-
-const ibmPlexSans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  display: 'swap',
-  variable: '--font-ibm-plex-sans',
+  variable: '--font-atkinson',
 })
 
 // Base para URLs absolutas de metadata (og:url, canonical). Sem ela, URLs
@@ -43,19 +42,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="pt-BR"
-      className={`${spectral.variable} ${newsreader.variable} ${ibmPlexSans.variable}`}
-    >
+    <html lang="pt-BR" className={`${fraunces.variable} ${atkinson.variable}`}>
       <body>
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-ink-900"
-        >
+        <a href="#main" className="lia-skip-link">
           Ir para o conteúdo principal
         </a>
         {/* Ordem no DOM = ordem de tabulação: skip link → marca → navegação →
-            conteúdo. O skip link segue pulando TUDO isto de uma vez. */}
+            conteúdo. O skip link segue pulando TUDO isto de uma vez.
+            HOME-07: marca à esquerda, navegação à direita (CSS). */}
         <header className="lia-site-header">
           <Link href="/" className="lia-site-header__brand" aria-label="OLDA — página inicial">
             OLDA

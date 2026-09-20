@@ -71,10 +71,10 @@ test('foco visível em todos os itens do menu', async ({ page }) => {
       const s = getComputedStyle(el)
       return { width: s.outlineWidth, style: s.outlineStyle, color: s.outlineColor }
     })
-    // Anel global do @layer base: 3px sólidos em --color-focus-blue (#1f5fd6).
+    // Anel global do @layer base: 3px sólidos em --focus-ring (teal, D-13b).
     expect(outline.style, `${label} sem estilo de outline`).toBe('solid')
     expect(parseFloat(outline.width), `${label} com outline fino demais`).toBeGreaterThanOrEqual(2)
-    expect(outline.color).toBe('rgb(31, 95, 214)')
+    expect(outline.color).toBe('rgb(15, 94, 90)')
   }
 })
 
