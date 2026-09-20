@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>OLDA — Início</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&amp;family=Fraunces:opsz,wght@9..144,500;9..144,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F1E7;color:#1D1A16;font-family:"Atkinson Hyperlegible",system-ui,sans-serif}
+*{box-sizing:border-box}
+a{color:#0F5E5A}
+a:hover{color:#0A4441}
+:focus-visible{outline:3px solid #0F5E5A;outline-offset:3px}
+.skip{position:absolute;left:24px;top:-80px;z-index:50;background:#1D1A16;color:#F6F1E7;padding:12px 20px;border-radius:8px;font-weight:700;text-decoration:none}
+.skip:focus{top:16px;color:#F6F1E7}
+.nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;color:#1D1A16;text-decoration:none;font-size:17px}
+.nav a:hover{background:#ECE3D1;color:#1D1A16;text-decoration:underline;text-underline-offset:4px}
+.ctl{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border:1.5px solid #1D1A16;border-radius:999px;background:transparent;color:#1D1A16;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.ctl:hover{background:#1D1A16;color:#F6F1E7}
+.ctl.icon{width:44px;padding:0;justify-content:center}
+.more-link{font-weight:700;font-size:16px;min-height:44px;display:inline-flex;align-items:center;padding:0 8px;text-underline-offset:4px}
+.viewport{display:flex;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:12px 40px;scroll-padding-inline:96px;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 56px,#000 calc(100% - 56px),transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 56px,#000 calc(100% - 56px),transparent 100%)}
+.viewport::-webkit-scrollbar{display:none}
+.group{display:flex;gap:24px;padding:0 24px 0 0;margin:0;list-style:none;flex-shrink:0}
+.card{position:relative;flex-shrink:0;border-radius:16px;overflow:hidden;background:#2B2620;color:#F6F1E7}
+.card.lg{width:248px;height:352px}
+.card.sm{width:216px;height:304px}
+.art{position:absolute;inset:0}
+.art svg{display:block;width:100%;height:100%}
+.scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(20,17,13,.94) 0%,rgba(20,17,13,.8) 38%,rgba(20,17,13,0) 72%)}
+.cap{position:absolute;left:0;right:0;bottom:0;padding:20px;display:flex;flex-direction:column;gap:6px}
+.kicker{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#F6F1E7}
+.card h3,.card h4{margin:0;font-family:Fraunces,Georgia,serif;font-weight:600;font-size:24px;line-height:1.15}
+.card.sm h4{font-size:20px}
+.card-link{color:#F6F1E7;text-decoration:none}
+.card-link:hover{color:#F6F1E7}
+.card-link::after{content:"";position:absolute;inset:0;z-index:3}
+.card-link:focus-visible{outline:none}
+.card:has(.card-link:focus-visible){outline:3px solid #0F5E5A;outline-offset:3px}
+.syn{position:absolute;inset:0;z-index:2;padding:20px;background:rgba(29,26,22,.97);display:flex;flex-direction:column;gap:10px;opacity:0;transform:translateY(8px);transition:opacity .18s ease,transform .18s ease;pointer-events:none}
+.card:hover .syn,.card:focus-within .syn{opacity:1;transform:none}
+.card.is-dismissed .syn{opacity:0;transform:translateY(8px)}
+.syn-title{margin:0;font-family:Fraunces,Georgia,serif;font-weight:600;font-size:20px;line-height:1.2}
+.syn-meta{margin:0;font-size:14px;color:#D9CFBC}
+.tag{align-self:flex-start;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;background:#F6F1E7;color:#1D1A16}
+.syn-text{margin:0;font-size:16px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;overflow:hidden}
+.card.sm .syn-text{font-size:15px;-webkit-line-clamp:5}
+.syn-more{margin-top:auto;font-weight:700;text-decoration:underline;text-underline-offset:4px}
+.row{display:flex;gap:24px;overflow-x:auto;scrollbar-width:thin;padding:10px 6px 16px;margin:0;list-style:none;scroll-padding-inline:24px;border-radius:12px}
+.row-meta{margin:10px 0 0;font-size:15px;color:#5A5247}
+.field{display:flex;flex-direction:column;gap:8px}
+.field label{font-weight:700;font-size:16px}
+.input{min-height:52px;padding:0 16px;border:1.5px solid #6E6557;border-radius:12px;background:#FFFDF8;font:inherit;font-size:17px;color:#1D1A16}
+.btn{min-height:52px;padding:0 24px;border:0;border-radius:12px;background:#0F5E5A;color:#FFFFFF;font:inherit;font-size:17px;font-weight:700;cursor:pointer}
+.btn:hover{background:#0A4441}
+.btn-ghost{min-height:52px;padding:0 20px;border:1.5px solid #1D1A16;border-radius:12px;background:transparent;color:#1D1A16;font:inherit;font-size:17px;font-weight:700;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.syn{transition:none;transform:none}.card.is-dismissed .syn{transform:none}}
+</style>
+</helmet>
+<div onKeyDown="{{onRootKey}}" style="position: relative; width: 1440px; height: 3080px; background: #F6F1E7; color: #1D1A16; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; font-size: 18px; line-height: 1.6;">
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+<header style="display: flex; align-items: center; justify-content: space-between; gap: 32px; height: 96px; padding: 0 64px; border-bottom: 1px solid #D9CFBC;">
+<a href="#" aria-label="OLDA — página inicial" style="display: flex; flex-direction: column; text-decoration: none; color: #1D1A16; line-height: 1.2;">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: 0.02em;">OLDA</span>
+<span style="font-size: 13px; color: #5A5247;">Observatório de Literatura, Deficiência e Arte</span>
+</a>
+<nav class="nav" aria-label="Principal">
+<ul style="display: flex; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none;">
+<li><a href="#">Quem somos</a></li>
+<li><a href="#">Autores com deficiência</a></li>
+<li><a href="#catalogo">Catálogo</a></li>
+<li><a href="#">Filmografia</a></li>
+<li><a href="#">LIACast</a></li>
+<li><a href="#">Sugestões</a></li>
+</ul>
+</nav>
+</header>
+
+<main id="conteudo">
+<section aria-labelledby="hero-title" style="padding: 80px 0 0;">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 0 64px; text-align: center;">
+<h1 id="hero-title" style="margin: 0; max-width: 960px; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 60px; line-height: 1.08; letter-spacing: -0.01em;">Literatura, cinema e deficiência, lidos com olhar crítico</h1>
+<p style="margin: 0; max-width: 720px; font-size: 20px; color: #5A5247;">Resenhas críticas de obras literárias e audiovisuais com personagens com deficiência, a partir de uma perspectiva anticapacitista.</p>
+</div>
+
+<div style="margin: 56px 32px 0; padding: 32px 0 28px; background: #ECE3D1; border-radius: 28px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 40px 12px;">
+<h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 32px;">Em destaque</h2>
+<div style="display: flex; align-items: center; gap: 8px;">
+<sc-if value="{{motionOn}}" hint-placeholder-val="{{ true }}">
+<button type="button" class="ctl" onClick="{{togglePause}}" aria-label="{{pauseLabel}}">
+<sc-if value="{{paused}}" hint-placeholder-val="{{ false }}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 5l12 7-12 7z"></path></svg>
+<span>Retomar</span>
+</sc-if>
+<sc-if value="{{running}}" hint-placeholder-val="{{ true }}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M9 5v14M15 5v14"></path></svg>
+<span>Pausar</span>
+</sc-if>
+</button>
+</sc-if>
+<button type="button" class="ctl icon" onClick="{{heroPrev}}" aria-label="Destaques anteriores">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+<button type="button" class="ctl icon" onClick="{{heroNext}}" aria-label="Próximos destaques">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+<a class="more-link" href="#catalogo">Ver todas as resenhas</a>
+</div>
+</div>
+
+<div class="viewport" ref="{{heroRef}}" onMouseEnter="{{heroEnter}}" onMouseLeave="{{heroLeave}}" onFocus="{{heroFocus}}" onBlur="{{heroBlur}}">
+<ul class="group" ref="{{groupRef}}">
+<sc-for list="{{hero}}" as="item" hint-placeholder-count="10">
+<li style="flex-shrink: 0;">
+<article class="{{item.cls}} lg" onMouseEnter="{{item.enter}}" onMouseLeave="{{item.leave}}" onFocus="{{item.focus}}" onBlur="{{item.blur}}">
+<div class="art" style="background: {{item.color}};">
+<svg viewBox="0 0 248 352" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+<circle cx="{{item.cx}}" cy="{{item.cy}}" r="{{item.r}}" fill="rgba(246,241,231,0.13)"></circle>
+<circle cx="{{item.cx2}}" cy="{{item.cy2}}" r="{{item.r2}}" fill="none" stroke="rgba(246,241,231,0.3)" stroke-width="1.5"></circle>
+<path d="{{item.path}}" fill="none" stroke="rgba(246,241,231,0.35)" stroke-width="1.5"></path>
+</svg>
+</div>
+<div class="scrim"></div>
+<div class="cap">
+<span class="kicker">{{item.kicker}}</span>
+<h3><a class="card-link" href="#" aria-describedby="syn-{{item.uid}}">{{item.title}}</a></h3>
+</div>
+<div class="syn" id="syn-{{item.uid}}">
+<p class="syn-title" aria-hidden="true">{{item.title}}</p>
+<p class="syn-meta">{{item.meta}}</p>
+<span class="tag">{{item.dis}}</span>
+<p class="syn-text">{{item.syn}}</p>
+<span class="syn-more" aria-hidden="true">Ler resenha →</span>
+</div>
+</article>
+</li>
+</sc-for>
+</ul>
+<ul class="group" aria-hidden="true">
+<sc-for list="{{heroClones}}" as="item" hint-placeholder-count="10">
+<li style="flex-shrink: 0;">
+<article class="{{item.cls}} lg" onMouseEnter="{{item.enter}}" onMouseLeave="{{item.leave}}">
+<div class="art" style="background: {{item.color}};">
+<svg viewBox="0 0 248 352" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+<circle cx="{{item.cx}}" cy="{{item.cy}}" r="{{item.r}}" fill="rgba(246,241,231,0.13)"></circle>
+<circle cx="{{item.cx2}}" cy="{{item.cy2}}" r="{{item.r2}}" fill="none" stroke="rgba(246,241,231,0.3)" stroke-width="1.5"></circle>
+<path d="{{item.path}}" fill="none" stroke="rgba(246,241,231,0.35)" stroke-width="1.5"></path>
+</svg>
+</div>
+<div class="scrim"></div>
+<div class="cap">
+<span class="kicker">{{item.kicker}}</span>
+<h3><a class="card-link" href="#" tabIndex="-1">{{item.title}}</a></h3>
+</div>
+<div class="syn">
+<p class="syn-title">{{item.title}}</p>
+<p class="syn-meta">{{item.meta}}</p>
+<span class="tag">{{item.dis}}</span>
+<p class="syn-text">{{item.syn}}</p>
+<span class="syn-more">Ler resenha →</span>
+</div>
+</article>
+</li>
+</sc-for>
+</ul>
+</div>
+</div>
+</section>
+
+<section id="catalogo" aria-labelledby="cat-title" style="padding: 104px 64px 96px; display: flex; flex-direction: column; gap: 40px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h2 id="cat-title" style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 44px; line-height: 1.1;">Catálogo</h2>
+<p style="margin: 0; font-size: 19px; color: #5A5247;">Livros e filmes resenhados pelo observatório.</p>
+</div>
+
+<form role="search" aria-label="Buscar no catálogo" onSubmit="{{onSubmit}}" style="display: grid; grid-template-columns: minmax(0, 1fr) 320px auto auto; gap: 16px; align-items: end; padding: 28px; background: #ECE3D1; border-radius: 20px;">
+<div class="field">
+<label for="busca">Buscar por título, autor ou tema</label>
+<input id="busca" class="input" type="search" autocomplete="off" value="{{q}}" onChange="{{onQ}}">
+</div>
+<div class="field">
+<label for="deficiencia">Deficiência representada</label>
+<select id="deficiencia" class="input" value="{{d}}" onChange="{{onDis}}">
+<option value="">Todas</option>
+<sc-for list="{{disOpts}}" as="o" hint-placeholder-count="8">
+<option value="{{o.v}}">{{o.v}}</option>
+</sc-for>
+</select>
+</div>
+<button type="submit" class="btn">Buscar</button>
+<button type="button" class="btn-ghost" onClick="{{clear}}">Limpar</button>
+</form>
+
+<p role="status" style="margin: -16px 0 0; min-height: 29px; font-size: 18px; font-weight: 700;">{{status}}</p>
+
+<sc-if value="{{active}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="res-title" style="display: flex; flex-direction: column; gap: 20px;">
+<h3 id="res-title" style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 28px;">Resultados</h3>
+<ul style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 40px 24px; margin: 0; padding: 0; list-style: none;">
+<sc-for list="{{results}}" as="item" hint-placeholder-count="5">
+<li>
+<article class="{{item.cls}} sm" onMouseEnter="{{item.enter}}" onMouseLeave="{{item.leave}}" onFocus="{{item.focus}}" onBlur="{{item.blur}}">
+<div class="art" style="background: {{item.color}};">
+<svg viewBox="0 0 248 352" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+<circle cx="{{item.cx}}" cy="{{item.cy}}" r="{{item.r}}" fill="rgba(246,241,231,0.13)"></circle>
+<circle cx="{{item.cx2}}" cy="{{item.cy2}}" r="{{item.r2}}" fill="none" stroke="rgba(246,241,231,0.3)" stroke-width="1.5"></circle>
+<path d="{{item.path}}" fill="none" stroke="rgba(246,241,231,0.35)" stroke-width="1.5"></path>
+</svg>
+</div>
+<div class="scrim"></div>
+<div class="cap">
+<span class="kicker">{{item.kicker}}</span>
+<h4><a class="card-link" href="#" aria-describedby="syn-{{item.uid}}">{{item.title}}</a></h4>
+</div>
+<div class="syn" id="syn-{{item.uid}}">
+<p class="syn-title" aria-hidden="true">{{item.title}}</p>
+<span class="tag">{{item.dis}}</span>
+<p class="syn-text">{{item.syn}}</p>
+<span class="syn-more" aria-hidden="true">Ler resenha →</span>
+</div>
+</article>
+<p class="row-meta">{{item.byline}}</p>
+</li>
+</sc-for>
+</ul>
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 18px; color: #5A5247;">Tente outro termo ou escolha “Todas” em Deficiência representada.</p>
+</sc-if>
+</section>
+</sc-if>
+
+<sc-if value="{{browsing}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 56px;">
+<sc-for list="{{rows}}" as="row" hint-placeholder-count="3">
+<section aria-labelledby="row-{{row.key}}" style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+<h3 id="row-{{row.key}}" style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 28px;">{{row.title}}</h3>
+<div style="display: flex; align-items: center; gap: 8px;">
+<a class="more-link" href="#catalogo">Ver todos</a>
+<button type="button" class="ctl icon" onClick="{{row.prev}}" aria-label="Rolar {{row.title}} para trás">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+<button type="button" class="ctl icon" onClick="{{row.next}}" aria-label="Rolar {{row.title}} para frente">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+</div>
+</div>
+<ul class="row" ref="{{row.ref}}" tabIndex="0" aria-label="{{row.title}}">
+<sc-for list="{{row.items}}" as="item" hint-placeholder-count="6">
+<li style="flex-shrink: 0; width: 216px;">
+<article class="{{item.cls}} sm" onMouseEnter="{{item.enter}}" onMouseLeave="{{item.leave}}" onFocus="{{item.focus}}" onBlur="{{item.blur}}">
+<div class="art" style="background: {{item.color}};">
+<svg viewBox="0 0 248 352" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+<circle cx="{{item.cx}}" cy="{{item.cy}}" r="{{item.r}}" fill="rgba(246,241,231,0.13)"></circle>
+<circle cx="{{item.cx2}}" cy="{{item.cy2}}" r="{{item.r2}}" fill="none" stroke="rgba(246,241,231,0.3)" stroke-width="1.5"></circle>
+<path d="{{item.path}}" fill="none" stroke="rgba(246,241,231,0.35)" stroke-width="1.5"></path>
+</svg>
+</div>
+<div class="scrim"></div>
+<div class="cap">
+<span class="kicker">{{item.kicker}}</span>
+<h4><a class="card-link" href="#" aria-describedby="syn-{{item.uid}}">{{item.title}}</a></h4>
+</div>
+<div class="syn" id="syn-{{item.uid}}">
+<p class="syn-title" aria-hidden="true">{{item.title}}</p>
+<span class="tag">{{item.dis}}</span>
+<p class="syn-text">{{item.syn}}</p>
+<span class="syn-more" aria-hidden="true">Ler resenha →</span>
+</div>
+</article>
+<p class="row-meta">{{item.byline}}</p>
+</li>
+</sc-for>
+</ul>
+</section>
+</sc-for>
+</div>
+</sc-if>
+</section>
+</main>
+
+<footer style="display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 40px 64px; border-top: 1px solid #D9CFBC; font-size: 16px; color: #5A5247;">
+<p style="margin: 0;">OLDA — Observatório de Literatura, Deficiência e Arte · Projeto LIA</p>
+<nav aria-label="Rodapé" class="nav">
+<ul style="display: flex; gap: 4px; margin: 0; padding: 0; list-style: none;">
+<li><a href="#">Acessibilidade</a></li>
+<li><a href="#">Contato</a></li>
+</ul>
+</nav>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"speed":{"editor":"range","default":28,"min":10,"max":60,"step":2,"unit":"px/s","section":"Carrossel"},"$preview":{"width":1440,"height":3080}}'>
+var WORKS = [
+  { id: "ensaio", title: "Ensaio sobre a cegueira", author: "José Saramago", kind: "Livro", year: 1995, dis: "Cegueira", br: false, syn: "Uma epidemia de cegueira branca se espalha por uma cidade sem nome. Os primeiros atingidos são confinados num manicômio abandonado, onde a ordem social desmorona." },
+  { id: "estranho", title: "O estranho caso do cachorro morto", author: "Mark Haddon", kind: "Livro", year: 2003, dis: "Autismo", br: false, syn: "Christopher, de 15 anos, decide investigar quem matou o cachorro da vizinha, e a investigação acaba revelando segredos da própria família." },
+  { id: "extraordinario", title: "Extraordinário", author: "R. J. Palacio", kind: "Livro", year: 2012, dis: "Diferença facial", br: false, syn: "Auggie nasceu com uma diferença facial e, aos dez anos, vai à escola pela primeira vez. A história é contada por ele e pelas pessoas ao seu redor." },
+  { id: "comoeu", title: "Como eu era antes de você", author: "Jojo Moyes", kind: "Livro", year: 2012, dis: "Tetraplegia", br: false, syn: "Lou é contratada como cuidadora de Will, tetraplégico após um acidente. Um dos romances mais debatidos pelo movimento anticapacitista." },
+  { id: "algernon", title: "Flores para Algernon", author: "Daniel Keyes", kind: "Livro", year: 1966, dis: "Deficiência intelectual", br: false, syn: "Charlie Gordon, homem com deficiência intelectual, passa por uma cirurgia experimental que multiplica sua inteligência, e registra tudo num diário." },
+  { id: "corcunda", title: "O corcunda de Notre-Dame", author: "Victor Hugo", kind: "Livro", year: 1831, dis: "Deficiência física", br: false, syn: "Quasímodo, sineiro da catedral, vive isolado por causa do corpo que Paris enxerga como monstruoso." },
+  { id: "feliz", title: "Feliz ano velho", author: "Marcelo Rubens Paiva", kind: "Livro", year: 1982, dis: "Tetraplegia", br: true, syn: "Relato autobiográfico de Marcelo Rubens Paiva sobre o acidente que o deixou tetraplégico aos 20 anos e a vida que veio depois." },
+  { id: "som", title: "O som do silêncio", author: "Darius Marder", kind: "Filme", year: 2019, dis: "Surdez", br: false, syn: "Um baterista de metal começa a perder a audição e precisa escolher entre recuperar a vida antiga ou se integrar a uma comunidade surda." },
+  { id: "coda", title: "CODA — No ritmo do coração", author: "Sian Heder", kind: "Filme", year: 2021, dis: "Surdez", br: false, syn: "Única ouvinte numa família surda, Ruby se divide entre o barco de pesca da família e o desejo de estudar canto." },
+  { id: "pe", title: "Meu pé esquerdo", author: "Jim Sheridan", kind: "Filme", year: 1989, dis: "Paralisia cerebral", br: false, syn: "A vida do escritor e pintor irlandês Christy Brown, que aprendeu a escrever e pintar com o pé esquerdo." },
+  { id: "intocaveis", title: "Intocáveis", author: "Olivier Nakache e Éric Toledano", kind: "Filme", year: 2011, dis: "Tetraplegia", br: false, syn: "Um aristocrata tetraplégico contrata como cuidador um jovem da periferia sem nenhuma experiência na função." },
+  { id: "colegas", title: "Colegas", author: "Marcelo Galvão", kind: "Filme", year: 2012, dis: "Síndrome de Down", br: true, syn: "Três amigos com síndrome de Down fogem do instituto onde vivem num carro emprestado, atrás dos próprios sonhos." },
+  { id: "hoje", title: "Hoje eu quero voltar sozinho", author: "Daniel Ribeiro", kind: "Filme", year: 2014, dis: "Cegueira", br: true, syn: "Leonardo, adolescente cego, busca mais independência enquanto a chegada de um colega novo muda sua rotina." },
+  { id: "teoria", title: "A teoria de tudo", author: "James Marsh", kind: "Filme", year: 2014, dis: "Deficiência física", br: false, syn: "A trajetória de Stephen Hawking e Jane Wilde a partir do diagnóstico de ELA do físico." }
+];
+var COLORS = ["#3B4A6B", "#2E5E5A", "#7A3B2E", "#4A3A5C", "#5B4A2A", "#2F4B3A", "#6B3B4F", "#34495A", "#7A4A22", "#3F3A5A", "#2E4E3E", "#5E3A3A", "#3A5068", "#4E4A2E"];
+var HERO = ["ensaio", "som", "estranho", "extraordinario", "coda", "pe", "feliz", "colegas", "hoje", "intocaveis"];
+
+function norm(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+function byId(id) { for (var i = 0; i < WORKS.length; i++) { if (WORKS[i].id === id) return WORKS[i]; } return null; }
+function art(i) {
+  var cx = 40 + (i * 67) % 170, cy = 70 + (i * 41) % 110, y0 = 150 + (i * 29) % 60;
+  return {
+    color: COLORS[i % COLORS.length], cx: cx, cy: cy, r: 60 + (i * 23) % 60,
+    cx2: Math.round(248 - cx * 0.6), cy2: cy + 60, r2: 30 + (i * 17) % 40,
+    path: "M-10 " + y0 + " C 70 " + (y0 - 70) + ", 170 " + (y0 + 70) + ", 260 " + (y0 - 20)
+  };
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { paused: false, reduced: false, dismissed: null, q: "", d: "" };
+    this.pos = 0; this.hover = false; this.focusIn = false; this.manualUntil = 0; this.last = 0;
+    this.hero = null; this.group = null; this.rowEls = {}; this.hoverUid = null; this.focusUid = null;
+    var self = this;
+    this.heroRef = function (el) { self.hero = el; };
+    this.groupRef = function (el) { self.group = el; };
+    this.rowRefs = {
+      lit: function (el) { self.rowEls.lit = el; },
+      cin: function (el) { self.rowEls.cin = el; },
+      br: function (el) { self.rowEls.br = el; }
+    };
+  }
+
+  componentDidMount() {
+    var self = this;
+    var mq = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    if (mq) {
+      this.setState({ reduced: mq.matches });
+      this.mq = mq;
+      this.mqh = function (e) { self.setState({ reduced: e.matches }); };
+      if (mq.addEventListener) mq.addEventListener("change", this.mqh);
+    }
+    var tick = function (t) {
+      self.raf = requestAnimationFrame(tick);
+      var el = self.hero;
+      var dt = self.last ? Math.min(t - self.last, 64) : 16;
+      self.last = t;
+      if (!el) return;
+      var loop = self.group ? self.group.offsetWidth : el.scrollWidth / 2;
+      if (Math.abs(el.scrollLeft - self.pos) > 2) self.pos = el.scrollLeft;
+      var moving = !self.state.paused && !self.state.reduced && !self.hover && !self.focusIn && t > self.manualUntil;
+      if (!moving) return;
+      var speed = self.props.speed ?? 28;
+      self.pos += speed * dt / 1000;
+      if (loop > 0 && self.pos >= loop) self.pos -= loop;
+      el.scrollLeft = self.pos;
+    };
+    this.raf = requestAnimationFrame(tick);
+  }
+
+  componentWillUnmount() {
+    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.mq && this.mq.removeEventListener) this.mq.removeEventListener("change", this.mqh);
+  }
+
+  heroStep(dir) {
+    var el = this.hero; if (!el) return;
+    var loop = this.group ? this.group.offsetWidth : el.scrollWidth / 2;
+    var step = 272 * 2;
+    this.manualUntil = performance.now() + 900;
+    if (dir < 0 && el.scrollLeft < step) el.scrollLeft += loop;
+    if (dir > 0 && el.scrollLeft >= loop - 1) el.scrollLeft -= loop;
+    this.pos = el.scrollLeft;
+    el.scrollBy({ left: dir * step, behavior: this.state.reduced ? "auto" : "smooth" });
+  }
+
+  rowStep(key, dir) {
+    var el = this.rowEls[key]; if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: this.state.reduced ? "auto" : "smooth" });
+  }
+
+  renderVals() {
+    var self = this, s = this.state;
+    var mk = function (w, uid) {
+      var i = WORKS.indexOf(w);
+      return Object.assign({}, w, art(i), {
+        uid: uid,
+        kicker: w.kind + " · " + w.year,
+        meta: w.author + " · " + w.kind + " · " + w.year,
+        byline: w.author + " · " + w.year,
+        cls: "card" + (s.dismissed === uid ? " is-dismissed" : ""),
+        enter: function () { self.hoverUid = uid; },
+        leave: function () {
+          if (self.hoverUid === uid) self.hoverUid = null;
+          if (self.state.dismissed === uid && self.focusUid !== uid) self.setState({ dismissed: null });
+        },
+        focus: function () { self.focusUid = uid; },
+        blur: function () {
+          if (self.focusUid === uid) self.focusUid = null;
+          if (self.state.dismissed === uid && self.hoverUid !== uid) self.setState({ dismissed: null });
+        }
+      });
+    };
+
+    var hero = HERO.map(function (id) { return mk(byId(id), "h-" + id); });
+    var heroClones = HERO.map(function (id) { return mk(byId(id), "c-" + id); });
+
+    var q = norm(s.q.trim());
+    var active = q !== "" || s.d !== "";
+    var results = WORKS.filter(function (w) {
+      if (s.d && w.dis !== s.d) return false;
+      if (!q) return true;
+      return norm(w.title + " " + w.author + " " + w.dis + " " + w.kind).indexOf(q) >= 0;
+    }).map(function (w) { return mk(w, "s-" + w.id); });
+    var n = results.length;
+    var status = !active ? "" : (n === 0 ? "Nenhuma obra encontrada." : (n === 1 ? "1 obra encontrada." : n + " obras encontradas."));
+
+    var mkRow = function (key, title, list) {
+      return {
+        key: key, title: title, ref: self.rowRefs[key],
+        items: list.map(function (w) { return mk(w, "r-" + key + "-" + w.id); }),
+        prev: function () { self.rowStep(key, -1); },
+        next: function () { self.rowStep(key, 1); }
+      };
+    };
+    var rows = [
+      mkRow("lit", "Literatura", WORKS.filter(function (w) { return w.kind === "Livro"; })),
+      mkRow("cin", "Cinema", WORKS.filter(function (w) { return w.kind === "Filme"; })),
+      mkRow("br", "Produção brasileira", WORKS.filter(function (w) { return w.br; }))
+    ];
+
+    var dis = [];
+    WORKS.forEach(function (w) { if (dis.indexOf(w.dis) < 0) dis.push(w.dis); });
+    dis.sort(function (a, b) { return a.localeCompare(b, "pt-BR"); });
+
+    return {
+      hero: hero, heroClones: heroClones, heroRef: this.heroRef, groupRef: this.groupRef,
+      motionOn: !s.reduced, paused: s.paused, running: !s.paused,
+      pauseLabel: s.paused ? "Retomar carrossel" : "Pausar carrossel",
+      togglePause: function () { self.setState({ paused: !self.state.paused }); },
+      heroPrev: function () { self.heroStep(-1); },
+      heroNext: function () { self.heroStep(1); },
+      heroEnter: function () { self.hover = true; },
+      heroLeave: function () { self.hover = false; },
+      heroFocus: function () { self.focusIn = true; },
+      heroBlur: function () { self.focusIn = false; },
+      onRootKey: function (e) {
+        if (e.key !== "Escape") return;
+        var uid = self.focusUid || self.hoverUid;
+        if (uid) self.setState({ dismissed: uid });
+      },
+      q: s.q, d: s.d,
+      disOpts: dis.map(function (v) { return { v: v }; }),
+      onQ: function (e) { self.setState({ q: e.target.value }); },
+      onDis: function (e) { self.setState({ d: e.target.value }); },
+      onSubmit: function (e) { e.preventDefault(); },
+      clear: function () { self.setState({ q: "", d: "" }); },
+      active: active, browsing: !active, empty: active && n === 0,
+      results: results, status: status, rows: rows
+    };
+  }
+}
+</script>
+</body>
+</html>
