@@ -9,6 +9,11 @@ import { BookCover } from '@/components/book/BookCover'
 import { HighlightQuote } from '@/components/review/HighlightQuote'
 import { ReviewTags } from '@/components/review/ReviewTags'
 import { ReviewFormDemo } from './ReviewFormDemo'
+import { FeaturedStrip } from '@/components/home/FeaturedStrip'
+import { DisabilityRow } from '@/components/home/DisabilityRow'
+import { DiscoveryCard } from '@/components/home/DiscoveryCard'
+import { SynopsisEscape } from '@/components/home/SynopsisEscape'
+import type { ReviewListItem } from '@/lib/review/queries'
 import {
   EditorReviewsTable,
   EmptyReviews,
@@ -164,6 +169,60 @@ const resenhasDoEditor: EditorReviewListItem[] = [
   },
 ]
 
+/* ── mocks da home (home-redesign) ──────────────────────────────────── */
+
+// IDs e textos FIXOS: arte do fallback e ordem determinísticas para o axe.
+const TITULOS_HOME = [
+  'Ensaio sobre a cegueira',
+  'O som do silêncio',
+  'Extraordinário',
+  'Flores para Algernon',
+  'Feliz ano velho',
+  'Colegas',
+  'Hoje eu quero voltar sozinho',
+  'O corcunda de Notre-Dame',
+  'Meu pé esquerdo',
+  'Um título bem mais longo para conferir o limite de três linhas no card',
+]
+
+const resenhasHome: ReviewListItem[] = TITULOS_HOME.map((titulo, i) => ({
+  id: `40000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`,
+  title: titulo,
+  slug: `exemplo-${i + 1}`,
+  published_at: '2026-09-01T00:00:00Z',
+  excerpt:
+    i % 4 === 3
+      ? ''
+      : 'Uma leitura sobre como a obra constrói a experiência da deficiência sem reduzi-la a metáfora nem a superação.',
+  book: {
+    title: titulo,
+    author: ['José Saramago', 'Darius Marder', 'R. J. Palacio', 'Daniel Keyes'][i % 4],
+    genre: { name: i % 2 ? 'Romance' : 'Autobiografia', slug: i % 2 ? 'romance' : 'autobiografia' },
+    year: 1960 + i * 6,
+    cover_url: i === 2 ? '/capa-exemplo.svg' : null,
+  },
+  disabilities:
+    i % 3 === 2
+      ? []
+      : [
+          { name: 'Deficiência visual', slug: 'deficiencia-visual' },
+          ...(i % 2 ? [{ name: 'Deficiência física', slug: 'deficiencia-fisica' }] : []),
+        ],
+}))
+
+const TOKENS_HOME = [
+  ['ground', 'Fundo da página'],
+  ['band', 'Faixas e superfícies'],
+  ['field', 'Campos'],
+  ['divider', 'Fios decorativos'],
+  ['ink', 'Texto principal'],
+  ['ink-soft', 'Texto secundário'],
+  ['ink-field', 'Borda de campo'],
+  ['teal', 'Link, ação e foco'],
+  ['teal-deep', 'Hover'],
+  ['night', 'Card escuro'],
+] as const
+
 /* ── página ────────────────────────────────────────────────────────── */
 
 export default function StyleguidePage() {
@@ -179,6 +238,66 @@ export default function StyleguidePage() {
       >
         Guia de estilos
       </h1>
+
+      {/* ── Tokens (D-13b) ───────────────────────────────────────── */}
+      <Section id="tokens" title="Tokens — identidade D-13b">
+        <ul
+          className="grid gap-3"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(11rem, 1fr))' }}
+        >
+          {TOKENS_HOME.map(([nome, uso]) => (
+            <li key={nome} className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="inline-block rounded-md border border-[var(--border-default)]"
+                style={{ width: '2.75rem', height: '2.75rem', background: `var(--color-${nome})` }}
+              />
+              <span>
+                <code>--color-{nome}</code>
+                <br />
+                <span className="text-[var(--text-secondary)]">{uso}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)' }}>
+          Fraunces — títulos
+        </p>
+        <p>Atkinson Hyperlegible — corpo e interface.</p>
+      </Section>
+
+      {/* ── Home: faixa, fileiras e grade (home-redesign) ─────────────── */}
+      {/* Montados aqui com dados fixos: no CI o banco é placeholder e a home
+          real cai no estado "indisponível" — é daqui que o axe/Lighthouse e o
+          Playwright auditam os componentes novos (HOME-35). */}
+      <Section id="home" title="Home — descoberta">
+        <SynopsisEscape />
+        <FeaturedStrip reviews={resenhasHome} />
+        <DisabilityRow
+          row={{
+            term: { name: 'Deficiência visual', slug: 'deficiencia-visual' },
+            reviews: resenhasHome.filter((r) => r.disabilities.length > 0),
+          }}
+          index={0}
+        />
+        <DisabilityRow
+          row={{ term: null, reviews: resenhasHome.filter((r) => r.disabilities.length === 0) }}
+          index={1}
+        />
+        <ol className="lia-results__grid" aria-label="Grade de resultados (exemplo)">
+          {resenhasHome.slice(0, 3).map((review) => (
+            <li key={review.id}>
+              <DiscoveryCard
+                review={review}
+                size="sm"
+                headingLevel={4}
+                instanceId={`guia-resultado-${review.id}`}
+                withByline
+              />
+            </li>
+          ))}
+        </ol>
+      </Section>
 
       {/* ── Button ───────────────────────────────────────────────── */}
       <Section id="btn" title="Button">
