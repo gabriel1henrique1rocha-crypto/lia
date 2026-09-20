@@ -2,7 +2,7 @@
 
 Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md](../../docs/PRD-LIA.md)).
 
-**Status possíveis:** `Aceita` (resolvida) · `A decidir` (proposta, será resolvida na feature indicada).
+**Status possíveis:** `Aceita` (resolvida) · `A decidir` (proposta, será resolvida na feature indicada) · `Proposta` (rascunho redigido, aguardando aprovação).
 
 | ID | Decisão | Status | Resolver em |
 |---|---|---|---|
@@ -18,6 +18,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-10 | Sessão server-only + cookies httpOnly | **Aceita** | `security-foundation` (M2) |
 | D-11 | Remoção da nota (rating) do produto | **Aceita** | `reviews-crud` (M3) |
 | D-12 | Taxonomia de deficiência representada | **Aceita** | vertical de deficiência (M4) |
+| D-13 | Home: carrossel com movimento automático (substitui LST-16) + nova identidade visual | **Proposta** | `home-redesign` (M4) |
 ---
 
 ## D-05 — Hospedagem: Vercel
@@ -259,3 +260,40 @@ O **texto original da ordem permanece acima**, sem edição, como registro do qu
 **Impacto:** ~~desbloqueia o passo 3 da ORDEM DE REMOÇÃO de D-11 — o filtro por nota só pode sair da home depois que o filtro por deficiência existir. Enquanto D-12 não for implementada, a home mantém o filtro por nota mesmo com a captura já removida.~~
 
 **REVISTO pela emenda de D-11 (2026-08-24):** a ordem foi colapsada e o filtro por nota **já saiu**, sem esperar por D-12. A relação entre as duas ADRs inverteu-se: D-12 não desbloqueia mais nada — ela **fecha uma lacuna já aberta**. Enquanto o vocabulário inicial seguir `[PREENCHER]`, a home fica **sem filtro nem ordenação**. Isso torna D-12 mais urgente do que era, não menos.
+
+---
+
+## D-13 — Home: carrossel com movimento automático e nova identidade visual
+
+**Status:** Proposta · **Data:** 2026-09-19 · **Milestone:** M4 (`home-redesign`) · **Spec:** [home-redesign](../features/home-redesign/spec.md)
+
+**Contexto:** o protótipo aprovado no Claude Design ([`docs/design/home-redesign-prototype.dc.html`](../../docs/design/home-redesign-prototype.dc.html)) muda duas coisas que hoje estão travadas: (1) o carrossel "Em destaque" passa a andar sozinho, contrariando a LST-16 ("carrossel que NÃO gira sozinho", DD-5 de `review-listing-search`); (2) a identidade visual (Spectral/Newsreader/IBM Plex Sans + paper/ink/oxblood) é substituída por Fraunces + Atkinson Hyperlegible e uma paleta creme/verde, em **todas** as rotas.
+
+### D-13a — Carrossel com movimento automático
+
+**Decisão:** a LST-16 é **substituída**. O carrossel "Em destaque" rola continuamente, **conforme WCAG 2.2.2 (Pausar, Parar, Ocultar)**, sob estas condições (detalhadas em HOME-11..18):
+
+- botão **Pausar/Retomar** visível, com nome acessível que contém o texto visível;
+- movimento para sozinho com ponteiro sobre a faixa, foco dentro dela, aba oculta, faixa fora da viewport e logo após ação manual;
+- `prefers-reduced-motion: reduce` → nenhum movimento e nenhum botão de pausa;
+- rolagem por `scrollLeft` (não `transform`), para que o foco por Tab traga o card para a vista (2.4.11), com `scroll-padding-inline` maior que a máscara de borda;
+- loop por cópias montadas **só no cliente**, `aria-hidden` e sem foco; sem JS, a lista única rolável de hoje;
+- faixa que não enche a viewport não duplica nem anima;
+- sai o `role="status"` "Destaque n de N" (anúncio contínuo com movimento seria ruído).
+
+**Razão:** o movimento dá à home o caráter de vitrine do acervo que o protótipo propõe, e 2.2.2 permite movimento automático desde que haja mecanismo de pausa — o que a LST-16 proibia por precaução, não por exigência normativa. As salvaguardas acima cobrem os grupos que a LST-16 protegia: sensibilidade a movimento (reduced-motion), leitor de tela (cópias inertes, sem anúncio), teclado (pausa no foco, foco não obscurecido) e baixa visão/cognição (pausa explícita e pausa no hover).
+
+**Trade-off:** mais JS e mais estados para testar no componente mais visível do site; movimento automático continua sendo, para parte do público, distração — mitigada pela pausa e pela preferência do sistema, não eliminada.
+
+**Alternativas rejeitadas:** manter a LST-16 (contraria a decisão de produto registrada no protótipo); animar por `transform` (mais barato, mas o card focado pode ficar fora da vista, 2.4.11); timer por slide com transição (salto brusco, pior para reduced-motion e leitor de tela).
+
+### D-13b — Nova identidade visual em todo o site
+
+**Decisão:** Fraunces (display, 500/600) + Atkinson Hyperlegible (corpo e UI, 400/700) via `next/font/google`; paleta do protótipo como primitivos no `@theme`, com os **aliases semânticos remapeados** — ground `#F6F1E7`, band `#ECE3D1`, divisória `#D9CFBC`, ink `#1D1A16`, secundário `#5A5247`, borda de campo `#6E6557`, acento/link/foco `#0F5E5A` (hover `#0A4441`), card escuro `#2B2620`, overlay `rgba(29,26,22,.97)`. Nenhum hex fora do `@theme`. Primitivos antigos saem; cores de feedback ficam.
+
+**Razão:** Atkinson Hyperlegible foi desenhada para leitura por pessoas com baixa visão — coerente com o propósito do observatório; a paleta nova tem folga de contraste em todos os pares (spec §7). Remapear aliases, em vez de reescrever componentes, mantém o impacto concentrado em `globals.css` e `layout.tsx`.
+
+**Impacto:** atinge todas as rotas (`/`, `/resenha/[slug]`, `/admin/*`, `/styleguide`, placeholders), todas sob o gate `axe + lighthouse` (a11y = 1.0). O corpo das resenhas passa de serifa para Atkinson (A-15). `text-muted` precisa de remapeamento por contraste (A-4); Atkinson não tem peso 500 (A-3).
+
+**Pendência associada (C-11):** este ADR cita critérios da WCAG **2.2** (2.4.11, 2.5.8); a DoD do projeto está em 2.1 AA. Proposta: adotar 2.2 AA para todo trabalho novo a partir daqui.
+
