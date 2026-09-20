@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import axe from 'axe-core'
 import { ListingControls } from '../ListingControls'
 import type { ListingParams } from '@/lib/review/listingParams'
@@ -43,7 +43,7 @@ describe('ListingControls', () => {
 
   it('todos os controles têm rótulo associado (getByLabelText)', () => {
     render(<ListingControls params={params} options={options} />)
-    expect(screen.getByLabelText('Buscar por título')).toHaveValue('dom')
+    expect(screen.getByLabelText('Buscar por título ou autor')).toHaveValue('dom')
     expect(screen.getByLabelText('Gênero')).toHaveValue('romance')
     expect(screen.getByLabelText('Autor')).toHaveValue('')
     expect(screen.getByLabelText('Ordenar por')).toHaveValue('titulo')
@@ -83,7 +83,7 @@ describe('filtro por deficiência representada (D-12, DIS-07)', () => {
     ],
   }
 
-  it('aparece como PRIMEIRO filtro, rotulado, com "Todas" e a pré-seleção da URL', () => {
+  it('aparece como PRIMEIRO select, ao lado da busca, com "Todas" e a pré-seleção da URL', () => {
     const { container } = render(
       <ListingControls params={{ ...params, deficiencia: 'tea' }} options={comDeficiencias} />
     )
@@ -91,12 +91,39 @@ describe('filtro por deficiência representada (D-12, DIS-07)', () => {
     expect(select).toHaveValue('tea')
     expect(select).toHaveAttribute('name', 'deficiencia')
     expect(select).toHaveTextContent('Todas as deficiências')
-    const primeiroFiltro = container.querySelector('.lia-listing-controls__filters select')
-    expect(primeiroFiltro).toBe(select)
+    const primeiroSelect = container.querySelector('form select')
+    expect(primeiroSelect).toBe(select)
   })
 
   it('sem nenhum termo com resenha publicada, o controle não é renderizado', () => {
     render(<ListingControls params={params} options={options} />)
     expect(screen.queryByLabelText('Deficiência representada')).toBeNull()
+  })
+})
+
+describe('home-redesign — "Mais filtros" e "Limpar" (C-2, HOME-29)', () => {
+  it('gênero/autor/ordem ficam num <details> fechado quando nenhum deles está ativo', () => {
+    const { container } = render(
+      <ListingControls
+        params={{ ...params, genero: '', autor: '', ordem: 'recentes' }}
+        options={options}
+      />
+    )
+    const details = container.querySelector('details')!
+    expect(details).not.toHaveAttribute('open')
+    expect(within(details).getByText('Mais filtros').tagName).toBe('SUMMARY')
+    for (const nome of ['genero', 'autor', 'ordem']) {
+      expect(details.querySelector(`[name="${nome}"]`)).not.toBeNull()
+    }
+  })
+
+  it('abre sozinho quando um filtro escondido está ativo (o filtro aplicado não fica oculto)', () => {
+    const { container } = render(<ListingControls params={params} options={options} />)
+    expect(container.querySelector('details')).toHaveAttribute('open')
+  })
+
+  it('"Limpar" é link para / (funciona sem JS)', () => {
+    render(<ListingControls params={params} options={options} />)
+    expect(screen.getByRole('link', { name: 'Limpar' })).toHaveAttribute('href', '/')
   })
 })

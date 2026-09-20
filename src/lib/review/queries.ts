@@ -66,7 +66,13 @@ export type ReviewListItem = {
     title: string
     author: string
     genre: { name: string; slug: string } | null
+    /** Ano da obra (kicker/linha de apoio do card — home-redesign C-9). */
+    year: number | null
+    /** Ilustração do card (HOME-19). `null` → fallback tipográfico. */
+    cover_url: string | null
   }
+  /** Termos ATIVOS, em `sort_order` (sinopse do card — HOME-21). */
+  disabilities: { name: string; slug: string }[]
 }
 
 // Select da listagem: traz `body` só para derivar o excerpt no servidor.
@@ -74,8 +80,12 @@ export type ReviewListItem = {
 // (book.author, book.genre.slug) — sem o hint o PostgREST não restringe a linha
 // pai. Toda review tem book (FK) e todo book tem genre, então o inner não perde
 // linhas (design §3).
+//
+// `disabilities:` é um embed COM ALIAS só para exibição (home-redesign): quando o
+// filtro por deficiência está ativo, o embed de FILTRO (`!inner`, abaixo) volta
+// só o termo filtrado; este traz todos os termos da resenha para o card.
 const LIST_SELECT =
-  'id, title, slug, body, published_at, book!inner(title, author, genre!inner(name, slug))'
+  'id, title, slug, body, published_at, book!inner(title, author, year, cover_url, genre!inner(name, slug)), disabilities:review_disability(term:disability_term(name, slug, sort_order))'
 
 type RawListRow = {
   id: string
@@ -83,7 +93,14 @@ type RawListRow = {
   slug: string
   body: string | null
   published_at: string | null
-  book: { title: string; author: string; genre: { name: string; slug: string } | null }
+  book: {
+    title: string
+    author: string
+    year: number | null
+    cover_url: string | null
+    genre: { name: string; slug: string } | null
+  }
+  disabilities?: { term: DisabilityTag | null }[] | null
 }
 
 function toListItem(row: RawListRow): ReviewListItem {
@@ -93,8 +110,39 @@ function toListItem(row: RawListRow): ReviewListItem {
     slug: row.slug,
     published_at: row.published_at,
     excerpt: excerpt(row.body),
-    book: { title: row.book.title, author: row.book.author, genre: row.book.genre ?? null },
+    book: {
+      title: row.book.title,
+      author: row.book.author,
+      genre: row.book.genre ?? null,
+      year: row.book.year ?? null,
+      cover_url: row.book.cover_url ?? null,
+    },
+    disabilities: disabilitiesOf({ review_disability: row.disabilities }).map(({ name, slug }) => ({
+      name,
+      slug,
+    })),
   }
+}
+
+/**
+ * Busca por título OU autor (home-redesign C-6). O autor mora em `book`, e o
+ * `or` do PostgREST não mistura coluna da tabela-pai com coluna embutida — por
+ * isso a busca resolve antes os `book_id` cujo autor casa e os soma ao `or`.
+ * Duas viagens só quando há `q`; o curinga do usuário continua escapado.
+ */
+async function bookIdsByAuthor(client: ReadClient, q: string): Promise<string[]> {
+  const { data, error } = await client
+    .from('book')
+    .select('id')
+    .ilike('author', `%${escapeLike(q)}%`)
+    .limit(500)
+  if (error) throw error
+  return (data ?? []).map((row) => row.id)
+}
+
+/** Valor de filtro `or` do PostgREST entre aspas (vírgula/parêntese no termo). */
+function orValue(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
 /**
@@ -128,12 +176,12 @@ function toListItem(row: RawListRow): ReviewListItem {
  * Sem filtro, a junção NÃO entra — incluí-la como `!inner` sumiria com as
  * resenhas sem deficiência marcada.
  */
-const LIST_SELECT_WITH_DISABILITY = `${LIST_SELECT}, review_disability!inner(disability_term!inner(slug))`
+const LIST_SELECT_WITH_DISABILITY = `${LIST_SELECT}, filtro:review_disability!inner(disability_term!inner(slug))`
 
 function buildFilteredSelect(
   client: ReadClient,
   params: ListingParams,
-  { head }: { head?: boolean } = {}
+  { head, authorBookIds = [] }: { head?: boolean; authorBookIds?: string[] } = {}
 ) {
   let query = client
     .from('review')
@@ -142,11 +190,16 @@ function buildFilteredSelect(
       head,
     })
     .eq('status', 'published')
-  if (params.q) query = query.ilike('title', `%${escapeLike(params.q)}%`)
+  if (params.q) {
+    const pattern = orValue(`%${escapeLike(params.q)}%`)
+    query =
+      authorBookIds.length > 0
+        ? query.or(`title.ilike.${pattern},book_id.in.(${authorBookIds.join(',')})`)
+        : query.or(`title.ilike.${pattern}`)
+  }
   if (params.genero) query = query.eq('book.genre.slug', params.genero)
   if (params.autor) query = query.eq('book.author', params.autor)
-  if (params.deficiencia)
-    query = query.eq('review_disability.disability_term.slug', params.deficiencia)
+  if (params.deficiencia) query = query.eq('filtro.disability_term.slug', params.deficiencia)
   return query
 }
 
@@ -157,7 +210,8 @@ export async function listPublishedReviews(
   const from = (params.pagina - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  const filtered = buildFilteredSelect(client, params)
+  const authorBookIds = params.q ? await bookIdsByAuthor(client, params.q) : []
+  const filtered = buildFilteredSelect(client, params, { authorBookIds })
   // Mapa de ordenação (design §3): `recentes` (default) por published_at desc
   // com nulls last — rascunho sem data não "vence"; `titulo` asc pela collation
   // do banco (suficiente no MVP). A opção `nota` saiu com D-11 (a coluna foi
@@ -178,6 +232,7 @@ export async function listPublishedReviews(
     if (rangeError) {
       const { count: total, error: countError } = await buildFilteredSelect(client, params, {
         head: true,
+        authorBookIds,
       })
       if (countError) throw countError
       return { rows: [], total: total ?? 0 }
@@ -192,7 +247,10 @@ export async function listPublishedReviews(
   return { rows, total: count ?? 0 }
 }
 
-/** Destaque derivado: 4 mais recentes publicadas, sem filtros (C-5/DD-5). */
+/** Quantos destaques a faixa da home mostra (home-redesign C-3, HOME-10). */
+export const FEATURED_LIMIT = 10
+
+/** Destaque derivado: N mais recentes publicadas, sem filtros (LST-18, HOME-10). */
 export async function listFeaturedReviews(
   client: ReadClient = createPublicClient()
 ): Promise<ReviewListItem[]> {
@@ -201,9 +259,69 @@ export async function listFeaturedReviews(
     .select(LIST_SELECT)
     .eq('status', 'published')
     .order('published_at', { ascending: false, nullsFirst: false })
-    .limit(4)
+    .limit(FEATURED_LIMIT)
   if (error) throw error
-  return ((data as RawListRow[] | null) ?? []).map(toListItem)
+  return ((data as unknown as RawListRow[] | null) ?? []).map(toListItem)
+}
+
+/** Itens por fileira da home (home-redesign C-12, HOME-25). */
+export const ROW_LIMIT = 12
+
+/** Teto de leitura para montar as fileiras numa só viagem (A-12). */
+const ROWS_SCAN_LIMIT = 500
+
+export type DisabilityRow = {
+  /** `null` = fileira "Outras resenhas" (sem termo ativo — HOME-28). */
+  term: { name: string; slug: string } | null
+  reviews: ReviewListItem[]
+}
+
+/**
+ * Fileiras da home por deficiência representada (HOME-25/28, A-12).
+ *
+ * UMA consulta (publicadas, mais recentes primeiro, com os termos) e o
+ * agrupamento no servidor: com o acervo atual isto é mais barato que uma
+ * consulta por termo, e a ordem das fileiras sai da mesma regra de
+ * `listFilterOptions` (termo ativo com ≥ 1 publicada, em `sort_order`).
+ * Resenha com vários termos aparece em várias fileiras (A-13). As sem termo
+ * vão para a fileira final "Outras resenhas".
+ */
+export async function listDisabilityRows(
+  client: ReadClient = createPublicClient()
+): Promise<DisabilityRow[]> {
+  const { data, error } = await client
+    .from('review')
+    .select(LIST_SELECT)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .limit(ROWS_SCAN_LIMIT)
+  if (error) throw error
+  const raws = (data as unknown as RawListRow[] | null) ?? []
+
+  const bySlug = new Map<string, { term: DisabilityTag; reviews: ReviewListItem[] }>()
+  const semTermo: ReviewListItem[] = []
+  for (const raw of raws) {
+    const item = toListItem(raw)
+    const termos = disabilitiesOf({ review_disability: raw.disabilities })
+    if (termos.length === 0) {
+      if (semTermo.length < ROW_LIMIT) semTermo.push(item)
+      continue
+    }
+    for (const term of termos) {
+      const row = bySlug.get(term.slug) ?? { term, reviews: [] }
+      if (row.reviews.length < ROW_LIMIT) row.reviews.push(item)
+      bySlug.set(term.slug, row)
+    }
+  }
+
+  const rows: DisabilityRow[] = [...bySlug.values()]
+    .sort(
+      (a, b) =>
+        a.term.sort_order - b.term.sort_order || a.term.name.localeCompare(b.term.name, 'pt-BR')
+    )
+    .map(({ term, reviews }) => ({ term: { name: term.name, slug: term.slug }, reviews }))
+  if (semTermo.length > 0) rows.push({ term: null, reviews: semTermo })
+  return rows
 }
 
 /**
