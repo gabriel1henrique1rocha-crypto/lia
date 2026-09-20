@@ -1,6 +1,6 @@
 # HOME — `home-redesign` (repaginação da home + nova identidade visual)
 
-**Marco:** M4 · **Fase:** Specify — **aguardando aprovação** · **ADR:** [D-13 (Proposta)](../../project/DECISIONS.md#d-13--home-carrossel-com-movimento-automático-e-nova-identidade-visual)
+**Marco:** M4 · **Fase:** Execute concluído (2026-09-20) — spec **aprovada** com as recomendações de C-1..C-12 (C-8: só "OLDA"); ver [design.md](design.md) e [tasks.md](tasks.md) · **ADR:** [D-13 (Aceita)](../../project/DECISIONS.md#d-13--home-carrossel-com-movimento-automático-e-nova-identidade-visual)
 **Referência visual/comportamental:** [`docs/design/home-redesign-prototype.dc.html`](../../../docs/design/home-redesign-prototype.dc.html) — protótipo aprovado no Claude Design. **Não é código de produção** (runtime próprio do Claude Design): é alvo, não fonte. Nada dele é importado ou portado literalmente.
 **Substitui:** LST-16 (via D-13). **Afeta:** LST-01/02/03/05/08/09/12/17/18/26 (§6).
 

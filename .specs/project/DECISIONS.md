@@ -18,7 +18,7 @@ Registro de decisões arquiteturais. Origem: seção 10 do PRD ([docs/PRD-LIA.md
 | D-10 | Sessão server-only + cookies httpOnly | **Aceita** | `security-foundation` (M2) |
 | D-11 | Remoção da nota (rating) do produto | **Aceita** | `reviews-crud` (M3) |
 | D-12 | Taxonomia de deficiência representada | **Aceita** | vertical de deficiência (M4) |
-| D-13 | Home: carrossel com movimento automático (substitui LST-16) + nova identidade visual | **Proposta** | `home-redesign` (M4) |
+| D-13 | Home: carrossel com movimento automático (substitui LST-16) + nova identidade visual | **Aceita** | `home-redesign` (M4) |
 ---
 
 ## D-05 — Hospedagem: Vercel
@@ -265,7 +265,7 @@ O **texto original da ordem permanece acima**, sem edição, como registro do qu
 
 ## D-13 — Home: carrossel com movimento automático e nova identidade visual
 
-**Status:** Proposta · **Data:** 2026-09-19 · **Milestone:** M4 (`home-redesign`) · **Spec:** [home-redesign](../features/home-redesign/spec.md)
+**Status:** Aceita (2026-09-20, aprovação do spec) · **Data:** 2026-09-19 · **Milestone:** M4 (`home-redesign`) · **Spec:** [home-redesign](../features/home-redesign/spec.md)
 
 **Contexto:** o protótipo aprovado no Claude Design ([`docs/design/home-redesign-prototype.dc.html`](../../docs/design/home-redesign-prototype.dc.html)) muda duas coisas que hoje estão travadas: (1) o carrossel "Em destaque" passa a andar sozinho, contrariando a LST-16 ("carrossel que NÃO gira sozinho", DD-5 de `review-listing-search`); (2) a identidade visual (Spectral/Newsreader/IBM Plex Sans + paper/ink/oxblood) é substituída por Fraunces + Atkinson Hyperlegible e uma paleta creme/verde, em **todas** as rotas.
 
@@ -295,5 +295,5 @@ O **texto original da ordem permanece acima**, sem edição, como registro do qu
 
 **Impacto:** atinge todas as rotas (`/`, `/resenha/[slug]`, `/admin/*`, `/styleguide`, placeholders), todas sob o gate `axe + lighthouse` (a11y = 1.0). O corpo das resenhas passa de serifa para Atkinson (A-15). `text-muted` precisa de remapeamento por contraste (A-4); Atkinson não tem peso 500 (A-3).
 
-**Pendência associada (C-11):** este ADR cita critérios da WCAG **2.2** (2.4.11, 2.5.8); a DoD do projeto está em 2.1 AA. Proposta: adotar 2.2 AA para todo trabalho novo a partir daqui.
+**C-11 (aprovada):** este ADR cita critérios da WCAG **2.2** (2.4.11, 2.5.8); a DoD do projeto estava em 2.1 AA. A partir daqui, trabalho novo mira **2.2 AA**.
 
